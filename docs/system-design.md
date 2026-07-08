@@ -1,0 +1,110 @@
+# Pocket-Mate System Design
+
+## Current Architecture
+
+Pocket-Mate starts as an Expo React Native mobile app using JavaScript and Supabase.
+
+```mermaid
+flowchart TD
+    A["Expo React Native App"] --> B["Application Services"]
+    B --> C["Auth Service"]
+    B --> D["Finance Service"]
+    B --> E["Dashboard Service"]
+    B --> F["Savings Service"]
+
+    C --> G["Supabase Auth Adapter"]
+    D --> H["Supabase Finance Repository"]
+    E --> H
+    F --> H
+
+    G --> I["Supabase Auth"]
+    H --> J["Supabase Postgres"]
+    J --> K["Row Level Security"]
+```
+
+## Architecture Principle
+
+The UI should not talk directly to Supabase tables. Screens should call feature services, and services should call infrastructure adapters.
+
+This keeps the app adaptable if the backend, database, or hosting platform changes later.
+
+## Planned Folder Boundaries
+
+```text
+src/
+  app/
+    navigation/
+
+  features/
+    auth/
+    dashboard/
+    finance/
+    budgets/
+    savings/
+
+  shared/
+    components/
+    constants/
+    utils/
+
+  infrastructure/
+    supabase/
+    repositories/
+```
+
+## Future Microservice Path
+
+The first version should not deploy many services. It should be structured so services can be split later.
+
+```mermaid
+flowchart TD
+    A["Mobile App"] --> B["API Gateway"]
+    B --> C["Auth Service"]
+    B --> D["Finance Service"]
+    B --> E["Budget Service"]
+    B --> F["Notification Service"]
+    D --> G["Finance Database"]
+    E --> G
+```
+
+## Data Ownership
+
+Each user-owned table should include:
+
+- `id`
+- `user_id`
+- `created_at`
+- `updated_at`
+
+Each user must only access their own rows through Supabase Row Level Security.
+
+## Core Tables
+
+```text
+profiles
+income_entries
+expense_categories
+expenses
+budget_caps
+savings_goals
+```
+
+## Security Rules
+
+- Use Supabase Auth for identity.
+- Enable Row Level Security on every user-owned table.
+- Keep the Supabase service role key out of the app.
+- Store only the public anon key in the app.
+- Validate user input before saving.
+- Keep finance calculations deterministic and testable.
+- Avoid bank account syncing in the first version.
+
+## Replaceability Goals
+
+The app should make these changes possible later:
+
+- Supabase Storage to Vercel Blob.
+- Supabase direct queries to a custom backend API.
+- Supabase Postgres to another Postgres host.
+- Manual expenses to optional bank syncing.
+- Mobile-only app to mobile plus web.
