@@ -89,6 +89,8 @@ budget_caps
 savings_goals
 ```
 
+Detailed table planning is maintained in [database-schema.md](./database-schema.md).
+
 ## Security Rules
 
 - Use Supabase Auth for identity.
