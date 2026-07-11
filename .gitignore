@@ -19,6 +19,10 @@ web-build/
 .expo/
 expo-env.d.ts
 
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+
 # Native build output
 /ios
 /android
