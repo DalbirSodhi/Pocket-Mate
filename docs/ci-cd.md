@@ -22,6 +22,7 @@ Development
   integration branch for active work
 
 feature/*
+chore/*
   short-lived work branches
 ```
 
@@ -29,15 +30,16 @@ feature/*
 
 ```text
 feature/some-change -> pull request -> Development -> final merge -> main
+chore/some-change -> pull request -> Development -> final merge -> main
 ```
 
 ## What CI Checks Today
 
-The project is still in the documentation phase, so CI currently checks that documentation exists and is not empty.
+CI checks that documentation exists, that the monorepo folders exist, and that the mobile app can run its package scripts.
 
 ## What CI Will Check After App Setup
 
-Once the Expo app is added, the same workflow will automatically detect `package.json` and run:
+The workflow detects `apps/mobile/package.json` and runs:
 
 - dependency installation
 - lint script, if present

@@ -24,33 +24,41 @@ flowchart TD
 
 ## Architecture Principle
 
-The UI should not talk directly to Supabase tables. Screens should call feature services, and services should call infrastructure adapters.
+The UI should not talk directly to Supabase tables. Screens should call feature services, and feature services should call API or repository boundaries.
 
 This keeps the app adaptable if the backend, database, or hosting platform changes later.
 
-## Planned Folder Boundaries
+## Monorepo Boundaries
 
 ```text
-src/
-  app/
-    navigation/
+apps/
+  mobile/
+    Expo React Native app
 
-  features/
-    auth/
-    dashboard/
-    finance/
-    budgets/
-    savings/
+supabase/
+  migrations/
+    database schema, indexes, and RLS policies
+  functions/
+    future backend endpoints and server-only logic
 
+packages/
   shared/
-    components/
-    constants/
-    utils/
-
-  infrastructure/
-    supabase/
-    repositories/
+    shared constants, validation, and finance calculations
 ```
+
+## Backend-First Flow
+
+Pocket-Mate should define backend contracts before building final UI screens.
+
+Recommended flow:
+
+1. Create or update Supabase migration.
+2. Add Row Level Security policy.
+3. Add backend endpoint or repository contract.
+4. Add shared validation or calculation logic.
+5. Build the mobile UI against that contract.
+
+Early app screens may use placeholder data, but feature-complete screens should call the same service boundary that production data will use.
 
 ## Future Microservice Path
 
