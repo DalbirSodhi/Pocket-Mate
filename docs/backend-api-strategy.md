@@ -16,6 +16,8 @@ The first backend layer is Supabase:
 - Supabase migrations for schema changes.
 - Supabase Edge Functions for server-only endpoints when direct database access is not enough.
 
+Local setup is documented in [supabase-setup.md](./supabase-setup.md).
+
 ## Endpoint Strategy
 
 Not every feature needs a custom HTTP endpoint on day one.
