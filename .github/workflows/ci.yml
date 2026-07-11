@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - Development
+      - main
+  push:
+    branches:
+      - Development
+      - main
+      - "feature/**"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  project-checks:
+    name: Project checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate documentation files
+        run: |
+          test -d docs
+          find docs -name "*.md" -type f -print -exec test -s {} \;
+
+      - name: Detect JavaScript project
+        id: js_project
+        shell: bash
+        run: |
+          if [ -f package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        if: steps.js_project.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.js_project.outputs.exists == 'true'
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Run lint
+        if: steps.js_project.outputs.exists == 'true'
+        run: npm run lint --if-present
+
+      - name: Run tests
+        if: steps.js_project.outputs.exists == 'true'
+        run: npm test --if-present
