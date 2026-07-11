@@ -286,6 +286,12 @@ Then add:
 3. RLS policies
 4. seed/default category strategy
 
+The first schema migration is maintained at:
+
+```text
+supabase/migrations/202607110001_create_finance_core.sql
+```
+
 ## Open Decisions
 
 - whether default categories are copied per user or stored globally

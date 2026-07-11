@@ -10,3 +10,9 @@ The first real migration should create the finance core:
 - expenses
 - budget_caps
 - savings_goals
+
+Current migration:
+
+```text
+202607110001_create_finance_core.sql
+```
