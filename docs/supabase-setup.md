@@ -61,6 +61,20 @@ apps/mobile/.env.example
 
 as the template.
 
+The mobile Supabase client lives at:
+
+```text
+apps/mobile/src/infrastructure/supabase/client.js
+```
+
+Environment access is centralized at:
+
+```text
+apps/mobile/src/config/env.js
+```
+
+Do not create Supabase clients directly inside screens. Import the shared client or call feature services that use it.
+
 ## Backend-First Flow
 
 For finance features, prefer this order:
