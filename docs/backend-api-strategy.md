@@ -48,6 +48,12 @@ Screen -> hook/service -> API or repository adapter -> Supabase
 
 This keeps the frontend simple and allows the backend implementation to change later.
 
+The mobile Supabase client is centralized in:
+
+```text
+apps/mobile/src/infrastructure/supabase/client.js
+```
+
 ## Initial API Contracts
 
 Finance features should be designed around these contracts:
