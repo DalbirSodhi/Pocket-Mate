@@ -1,7 +1,9 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 
-export default function App() {
+import { AuthProvider } from './src/features/auth';
+
+function AppContent() {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -14,6 +16,14 @@ export default function App() {
         </Text>
       </View>
     </View>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

@@ -61,3 +61,30 @@ They should not import:
 ```text
 apps/mobile/src/infrastructure/supabase/client.js
 ```
+
+## Auth State
+
+The app root is wrapped with `AuthProvider`. Screens and navigators can read the
+current authentication state with:
+
+```js
+import { useAuthSession } from '../features/auth';
+
+const {
+  session,
+  user,
+  isAuthenticated,
+  isLoading,
+  error,
+} = useAuthSession();
+```
+
+The provider:
+
+- restores the persisted session when the app starts
+- listens for sign-in, sign-out, and token refresh events
+- unsubscribes when it is unmounted
+- exposes loading and initialization error states
+
+Navigation should wait until `isLoading` is false before deciding whether to
+show authenticated or unauthenticated screens.
