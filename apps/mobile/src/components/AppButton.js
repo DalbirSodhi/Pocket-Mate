@@ -19,7 +19,7 @@ const variants = {
     backgroundColor: colors.dangerSoft,
     borderColor: colors.dangerSoft,
     textColor: colors.danger,
-    pressedColor: '#F0CED0',
+    pressedColor: colors.dangerPressed,
   },
 };
 

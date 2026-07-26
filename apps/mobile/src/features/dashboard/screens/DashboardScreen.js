@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     ...typography.label,
-    color: '#B8C6BC',
+    color: colors.panelMuted,
   },
   balanceValue: {
     color: colors.white,
@@ -374,14 +374,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radius.md,
-    backgroundColor: '#BDE7D2',
+    backgroundColor: colors.panelAccent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   progressTrack: {
     height: 8,
     borderRadius: radius.sm,
-    backgroundColor: '#324039',
+    backgroundColor: colors.panelTrack,
     overflow: 'hidden',
   },
   progressFill: {
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     ...typography.caption,
-    color: '#B8C6BC',
+    color: colors.panelMuted,
   },
   metrics: {
     flexDirection: 'row',
