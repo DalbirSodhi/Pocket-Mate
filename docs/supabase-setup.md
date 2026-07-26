@@ -75,6 +75,8 @@ apps/mobile/src/config/env.js
 
 Do not create Supabase clients directly inside screens. Import the shared client or call feature services that use it.
 
+Auth screens should call the auth feature service documented in [auth-service-contract.md](./auth-service-contract.md).
+
 ## Backend-First Flow
 
 For finance features, prefer this order:

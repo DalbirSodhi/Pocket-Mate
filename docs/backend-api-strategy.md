@@ -72,6 +72,14 @@ getDashboardSummary(filters)
 getSafeToSpendToday(filters)
 ```
 
+Auth is exposed to the mobile app through:
+
+```text
+apps/mobile/src/features/auth
+```
+
+The auth contract is documented in [auth-service-contract.md](./auth-service-contract.md).
+
 ## Future Split
 
 If Pocket-Mate outgrows direct Supabase access, the backend can move toward:
