@@ -1,3 +1,5 @@
+export { AuthProvider } from './context/AuthContext';
+export { useAuthSession } from './hooks/useAuthSession';
 export {
   getCurrentSession,
   getCurrentUser,
