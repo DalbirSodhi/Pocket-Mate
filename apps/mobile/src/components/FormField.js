@@ -1,0 +1,100 @@
+import { Eye, EyeOff } from 'lucide-react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { colors, radius, spacing, typography } from '../theme/tokens';
+
+export function FormField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry = false,
+  keyboardType = 'default',
+  autoCapitalize = 'sentences',
+  autoComplete,
+  textContentType,
+  returnKeyType,
+  onSubmitEditing,
+  error,
+}) {
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const shouldHideValue = secureTextEntry && !isPasswordVisible;
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={[styles.inputShell, error && styles.inputShellError]}>
+        <TextInput
+          autoCapitalize={autoCapitalize}
+          autoComplete={autoComplete}
+          keyboardType={keyboardType}
+          onChangeText={onChangeText}
+          onSubmitEditing={onSubmitEditing}
+          placeholder={placeholder}
+          placeholderTextColor={colors.inkMuted}
+          returnKeyType={returnKeyType}
+          secureTextEntry={shouldHideValue}
+          style={styles.input}
+          textContentType={textContentType}
+          value={value}
+        />
+        {secureTextEntry ? (
+          <Pressable
+            accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => setIsPasswordVisible((current) => !current)}
+            style={styles.visibilityButton}
+          >
+            {isPasswordVisible ? (
+              <EyeOff color={colors.inkMuted} size={20} />
+            ) : (
+              <Eye color={colors.inkMuted} size={20} />
+            )}
+          </Pressable>
+        ) : null}
+      </View>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    gap: spacing.sm,
+  },
+  label: {
+    ...typography.label,
+    color: colors.ink,
+  },
+  inputShell: {
+    minHeight: 52,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputShellError: {
+    borderColor: colors.danger,
+  },
+  input: {
+    ...typography.body,
+    color: colors.ink,
+    flex: 1,
+    minHeight: 50,
+    paddingHorizontal: spacing.lg,
+  },
+  visibilityButton: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  error: {
+    ...typography.caption,
+    color: colors.danger,
+  },
+});

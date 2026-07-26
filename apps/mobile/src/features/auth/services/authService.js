@@ -1,6 +1,7 @@
 import { supabase } from '../../../infrastructure/supabase/client';
 
 const MIN_PASSWORD_LENGTH = 8;
+const PASSWORD_RESET_REDIRECT_URL = 'pocketmate://reset-password';
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -70,6 +71,65 @@ export async function signOut() {
   if (response.error) {
     throw response.error;
   }
+}
+
+export async function requestPasswordReset(email) {
+  const normalizedEmail = normalizeEmail(email);
+
+  assertValidEmail(normalizedEmail);
+
+  const response = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+    redirectTo: PASSWORD_RESET_REDIRECT_URL,
+  });
+
+  return unwrapAuthResponse(response);
+}
+
+export async function updatePassword(password) {
+  assertValidPassword(password);
+
+  const response = await supabase.auth.updateUser({ password });
+  return unwrapAuthResponse(response).user;
+}
+
+function getAuthCallbackParams(url) {
+  const query = url.includes('?') ? url.split('?')[1].split('#')[0] : '';
+  const fragment = url.includes('#') ? url.split('#')[1] : '';
+  return new URLSearchParams([query, fragment].filter(Boolean).join('&'));
+}
+
+export async function createSessionFromUrl(url) {
+  const params = getAuthCallbackParams(url);
+  const errorDescription = params.get('error_description');
+
+  if (errorDescription) {
+    throw new Error(errorDescription);
+  }
+
+  const code = params.get('code');
+  let session = null;
+
+  if (code) {
+    const response = await supabase.auth.exchangeCodeForSession(code);
+    session = unwrapAuthResponse(response).session;
+  } else {
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+
+    if (accessToken && refreshToken) {
+      const response = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      session = unwrapAuthResponse(response).session;
+    }
+  }
+
+  return {
+    session,
+    isPasswordRecovery:
+      params.get('type') === 'recovery' || url.includes('reset-password'),
+  };
 }
 
 export async function getCurrentSession() {
