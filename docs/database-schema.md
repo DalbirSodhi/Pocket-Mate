@@ -252,6 +252,15 @@ For `profiles`, the rule is:
 id = auth.uid()
 ```
 
+Authenticated and server roles receive explicit CRUD table privileges through:
+
+```text
+supabase/migrations/202607250001_grant_finance_api_access.sql
+```
+
+The anonymous role has no table privileges. RLS remains enabled and enforces
+ownership for authenticated requests.
+
 ## Insert Rules
 
 The app should not trust a client-provided `user_id` blindly.
