@@ -2,6 +2,7 @@
   "expo": {
     "name": "Pocket-Mate",
     "slug": "pocket-mate",
+    "scheme": "pocketmate",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F4F7F2",
+        "backgroundColor": "#F6F1E8",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

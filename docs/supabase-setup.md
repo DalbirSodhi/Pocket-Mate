@@ -77,6 +77,12 @@ Do not create Supabase clients directly inside screens. Import the shared client
 
 Auth screens should call the auth feature service documented in [auth-service-contract.md](./auth-service-contract.md).
 
+The hosted Supabase Auth redirect allow list must include:
+
+```text
+pocketmate://reset-password
+```
+
 ## Backend-First Flow
 
 For finance features, prefer this order:

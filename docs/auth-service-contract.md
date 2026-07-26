@@ -24,6 +24,9 @@ apps/mobile/src/features/auth/services/authService.js
 signUpWithEmail({ email, password, displayName })
 signInWithEmail({ email, password })
 signOut()
+requestPasswordReset(email)
+updatePassword(password)
+createSessionFromUrl(url)
 getCurrentSession()
 getCurrentUser()
 subscribeToAuthChanges(callback)
@@ -88,3 +91,18 @@ The provider:
 
 Navigation should wait until `isLoading` is false before deciding whether to
 show authenticated or unauthenticated screens.
+
+## Password Recovery
+
+Password reset requests redirect to:
+
+```text
+pocketmate://reset-password
+```
+
+The mobile app registers the `pocketmate` URL scheme and passes callback URLs
+through `createSessionFromUrl`. Recovery sessions show the new-password screen
+before normal authenticated navigation resumes.
+
+The same redirect must be allowed in the hosted Supabase Auth URL
+configuration.
