@@ -18,4 +18,5 @@ Current migrations:
 202607250001_grant_finance_api_access.sql
 202607270001_add_recurring_expenses_and_card_bills.sql
 202607270002_complete_monthly_plan.sql
+202607270003_add_pay_cycle_anchor.sql
 ```
