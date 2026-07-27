@@ -120,6 +120,59 @@ created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
 ```
 
+### recurring_expenses
+
+Stores known repeating commitments such as rent, internet, and subscriptions.
+Categories still describe the purpose of each commitment.
+
+```text
+id uuid primary key
+user_id uuid not null references auth.users(id)
+category_id uuid not null references expense_categories(id)
+name text not null
+amount_cents integer not null
+cadence text not null default 'monthly'
+charge_day integer not null
+starts_on date not null
+ends_on date
+is_active boolean not null default true
+note text
+created_at timestamptz not null default now()
+updated_at timestamptz not null default now()
+```
+
+### credit_cards
+
+Stores reusable, non-sensitive card labels. Full card numbers are never stored.
+
+```text
+id uuid primary key
+user_id uuid not null references auth.users(id)
+nickname text not null
+issuer text
+last_four text
+is_active boolean not null default true
+created_at timestamptz not null default now()
+updated_at timestamptz not null default now()
+```
+
+### credit_card_bills
+
+Stores aggregate statements for users who do not record every card purchase.
+
+```text
+id uuid primary key
+user_id uuid not null references auth.users(id)
+credit_card_id uuid not null references credit_cards(id)
+amount_cents integer not null
+statement_on date not null
+due_on date not null
+paid_on date
+note text
+created_at timestamptz not null default now()
+updated_at timestamptz not null default now()
+```
+
 ### budget_caps
 
 Stores category spending limits for a cycle.
@@ -168,7 +221,6 @@ These should wait until core finance is stable:
 
 ```text
 planned_purchases
-recurring_transactions
 no_spend_days
 monthly_snapshots
 notification_preferences
@@ -183,9 +235,14 @@ erDiagram
     auth_users ||--o{ income_entries : owns
     auth_users ||--o{ expense_categories : owns
     auth_users ||--o{ expenses : owns
+    auth_users ||--o{ recurring_expenses : owns
+    auth_users ||--o{ credit_cards : owns
+    auth_users ||--o{ credit_card_bills : owns
     auth_users ||--o{ budget_caps : owns
     auth_users ||--o{ savings_goals : owns
     expense_categories ||--o{ expenses : classifies
+    expense_categories ||--o{ recurring_expenses : classifies
+    credit_cards ||--o{ credit_card_bills : receives
     expense_categories ||--o{ budget_caps : limits
 ```
 
@@ -199,6 +256,8 @@ Required calculations:
 
 - total income in current cycle
 - total expenses in current cycle
+- active fixed commitments in current cycle
+- card bills due in current cycle
 - total protected savings
 - remaining balance
 - category spent amount
@@ -213,6 +272,8 @@ Initial version:
 ```text
 cycle_income
 - cycle_expenses
+- active_fixed_expenses
+- card_bills_due
 - protected_savings_remaining
 = remaining_spendable
 
@@ -234,6 +295,9 @@ expenses(user_id, spent_on)
 expenses(user_id, category_id, spent_on)
 budget_caps(user_id, category_id)
 savings_goals(user_id, is_active)
+recurring_expenses(user_id, is_active, starts_on, ends_on)
+credit_cards(user_id, is_active)
+credit_card_bills(user_id, due_on)
 ```
 
 ## Row Level Security Plan
@@ -287,6 +351,9 @@ Create tables in this order:
 4. expenses
 5. budget_caps
 6. savings_goals
+7. recurring_expenses
+8. credit_cards
+9. credit_card_bills
 
 Then add:
 
@@ -299,6 +366,7 @@ The first schema migration is maintained at:
 
 ```text
 supabase/migrations/202607110001_create_finance_core.sql
+supabase/migrations/202607270001_add_recurring_expenses_and_card_bills.sql
 ```
 
 ## Open Decisions
