@@ -4,6 +4,7 @@ const test = require('node:test');
 const {
   calculatePlanTotals,
   getMonthRange,
+  getPlanHealth,
   sumCents,
 } = require('./dashboardMath.cjs');
 
@@ -42,13 +43,42 @@ test('calculatePlanTotals reserves fixed expenses and card bills', () => {
       expenseCents: 75000,
       fixedExpenseCents: 180000,
       cardBillCents: 45000,
+      savingsContributionCents: 25000,
     }),
     {
-      committedCents: 225000,
-      totalOutflowCents: 300000,
-      availableCents: 200000,
+      committedCents: 250000,
+      totalOutflowCents: 325000,
+      availableCents: 175000,
       shortfallCents: 0,
     },
+  );
+});
+
+test('getPlanHealth identifies healthy and overcommitted plans', () => {
+  assert.equal(
+    getPlanHealth({
+      incomeCents: 100000,
+      totalOutflowCents: 50000,
+    }).label,
+    'Healthy',
+  );
+  assert.equal(
+    getPlanHealth({
+      incomeCents: 100000,
+      totalOutflowCents: 110000,
+    }).label,
+    'Overcommitted',
+  );
+});
+
+test('getPlanHealth prioritizes breached budget caps', () => {
+  assert.equal(
+    getPlanHealth({
+      incomeCents: 100000,
+      totalOutflowCents: 50000,
+      overBudgetCaps: 2,
+    }).label,
+    'Needs attention',
   );
 });
 

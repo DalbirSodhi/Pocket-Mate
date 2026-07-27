@@ -2,6 +2,7 @@ import { supabase } from '../../../infrastructure/supabase/client';
 import {
   calculatePlanTotals,
   getMonthRange,
+  getPlanHealth,
   sumCents,
 } from '../utils/dashboardMath.cjs';
 
@@ -34,7 +35,7 @@ export async function getDashboardSummary(userId, date = new Date()) {
       .lte('received_on', month.endDate),
     supabase
       .from('expenses')
-      .select('amount_cents')
+      .select('amount_cents, category_id')
       .eq('user_id', userId)
       .gte('spent_on', month.startDate)
       .lte('spent_on', month.endDate),
@@ -51,12 +52,14 @@ export async function getDashboardSummary(userId, date = new Date()) {
       .eq('user_id', userId),
     supabase
       .from('savings_goals')
-      .select('current_amount_cents, target_amount_cents')
+      .select(
+        'current_amount_cents, target_amount_cents, monthly_contribution_cents',
+      )
       .eq('user_id', userId)
       .eq('is_active', true),
     supabase
       .from('budget_caps')
-      .select('id')
+      .select('id, category_id, amount_cents')
       .eq('user_id', userId),
     supabase
       .from('recurring_expenses')
@@ -86,11 +89,39 @@ export async function getDashboardSummary(userId, date = new Date()) {
   const expenseCents = sumCents(expenses, 'amount_cents');
   const fixedExpenseCents = sumCents(recurringExpenses, 'amount_cents');
   const cardBillCents = sumCents(cardBills, 'amount_cents');
+  const monthlySavingsCents = sumCents(
+    savingsGoals,
+    'monthly_contribution_cents',
+  );
+  const budgetSpentCents = budgets.reduce(
+    (total, budget) =>
+      total +
+      sumCents(
+        expenses.filter(
+          (expense) => expense.category_id === budget.category_id,
+        ),
+        'amount_cents',
+      ),
+    0,
+  );
+  const overBudgetCaps = budgets.filter((budget) => {
+    const spentCents = sumCents(
+      expenses.filter((expense) => expense.category_id === budget.category_id),
+      'amount_cents',
+    );
+    return spentCents > budget.amount_cents;
+  }).length;
   const planTotals = calculatePlanTotals({
     incomeCents,
     expenseCents,
     fixedExpenseCents,
     cardBillCents,
+    savingsContributionCents: monthlySavingsCents,
+  });
+  const planHealth = getPlanHealth({
+    incomeCents,
+    totalOutflowCents: planTotals.totalOutflowCents,
+    overBudgetCaps,
   });
 
   return {
@@ -99,6 +130,7 @@ export async function getDashboardSummary(userId, date = new Date()) {
     expenseCents,
     fixedExpenseCents,
     cardBillCents,
+    monthlySavingsCents,
     committedCents: planTotals.committedCents,
     totalOutflowCents: planTotals.totalOutflowCents,
     availableCents: planTotals.availableCents,
@@ -107,6 +139,10 @@ export async function getDashboardSummary(userId, date = new Date()) {
     savingsTargetCents: sumCents(savingsGoals, 'target_amount_cents'),
     activeSavingsGoals: savingsGoals.length,
     activeBudgetCaps: budgets.length,
+    budgetCapCents: sumCents(budgets, 'amount_cents'),
+    budgetSpentCents,
+    overBudgetCaps,
+    planHealth,
     activeRecurringExpenses: recurringExpenses.length,
     currentCardBills: cardBills.length,
     unpaidCardBills: cardBills.filter((bill) => !bill.paid_on).length,

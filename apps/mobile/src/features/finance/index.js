@@ -1,4 +1,5 @@
 export {
+  convertExpenseToRecurring,
   createCreditCard,
   createCreditCardBill,
   createExpenseCategory,
@@ -9,6 +10,7 @@ export {
   getCreditCardBills,
   getCreditCards,
   getExpenseCategories,
+  getExpenseDetail,
   getRecurringExpenses,
   getTransactions,
   setCreditCardActive,
@@ -20,6 +22,7 @@ export { AddIncomeScreen } from './screens/AddIncomeScreen';
 export { CardBillScreen } from './screens/CardBillScreen';
 export { CategoriesScreen } from './screens/CategoriesScreen';
 export { CreditCardsScreen } from './screens/CreditCardsScreen';
+export { ExpenseDetailScreen } from './screens/ExpenseDetailScreen';
 export { FixedExpensesScreen } from './screens/FixedExpensesScreen';
 export { OneTimeExpenseScreen } from './screens/OneTimeExpenseScreen';
 export { RecurringExpenseScreen } from './screens/RecurringExpenseScreen';

@@ -136,6 +136,7 @@ charge_day integer not null
 starts_on date not null
 ends_on date
 is_active boolean not null default true
+source_expense_id uuid references expenses(id)
 note text
 created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
@@ -209,6 +210,7 @@ user_id uuid not null references auth.users(id)
 name text not null
 target_amount_cents integer not null
 current_amount_cents integer not null default 0
+monthly_contribution_cents integer not null default 0
 target_date date
 is_active boolean not null default true
 created_at timestamptz not null default now()
@@ -367,6 +369,7 @@ The first schema migration is maintained at:
 ```text
 supabase/migrations/202607110001_create_finance_core.sql
 supabase/migrations/202607270001_add_recurring_expenses_and_card_bills.sql
+supabase/migrations/202607270002_complete_monthly_plan.sql
 ```
 
 ## Open Decisions
