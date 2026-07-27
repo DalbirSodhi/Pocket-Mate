@@ -16,21 +16,21 @@ const EXPENSE_TYPES = [
     title: 'One-time expense',
     description: 'Record an individual purchase or payment.',
     icon: ReceiptText,
-    tone: { background: colors.accentSoft, foreground: colors.accent },
+    tone: { background: colors.iconSurface, foreground: colors.iconInk },
   },
   {
     id: 'RecurringExpense',
     title: 'Monthly fixed expense',
     description: 'Set rent, subscriptions, and other repeating commitments once.',
     icon: CalendarClock,
-    tone: { background: colors.primarySoft, foreground: colors.primary },
+    tone: { background: colors.iconSurface, foreground: colors.iconInk },
   },
   {
     id: 'CardBill',
     title: 'Credit card bill',
     description: 'Add a monthly statement using a saved card.',
     icon: CreditCard,
-    tone: { background: colors.successSoft, foreground: colors.success },
+    tone: { background: colors.iconSurface, foreground: colors.iconInk },
   },
 ];
 

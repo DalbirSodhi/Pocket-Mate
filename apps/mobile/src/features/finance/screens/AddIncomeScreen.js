@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radius.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.iconSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },

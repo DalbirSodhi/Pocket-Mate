@@ -97,7 +97,7 @@ export function ExpenseDetailScreen({ navigation, route }) {
             <>
               <View style={styles.amountPanel}>
                 <View style={styles.amountIcon}>
-                  <ReceiptText color={colors.accent} size={23} />
+                  <ReceiptText color={colors.iconInk} size={23} />
                 </View>
                 <View style={styles.amountCopy}>
                   <Text style={styles.amountLabel}>Amount spent</Text>
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: radius.md,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.iconSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
