@@ -1,3 +1,11 @@
+const {
+  addDays,
+  addMonthsClamped,
+  getCalendarDayDifference,
+  getLocalDateString,
+  parseLocalDateString,
+} = require('../../../utils/date.cjs');
+
 function sumCents(rows, fieldName) {
   return rows.reduce((total, row) => total + Number(row[fieldName] || 0), 0);
 }
@@ -37,6 +45,199 @@ function calculatePlanTotals({
   };
 }
 
+function getFallbackAnchorDate(payCycle, date) {
+  if (payCycle === 'monthly' || payCycle === 'semi_monthly') {
+    return new Date(date.getFullYear(), date.getMonth(), 1, 12);
+  }
+
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12);
+}
+
+function getFixedDayCycleRange({ anchorDate, cycleLength, date }) {
+  const elapsedDays = getCalendarDayDifference(anchorDate, date);
+  const elapsedCycles = Math.floor(elapsedDays / cycleLength);
+  const start = addDays(anchorDate, elapsedCycles * cycleLength);
+  const nextStart = addDays(start, cycleLength);
+
+  return { start, nextStart };
+}
+
+function getMonthlyCycleRange({ anchorDate, date }) {
+  const preferredDay = anchorDate.getDate();
+  let start = addMonthsClamped(date, 0, preferredDay);
+
+  if (start > date) {
+    start = addMonthsClamped(date, -1, preferredDay);
+  }
+
+  return {
+    start,
+    nextStart: addMonthsClamped(start, 1, preferredDay),
+  };
+}
+
+function getSemiMonthlyBoundaries(anchorDate, date) {
+  const anchorDay = anchorDate.getDate();
+  const firstDay = anchorDay > 15 ? anchorDay - 15 : anchorDay;
+  const secondDay = firstDay + 15;
+  const boundaries = [];
+
+  for (let monthOffset = -2; monthOffset <= 2; monthOffset += 1) {
+    const month = new Date(
+      date.getFullYear(),
+      date.getMonth() + monthOffset,
+      1,
+      12,
+    );
+    boundaries.push(addMonthsClamped(month, 0, firstDay));
+    boundaries.push(addMonthsClamped(month, 0, secondDay));
+  }
+
+  return boundaries
+    .filter(
+      (boundary, index, values) =>
+        index ===
+        values.findIndex(
+          (value) => getLocalDateString(value) === getLocalDateString(boundary),
+        ),
+    )
+    .sort((left, right) => left - right);
+}
+
+function getSemiMonthlyCycleRange({ anchorDate, date }) {
+  const boundaries = getSemiMonthlyBoundaries(anchorDate, date);
+  const start =
+    [...boundaries].reverse().find((boundary) => boundary <= date) ||
+    boundaries[0];
+  const nextStart =
+    boundaries.find((boundary) => boundary > date) ||
+    addMonthsClamped(start, 1);
+
+  return { start, nextStart };
+}
+
+function formatCycleLabel(startDate, endDate) {
+  const sameYear = startDate.getFullYear() === endDate.getFullYear();
+  const sameMonth = sameYear && startDate.getMonth() === endDate.getMonth();
+  const startMonth = startDate.toLocaleDateString('en-CA', { month: 'short' });
+  const endMonth = endDate.toLocaleDateString('en-CA', { month: 'short' });
+
+  if (sameMonth) {
+    return `${startMonth} ${startDate.getDate()} - ${endDate.getDate()}, ${endDate.getFullYear()}`;
+  }
+
+  if (sameYear) {
+    return `${startMonth} ${startDate.getDate()} - ${endMonth} ${endDate.getDate()}, ${endDate.getFullYear()}`;
+  }
+
+  return `${startMonth} ${startDate.getDate()}, ${startDate.getFullYear()} - ${endMonth} ${endDate.getDate()}, ${endDate.getFullYear()}`;
+}
+
+function getPayCycleRange({
+  payCycle = 'monthly',
+  anchorDate: anchorDateValue,
+  date = new Date(),
+}) {
+  const normalizedDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    12,
+  );
+  const configuredAnchor = parseLocalDateString(anchorDateValue);
+  const anchorDate =
+    configuredAnchor || getFallbackAnchorDate(payCycle, normalizedDate);
+  let range;
+
+  if (payCycle === 'weekly') {
+    range = getFixedDayCycleRange({
+      anchorDate,
+      cycleLength: 7,
+      date: normalizedDate,
+    });
+  } else if (payCycle === 'bi_weekly') {
+    range = getFixedDayCycleRange({
+      anchorDate,
+      cycleLength: 14,
+      date: normalizedDate,
+    });
+  } else if (payCycle === 'semi_monthly') {
+    range = getSemiMonthlyCycleRange({ anchorDate, date: normalizedDate });
+  } else {
+    range = getMonthlyCycleRange({ anchorDate, date: normalizedDate });
+  }
+
+  const end = addDays(range.nextStart, -1);
+
+  return {
+    startDate: getLocalDateString(range.start),
+    endDate: getLocalDateString(end),
+    nextPayday: getLocalDateString(range.nextStart),
+    daysUntilNextPayday: Math.max(
+      getCalendarDayDifference(normalizedDate, range.nextStart),
+      1,
+    ),
+    label: formatCycleLabel(range.start, end),
+    isConfigured: Boolean(configuredAnchor),
+  };
+}
+
+function getCycleSavingsContribution(monthlyContributionCents, payCycle) {
+  const monthlyAmount = Number(monthlyContributionCents || 0);
+
+  if (payCycle === 'weekly') {
+    return Math.round((monthlyAmount * 12) / 52);
+  }
+
+  if (payCycle === 'bi_weekly') {
+    return Math.round((monthlyAmount * 12) / 26);
+  }
+
+  if (payCycle === 'semi_monthly') {
+    return Math.round(monthlyAmount / 2);
+  }
+
+  return monthlyAmount;
+}
+
+function calculateSafeToSpend({
+  availableCents,
+  daysUntilNextPayday,
+  shortfallCents = 0,
+}) {
+  if (shortfallCents > 0) {
+    return 0;
+  }
+
+  return Math.floor(
+    Math.max(Number(availableCents || 0), 0) /
+      Math.max(Number(daysUntilNextPayday || 1), 1),
+  );
+}
+
+function isMonthlyChargeInRange({ chargeDay, startDate, endDate }) {
+  const start = parseLocalDateString(startDate);
+  const end = parseLocalDateString(endDate);
+
+  if (!start || !end || !Number.isInteger(Number(chargeDay))) {
+    return false;
+  }
+
+  for (
+    let cursor = new Date(start.getFullYear(), start.getMonth(), 1, 12);
+    cursor <= end;
+    cursor = addMonthsClamped(cursor, 1, 1)
+  ) {
+    const chargeDate = addMonthsClamped(cursor, 0, Number(chargeDay));
+
+    if (chargeDate >= start && chargeDate <= end) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function getPlanHealth({ incomeCents, totalOutflowCents, overBudgetCaps = 0 }) {
   if (incomeCents <= 0) {
     return {
@@ -55,7 +256,7 @@ function getPlanHealth({ incomeCents, totalOutflowCents, overBudgetCaps = 0 }) {
       label: 'Overcommitted',
       tone: 'danger',
       allocationPercent,
-      detail: "Planned outflow is higher than this month's income.",
+      detail: "Planned outflow is higher than this cycle's income.",
     };
   }
 
@@ -95,8 +296,12 @@ function getPlanHealth({ incomeCents, totalOutflowCents, overBudgetCaps = 0 }) {
 }
 
 module.exports = {
+  calculateSafeToSpend,
   calculatePlanTotals,
+  getCycleSavingsContribution,
   getMonthRange,
+  getPayCycleRange,
   getPlanHealth,
+  isMonthlyChargeInRange,
   sumCents,
 };

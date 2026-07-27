@@ -1,9 +1,8 @@
-import { Check, WalletCards } from 'lucide-react-native';
+import { WalletCards } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,50 +14,11 @@ import { AppButton } from '../../../components/AppButton';
 import { BrandMark } from '../../../components/BrandMark';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
-import { colors, radius, spacing, typography } from '../../../theme/tokens';
+import { colors, spacing, typography } from '../../../theme/tokens';
+import { getLocalDateString } from '../../../utils/date.cjs';
+import { ProfileChoiceGroup } from '../components/ProfileChoiceGroup';
+import { currencyOptions, payCycleOptions } from '../profileOptions';
 import { saveProfile } from '../services/profileService';
-
-const currencyOptions = ['CAD', 'USD', 'GBP', 'EUR', 'AUD'];
-const payCycleOptions = [
-  { label: 'Weekly', value: 'weekly' },
-  { label: 'Every 2 weeks', value: 'bi_weekly' },
-  { label: 'Twice a month', value: 'semi_monthly' },
-  { label: 'Monthly', value: 'monthly' },
-];
-
-function ChoiceGroup({ label, options, selectedValue, onSelect }) {
-  return (
-    <View style={styles.choiceGroup}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.choices}>
-        {options.map((option) => {
-          const value = typeof option === 'string' ? option : option.value;
-          const optionLabel = typeof option === 'string' ? option : option.label;
-          const isSelected = selectedValue === value;
-
-          return (
-            <Pressable
-              accessibilityRole="radio"
-              accessibilityState={{ checked: isSelected }}
-              key={value}
-              onPress={() => onSelect(value)}
-              style={({ pressed }) => [
-                styles.choice,
-                isSelected && styles.choiceSelected,
-                pressed && styles.choicePressed,
-              ]}
-            >
-              <Text style={[styles.choiceLabel, isSelected && styles.choiceLabelSelected]}>
-                {optionLabel}
-              </Text>
-              {isSelected ? <Check color={colors.primary} size={18} /> : null}
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
 
 export function OnboardingScreen({
   user,
@@ -73,6 +33,9 @@ export function OnboardingScreen({
   const [displayName, setDisplayName] = useState(initialName);
   const [currencyCode, setCurrencyCode] = useState('CAD');
   const [payCycle, setPayCycle] = useState('monthly');
+  const [payCycleAnchorDate, setPayCycleAnchorDate] = useState(
+    getLocalDateString(),
+  );
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -86,6 +49,7 @@ export function OnboardingScreen({
         displayName,
         currencyCode,
         payCycle,
+        payCycleAnchorDate,
       });
       onComplete(profile);
     } catch (profileError) {
@@ -130,17 +94,25 @@ export function OnboardingScreen({
                   textContentType="name"
                   value={displayName}
                 />
-                <ChoiceGroup
+                <ProfileChoiceGroup
                   label="Currency"
                   onSelect={setCurrencyCode}
                   options={currencyOptions}
                   selectedValue={currencyCode}
                 />
-                <ChoiceGroup
+                <ProfileChoiceGroup
                   label="Pay cycle"
                   onSelect={setPayCycle}
                   options={payCycleOptions}
                   selectedValue={payCycle}
+                />
+                <FormField
+                  autoCapitalize="none"
+                  label="Most recent payday"
+                  maxLength={10}
+                  onChangeText={setPayCycleAnchorDate}
+                  placeholder="YYYY-MM-DD"
+                  value={payCycleAnchorDate}
                 />
                 <AppButton
                   disabled={!displayName}
@@ -195,41 +167,5 @@ const styles = StyleSheet.create({
   form: {
     marginTop: spacing.xxl,
     gap: spacing.xl,
-  },
-  label: {
-    ...typography.label,
-    color: colors.ink,
-  },
-  choiceGroup: {
-    gap: spacing.sm,
-  },
-  choices: {
-    gap: spacing.sm,
-  },
-  choice: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  choiceSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
-  },
-  choicePressed: {
-    opacity: 0.8,
-  },
-  choiceLabel: {
-    ...typography.body,
-    color: colors.ink,
-  },
-  choiceLabelSelected: {
-    color: colors.primary,
-    fontWeight: '700',
   },
 });

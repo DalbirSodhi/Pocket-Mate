@@ -46,6 +46,7 @@ display_name text
 currency_code text not null default 'CAD'
 pay_cycle text not null default 'monthly'
 pay_cycle_start_day integer
+pay_cycle_anchor_date date
 created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
 ```
