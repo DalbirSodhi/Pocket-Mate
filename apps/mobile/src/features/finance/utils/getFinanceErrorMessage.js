@@ -1,6 +1,6 @@
-export function getFinanceErrorMessage(error, fallback) {
+export function getFinanceErrorMessage(error, fallback, duplicateMessage) {
   if (error?.code === '23505') {
-    return 'A category with this name already exists.';
+    return duplicateMessage || 'This record already exists.';
   }
 
   if (error?.code === '23503') {

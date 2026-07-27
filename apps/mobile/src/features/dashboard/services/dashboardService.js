@@ -1,5 +1,6 @@
 import { supabase } from '../../../infrastructure/supabase/client';
 import {
+  calculatePlanTotals,
   getMonthRange,
   sumCents,
 } from '../utils/dashboardMath.cjs';
@@ -22,6 +23,8 @@ export async function getDashboardSummary(userId, date = new Date()) {
     categoryResponse,
     savingsResponse,
     budgetResponse,
+    recurringResponse,
+    cardBillResponse,
   ] = await Promise.all([
     supabase
       .from('income_entries')
@@ -55,6 +58,19 @@ export async function getDashboardSummary(userId, date = new Date()) {
       .from('budget_caps')
       .select('id')
       .eq('user_id', userId),
+    supabase
+      .from('recurring_expenses')
+      .select('id, amount_cents')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .lte('starts_on', month.endDate)
+      .or(`ends_on.is.null,ends_on.gte.${month.startDate}`),
+    supabase
+      .from('credit_card_bills')
+      .select('id, amount_cents, paid_on')
+      .eq('user_id', userId)
+      .gte('due_on', month.startDate)
+      .lte('due_on', month.endDate),
   ]);
 
   const income = unwrapResponse(incomeResponse);
@@ -63,20 +79,37 @@ export async function getDashboardSummary(userId, date = new Date()) {
   const categories = unwrapResponse(categoryResponse);
   const savingsGoals = unwrapResponse(savingsResponse);
   const budgets = unwrapResponse(budgetResponse);
+  const recurringExpenses = unwrapResponse(recurringResponse);
+  const cardBills = unwrapResponse(cardBillResponse);
   const categoryById = new Map(categories.map((category) => [category.id, category]));
   const incomeCents = sumCents(income, 'amount_cents');
   const expenseCents = sumCents(expenses, 'amount_cents');
+  const fixedExpenseCents = sumCents(recurringExpenses, 'amount_cents');
+  const cardBillCents = sumCents(cardBills, 'amount_cents');
+  const planTotals = calculatePlanTotals({
+    incomeCents,
+    expenseCents,
+    fixedExpenseCents,
+    cardBillCents,
+  });
 
   return {
     periodLabel: month.label,
     incomeCents,
     expenseCents,
-    availableCents: Math.max(incomeCents - expenseCents, 0),
-    shortfallCents: Math.max(expenseCents - incomeCents, 0),
+    fixedExpenseCents,
+    cardBillCents,
+    committedCents: planTotals.committedCents,
+    totalOutflowCents: planTotals.totalOutflowCents,
+    availableCents: planTotals.availableCents,
+    shortfallCents: planTotals.shortfallCents,
     savingsCurrentCents: sumCents(savingsGoals, 'current_amount_cents'),
     savingsTargetCents: sumCents(savingsGoals, 'target_amount_cents'),
     activeSavingsGoals: savingsGoals.length,
     activeBudgetCaps: budgets.length,
+    activeRecurringExpenses: recurringExpenses.length,
+    currentCardBills: cardBills.length,
+    unpaidCardBills: cardBills.filter((bill) => !bill.paid_on).length,
     recentExpenses: recentExpenses.map((expense) => ({
       ...expense,
       category: categoryById.get(expense.category_id) || null,

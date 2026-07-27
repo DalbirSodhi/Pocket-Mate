@@ -1,5 +1,10 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { ArrowDownLeft, ArrowUpRight, ReceiptText } from 'lucide-react-native';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CreditCard,
+  ReceiptText,
+} from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
@@ -22,6 +27,7 @@ import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
 const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'expense', label: 'Expenses' },
+  { id: 'card_bill', label: 'Card bills' },
   { id: 'income', label: 'Income' },
 ];
 
@@ -123,7 +129,20 @@ export function TransactionsScreen({ navigation, route }) {
             <View style={styles.list}>
               {visibleTransactions.map((transaction, index) => {
                 const isIncome = transaction.type === 'income';
-                const Icon = isIncome ? ArrowDownLeft : ArrowUpRight;
+                const isCardBill = transaction.type === 'card_bill';
+                const Icon = isIncome
+                  ? ArrowDownLeft
+                  : isCardBill
+                    ? CreditCard
+                    : ArrowUpRight;
+                const tone = isIncome
+                  ? { background: colors.primarySoft, foreground: colors.primary }
+                  : isCardBill
+                    ? {
+                        background: colors.warningSoft,
+                        foreground: colors.warning,
+                      }
+                    : { background: colors.accentSoft, foreground: colors.accent };
 
                 return (
                   <View key={`${transaction.type}-${transaction.id}`}>
@@ -132,16 +151,11 @@ export function TransactionsScreen({ navigation, route }) {
                         style={[
                           styles.icon,
                           {
-                            backgroundColor: isIncome
-                              ? colors.primarySoft
-                              : colors.accentSoft,
+                            backgroundColor: tone.background,
                           },
                         ]}
                       >
-                        <Icon
-                          color={isIncome ? colors.primary : colors.accent}
-                          size={19}
-                        />
+                        <Icon color={tone.foreground} size={19} />
                       </View>
                       <View style={styles.rowCopy}>
                         <Text numberOfLines={1} style={styles.rowTitle}>

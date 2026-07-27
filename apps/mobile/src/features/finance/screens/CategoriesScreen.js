@@ -77,7 +77,11 @@ export function CategoriesScreen({ navigation }) {
       setName('');
     } catch (error) {
       setRequestError(
-        getFinanceErrorMessage(error, 'Unable to create this category.'),
+        getFinanceErrorMessage(
+          error,
+          'Unable to create this category.',
+          'A category with this name already exists.',
+        ),
       );
     } finally {
       setIsSaving(false);

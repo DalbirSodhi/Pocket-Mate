@@ -2,12 +2,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  CalendarClock,
   ChevronRight,
   CircleDollarSign,
+  CreditCard,
   Landmark,
   ListFilter,
   LogOut,
-  PiggyBank,
   Plus,
   ReceiptText,
   RefreshCw,
@@ -139,9 +140,10 @@ export function DashboardScreen({ navigation, profile }) {
   const availableCents = summary?.availableCents || 0;
   const incomeCents = summary?.incomeCents || 0;
   const expenseCents = summary?.expenseCents || 0;
-  const savingsCurrentCents = summary?.savingsCurrentCents || 0;
+  const committedCents = summary?.committedCents || 0;
+  const totalOutflowCents = summary?.totalOutflowCents || 0;
   const spendingProgress =
-    incomeCents > 0 ? Math.min(expenseCents / incomeCents, 1) : 0;
+    incomeCents > 0 ? Math.min(totalOutflowCents / incomeCents, 1) : 0;
 
   function handleSignOut() {
     Alert.alert('Sign out?', 'You can sign back in at any time.', [
@@ -198,7 +200,9 @@ export function DashboardScreen({ navigation, profile }) {
           <View style={styles.balancePanel}>
             <View style={styles.balanceHeading}>
               <View>
-                <Text style={styles.balanceLabel}>Available this month</Text>
+                <Text style={styles.balanceLabel}>
+                  Available after commitments
+                </Text>
                 <Text
                   adjustsFontSizeToFit
                   numberOfLines={1}
@@ -221,7 +225,7 @@ export function DashboardScreen({ navigation, profile }) {
             </View>
             <View style={styles.progressLabels}>
               <Text style={styles.progressText}>
-                {formatCurrency(expenseCents, currencyCode)} spent
+                {formatCurrency(totalOutflowCents, currencyCode)} planned out
               </Text>
               <Text style={styles.progressText}>
                 {formatCurrency(incomeCents, currencyCode)} income
@@ -243,10 +247,10 @@ export function DashboardScreen({ navigation, profile }) {
               value={formatCurrency(expenseCents, currencyCode)}
             />
             <Metric
-              icon={PiggyBank}
-              label="Saved"
+              icon={CalendarClock}
+              label="Committed"
               tone={{ background: colors.warningSoft, foreground: colors.warning }}
-              value={formatCurrency(savingsCurrentCents, currencyCode)}
+              value={formatCurrency(committedCents, currencyCode)}
             />
           </View>
 
@@ -254,10 +258,12 @@ export function DashboardScreen({ navigation, profile }) {
             <Text style={styles.sectionTitle}>Quick add</Text>
             <View style={styles.quickActions}>
               <QuickAction
-                detail="Purchase or bill"
+                detail="Choose expense type"
                 icon={CircleDollarSign}
                 label="Expense"
-                onPress={() => navigation.navigate('AddExpense')}
+                onPress={() =>
+                  navigation.navigate('AddExpense', { currencyCode })
+                }
                 tone={{ background: colors.accentSoft, foreground: colors.accent }}
               />
               <QuickAction
@@ -287,6 +293,56 @@ export function DashboardScreen({ navigation, profile }) {
                   {formatCurrency(summary?.savingsTargetCents || 0, currencyCode)}
                 </Text>
               </View>
+              <View style={styles.divider} />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('FixedExpenses', { currencyCode })
+                }
+                style={({ pressed }) => [
+                  styles.healthRow,
+                  pressed && styles.healthRowPressed,
+                ]}
+              >
+                <View style={styles.healthIcon}>
+                  <CalendarClock color={colors.primary} size={20} />
+                </View>
+                <View style={styles.healthCopy}>
+                  <Text style={styles.healthTitle}>Monthly fixed</Text>
+                  <Text style={styles.healthBody}>
+                    {summary?.activeRecurringExpenses || 0} active
+                  </Text>
+                </View>
+                <Text style={styles.healthValue}>
+                  {formatCurrency(summary?.fixedExpenseCents || 0, currencyCode)}
+                </Text>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
+              <View style={styles.divider} />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('CreditCards', { currencyCode })
+                }
+                style={({ pressed }) => [
+                  styles.healthRow,
+                  pressed && styles.healthRowPressed,
+                ]}
+              >
+                <View style={styles.healthIcon}>
+                  <CreditCard color={colors.success} size={20} />
+                </View>
+                <View style={styles.healthCopy}>
+                  <Text style={styles.healthTitle}>Card bills</Text>
+                  <Text style={styles.healthBody}>
+                    {summary?.unpaidCardBills || 0} unpaid this month
+                  </Text>
+                </View>
+                <Text style={styles.healthValue}>
+                  {formatCurrency(summary?.cardBillCents || 0, currencyCode)}
+                </Text>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
               <View style={styles.divider} />
               <View style={styles.healthRow}>
                 <View style={styles.healthIcon}>
@@ -565,6 +621,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  healthRowPressed: {
+    backgroundColor: colors.surfaceMuted,
   },
   healthIcon: {
     width: 38,

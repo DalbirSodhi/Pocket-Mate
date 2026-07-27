@@ -57,9 +57,29 @@ function validateEntry({ amount, date }) {
   return errors;
 }
 
+function validateCardBill({ amount, statementDate, dueDate, lastFour = '' }) {
+  const errors = validateEntry({ amount, date: statementDate });
+
+  if (!isValidDateString(dueDate)) {
+    errors.dueDate = 'Use a valid due date in YYYY-MM-DD format.';
+  } else if (
+    isValidDateString(statementDate) &&
+    dueDate.localeCompare(statementDate) < 0
+  ) {
+    errors.dueDate = 'Due date cannot be before the statement date.';
+  }
+
+  if (lastFour && !/^\d{4}$/.test(lastFour)) {
+    errors.lastFour = 'Enter exactly four digits.';
+  }
+
+  return errors;
+}
+
 module.exports = {
   getLocalDateString,
   isValidDateString,
   parseAmountToCents,
+  validateCardBill,
   validateEntry,
 };
