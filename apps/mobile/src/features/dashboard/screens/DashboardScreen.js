@@ -1,15 +1,20 @@
+import { useFocusEffect } from '@react-navigation/native';
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  ChevronRight,
+  CircleDollarSign,
   Landmark,
+  ListFilter,
   LogOut,
   PiggyBank,
+  Plus,
   ReceiptText,
   RefreshCw,
   Target,
   WalletCards,
 } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -56,7 +61,26 @@ function EmptyActivity() {
   );
 }
 
-export function DashboardScreen({ profile }) {
+function QuickAction({ icon: Icon, label, detail, onPress, tone }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
+    >
+      <View style={[styles.quickActionIcon, { backgroundColor: tone.background }]}>
+        <Icon color={tone.foreground} size={21} />
+      </View>
+      <View style={styles.quickActionCopy}>
+        <Text style={styles.quickActionLabel}>{label}</Text>
+        <Text style={styles.quickActionDetail}>{detail}</Text>
+      </View>
+      <Plus color={colors.inkMuted} size={18} />
+    </Pressable>
+  );
+}
+
+export function DashboardScreen({ navigation, profile }) {
   const { user } = useAuthSession();
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState('');
@@ -78,30 +102,33 @@ export function DashboardScreen({ profile }) {
     }
   }, [user.id]);
 
-  useEffect(() => {
-    let isActive = true;
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
 
-    getDashboardSummary(user.id)
-      .then((nextSummary) => {
-        if (isActive) {
-          setSummary(nextSummary);
-        }
-      })
-      .catch((dashboardError) => {
-        if (isActive) {
-          setError(dashboardError.message || 'Unable to load your dashboard.');
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsInitialLoading(false);
-        }
-      });
+      getDashboardSummary(user.id)
+        .then((nextSummary) => {
+          if (isActive) {
+            setSummary(nextSummary);
+            setError('');
+          }
+        })
+        .catch((dashboardError) => {
+          if (isActive) {
+            setError(dashboardError.message || 'Unable to load your dashboard.');
+          }
+        })
+        .finally(() => {
+          if (isActive) {
+            setIsInitialLoading(false);
+          }
+        });
 
-    return () => {
-      isActive = false;
-    };
-  }, [user.id]);
+      return () => {
+        isActive = false;
+      };
+    }, [user.id]),
+  );
 
   const firstName = useMemo(() => {
     const displayName = profile.display_name || user.email || 'there';
@@ -224,6 +251,26 @@ export function DashboardScreen({ profile }) {
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quick add</Text>
+            <View style={styles.quickActions}>
+              <QuickAction
+                detail="Purchase or bill"
+                icon={CircleDollarSign}
+                label="Expense"
+                onPress={() => navigation.navigate('AddExpense')}
+                tone={{ background: colors.accentSoft, foreground: colors.accent }}
+              />
+              <QuickAction
+                detail="Salary or deposit"
+                icon={ArrowDownLeft}
+                label="Income"
+                onPress={() => navigation.navigate('AddIncome')}
+                tone={{ background: colors.primarySoft, foreground: colors.primary }}
+              />
+            </View>
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.sectionTitle}>Plan health</Text>
             <View style={styles.healthRows}>
               <View style={styles.healthRow}>
@@ -257,7 +304,20 @@ export function DashboardScreen({ profile }) {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent activity</Text>
+            <View style={styles.sectionHeading}>
+              <Text style={styles.sectionTitle}>Recent activity</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('Transactions', { currencyCode })
+                }
+                style={styles.textButton}
+              >
+                <ListFilter color={colors.primary} size={16} />
+                <Text style={styles.textButtonLabel}>See all</Text>
+                <ChevronRight color={colors.primary} size={16} />
+              </Pressable>
+            </View>
             {summary?.recentExpenses?.length ? (
               <View style={styles.activityList}>
                 {summary.recentExpenses.map((expense, index) => (
@@ -433,9 +493,65 @@ const styles = StyleSheet.create({
   section: {
     gap: spacing.md,
   },
+  sectionHeading: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   sectionTitle: {
     ...typography.section,
     color: colors.ink,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  quickAction: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 84,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  quickActionPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickActionCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  quickActionLabel: {
+    ...typography.label,
+    color: colors.ink,
+  },
+  quickActionDetail: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  textButton: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  textButtonLabel: {
+    ...typography.label,
+    color: colors.primary,
   },
   healthRows: {
     borderWidth: 1,

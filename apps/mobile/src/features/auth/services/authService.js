@@ -1,7 +1,17 @@
+import { Platform } from 'react-native';
+
 import { supabase } from '../../../infrastructure/supabase/client';
 
 const MIN_PASSWORD_LENGTH = 8;
-const PASSWORD_RESET_REDIRECT_URL = 'pocketmate://reset-password';
+const NATIVE_PASSWORD_RESET_REDIRECT_URL = 'pocketmate://reset-password';
+
+function getPasswordResetRedirectUrl() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
+  return NATIVE_PASSWORD_RESET_REDIRECT_URL;
+}
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -79,7 +89,7 @@ export async function requestPasswordReset(email) {
   assertValidEmail(normalizedEmail);
 
   const response = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-    redirectTo: PASSWORD_RESET_REDIRECT_URL,
+    redirectTo: getPasswordResetRedirectUrl(),
   });
 
   return unwrapAuthResponse(response);

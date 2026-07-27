@@ -17,6 +17,12 @@ import {
 } from '../features/auth/screens';
 import { useAuthSession } from '../features/auth';
 import { DashboardScreen } from '../features/dashboard';
+import {
+  AddExpenseScreen,
+  AddIncomeScreen,
+  CategoriesScreen,
+  TransactionsScreen,
+} from '../features/finance';
 import { ProfileGate } from '../features/profile';
 
 const Stack = createNativeStackNavigator();
@@ -53,10 +59,10 @@ function RecoveryNavigator() {
   );
 }
 
-function MainScreen() {
+function MainScreen({ navigation }) {
   return (
     <ProfileGate>
-      {(profile) => <DashboardScreen profile={profile} />}
+      {(profile) => <DashboardScreen navigation={navigation} profile={profile} />}
     </ProfileGate>
   );
 }
@@ -65,6 +71,10 @@ function MainNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen component={MainScreen} name="Dashboard" />
+      <Stack.Screen component={AddExpenseScreen} name="AddExpense" />
+      <Stack.Screen component={AddIncomeScreen} name="AddIncome" />
+      <Stack.Screen component={CategoriesScreen} name="Categories" />
+      <Stack.Screen component={TransactionsScreen} name="Transactions" />
     </Stack.Navigator>
   );
 }

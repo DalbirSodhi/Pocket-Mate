@@ -17,6 +17,9 @@ export function FormField({
   returnKeyType,
   onSubmitEditing,
   error,
+  maxLength,
+  multiline = false,
+  numberOfLines,
 }) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const shouldHideValue = secureTextEntry && !isPasswordVisible;
@@ -29,13 +32,16 @@ export function FormField({
           autoCapitalize={autoCapitalize}
           autoComplete={autoComplete}
           keyboardType={keyboardType}
+          maxLength={maxLength}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
           onChangeText={onChangeText}
           onSubmitEditing={onSubmitEditing}
           placeholder={placeholder}
           placeholderTextColor={colors.inkMuted}
           returnKeyType={returnKeyType}
           secureTextEntry={shouldHideValue}
-          style={styles.input}
+          style={[styles.input, multiline && styles.multilineInput]}
           textContentType={textContentType}
           value={value}
         />
@@ -86,6 +92,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 50,
     paddingHorizontal: spacing.lg,
+  },
+  multilineInput: {
+    minHeight: 96,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    textAlignVertical: 'top',
   },
   visibilityButton: {
     width: 48,
