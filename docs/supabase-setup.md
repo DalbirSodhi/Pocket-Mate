@@ -77,11 +77,25 @@ Do not create Supabase clients directly inside screens. Import the shared client
 
 Auth screens should call the auth feature service documented in [auth-service-contract.md](./auth-service-contract.md).
 
-The hosted Supabase Auth redirect allow list must include:
+The hosted Supabase Auth redirect allow list includes:
 
 ```text
+http://localhost:8081
 pocketmate://reset-password
 ```
+
+The web app uses its current origin for password recovery. Native builds use the
+`pocketmate` URL scheme.
+
+After reviewing the proposed diff, deploy linked project configuration with:
+
+```bash
+npx supabase config push
+```
+
+Do not accept unrelated hosted configuration changes. Email confirmation, TOTP
+MFA support, the eight-character OTP setting, and the one-minute email rate
+limit are intentionally preserved in `supabase/config.toml`.
 
 ## Backend-First Flow
 
