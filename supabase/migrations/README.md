@@ -17,4 +17,5 @@ Current migrations:
 202607110001_create_finance_core.sql
 202607250001_grant_finance_api_access.sql
 202607270001_add_recurring_expenses_and_card_bills.sql
+202607270002_complete_monthly_plan.sql
 ```
