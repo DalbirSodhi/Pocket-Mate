@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Check, CreditCard, WalletCards } from 'lucide-react-native';
+import { Check, CreditCard, Plus, WalletCards } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -48,6 +48,8 @@ export function CardBillScreen({ navigation, route }) {
   const [requestError, setRequestError] = useState('');
   const [isLoadingCards, setIsLoadingCards] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingCard, setIsSavingCard] = useState(false);
+  const [isAddingCard, setIsAddingCard] = useState(false);
 
   const loadCards = useCallback(async () => {
     setRequestError('');
@@ -75,6 +77,61 @@ export function CardBillScreen({ navigation, route }) {
       loadCards();
     }, [loadCards]),
   );
+
+  function getCardErrors() {
+    const nextErrors = {};
+
+    if (nickname.trim().length < 2) {
+      nextErrors.nickname = 'Enter a name for this card.';
+    }
+
+    if (lastFour && !/^\d{4}$/.test(lastFour)) {
+      nextErrors.lastFour = 'Enter exactly four digits.';
+    }
+
+    return nextErrors;
+  }
+
+  function clearCardForm() {
+    setNickname('');
+    setIssuer('');
+    setLastFour('');
+  }
+
+  async function handleAddCard() {
+    const nextErrors = getCardErrors();
+    setErrors(nextErrors);
+    setRequestError('');
+
+    if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
+    setIsSavingCard(true);
+
+    try {
+      const card = await createCreditCard({
+        userId: user.id,
+        nickname,
+        issuer,
+        lastFour,
+      });
+      setCards((current) => [...current, card]);
+      setCreditCardId(card.id);
+      clearCardForm();
+      setIsAddingCard(false);
+    } catch (error) {
+      setRequestError(
+        getFinanceErrorMessage(
+          error,
+          'Unable to save this card.',
+          'A card with this nickname already exists.',
+        ),
+      );
+    } finally {
+      setIsSavingCard(false);
+    }
+  }
 
   async function handleSave() {
     const isCreatingCard = cards.length === 0;
@@ -179,7 +236,22 @@ export function CardBillScreen({ navigation, route }) {
 
             {cards.length > 0 ? (
               <View style={styles.cardBlock}>
-                <Text style={styles.fieldLabel}>Card</Text>
+                <View style={styles.cardHeading}>
+                  <Text style={styles.fieldLabel}>Card</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      setErrors({});
+                      setIsAddingCard((current) => !current);
+                    }}
+                    style={styles.addCardButton}
+                  >
+                    <Plus color={colors.primary} size={17} />
+                    <Text style={styles.addCardLabel}>
+                      {isAddingCard ? 'Cancel' : 'Add another card'}
+                    </Text>
+                  </Pressable>
+                </View>
                 <View style={styles.cardGrid}>
                   {cards
                     .filter((card) => card.is_active)
@@ -223,6 +295,42 @@ export function CardBillScreen({ navigation, route }) {
                 </View>
                 {errors.card ? (
                   <Text style={styles.errorText}>{errors.card}</Text>
+                ) : null}
+                {isAddingCard ? (
+                  <View style={styles.newCard}>
+                    <Text style={styles.sectionTitle}>New credit card</Text>
+                    <FormField
+                      error={errors.nickname}
+                      label="Card nickname"
+                      maxLength={40}
+                      onChangeText={setNickname}
+                      placeholder="Travel Mastercard"
+                      value={nickname}
+                    />
+                    <FormField
+                      label="Issuer (optional)"
+                      maxLength={50}
+                      onChangeText={setIssuer}
+                      placeholder="Bank or card provider"
+                      value={issuer}
+                    />
+                    <FormField
+                      error={errors.lastFour}
+                      keyboardType="number-pad"
+                      label="Last four digits (optional)"
+                      maxLength={4}
+                      onChangeText={setLastFour}
+                      placeholder="1234"
+                      value={lastFour}
+                    />
+                    <AppButton
+                      icon={Plus}
+                      isLoading={isSavingCard}
+                      label="Save and select card"
+                      onPress={handleAddCard}
+                      variant="secondary"
+                    />
+                  </View>
                 ) : null}
               </View>
             ) : isLoadingCards ? (
@@ -316,7 +424,7 @@ export function CardBillScreen({ navigation, route }) {
             </View>
 
             <AppButton
-              disabled={isLoadingCards}
+              disabled={isLoadingCards || isAddingCard || isSavingCard}
               icon={Check}
               isLoading={isSaving}
               label="Save card bill"
@@ -358,6 +466,23 @@ const styles = StyleSheet.create({
   },
   cardBlock: {
     gap: spacing.sm,
+  },
+  cardHeading: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  addCardButton: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  addCardLabel: {
+    ...typography.label,
+    color: colors.primary,
   },
   cardGrid: {
     gap: spacing.sm,
