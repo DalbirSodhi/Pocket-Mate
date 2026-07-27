@@ -142,6 +142,20 @@ export function DashboardScreen({ navigation, profile }) {
   const expenseCents = summary?.expenseCents || 0;
   const committedCents = summary?.committedCents || 0;
   const totalOutflowCents = summary?.totalOutflowCents || 0;
+  const planHealth = summary?.planHealth || {
+    label: 'Add income',
+    tone: 'neutral',
+    allocationPercent: 0,
+    detail: 'Income is needed before plan health can be calculated.',
+  };
+  const planTone =
+    planHealth.tone === 'success'
+      ? { background: colors.successSoft, foreground: colors.success }
+      : planHealth.tone === 'danger'
+        ? { background: colors.dangerSoft, foreground: colors.danger }
+        : planHealth.tone === 'warning'
+          ? { background: colors.warningSoft, foreground: colors.warning }
+          : { background: colors.primarySoft, foreground: colors.primary };
   const spendingProgress =
     incomeCents > 0 ? Math.min(totalOutflowCents / incomeCents, 1) : 0;
 
@@ -277,9 +291,44 @@ export function DashboardScreen({ navigation, profile }) {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Plan health</Text>
+            <Text style={styles.sectionTitle}>Monthly plan</Text>
+            <View
+              style={[
+                styles.planStatus,
+                { backgroundColor: planTone.background },
+              ]}
+            >
+              <View style={styles.planStatusHeading}>
+                <Text
+                  style={[
+                    styles.planStatusLabel,
+                    { color: planTone.foreground },
+                  ]}
+                >
+                  {planHealth.label}
+                </Text>
+                <Text
+                  style={[
+                    styles.planStatusPercent,
+                    { color: planTone.foreground },
+                  ]}
+                >
+                  {planHealth.allocationPercent}% allocated
+                </Text>
+              </View>
+              <Text style={styles.planStatusDetail}>{planHealth.detail}</Text>
+            </View>
             <View style={styles.healthRows}>
-              <View style={styles.healthRow}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('SavingsGoals', { currencyCode })
+                }
+                style={({ pressed }) => [
+                  styles.healthRow,
+                  pressed && styles.healthRowPressed,
+                ]}
+              >
                 <View style={styles.healthIcon}>
                   <Target color={colors.primary} size={20} />
                 </View>
@@ -290,9 +339,10 @@ export function DashboardScreen({ navigation, profile }) {
                   </Text>
                 </View>
                 <Text style={styles.healthValue}>
-                  {formatCurrency(summary?.savingsTargetCents || 0, currencyCode)}
+                  {formatCurrency(summary?.monthlySavingsCents || 0, currencyCode)}
                 </Text>
-              </View>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
               <View style={styles.divider} />
               <Pressable
                 accessibilityRole="button"
@@ -344,18 +394,30 @@ export function DashboardScreen({ navigation, profile }) {
                 <ChevronRight color={colors.inkMuted} size={18} />
               </Pressable>
               <View style={styles.divider} />
-              <View style={styles.healthRow}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('BudgetCaps', { currencyCode })
+                }
+                style={({ pressed }) => [
+                  styles.healthRow,
+                  pressed && styles.healthRowPressed,
+                ]}
+              >
                 <View style={styles.healthIcon}>
                   <Landmark color={colors.accent} size={20} />
                 </View>
                 <View style={styles.healthCopy}>
                   <Text style={styles.healthTitle}>Budget caps</Text>
-                  <Text style={styles.healthBody}>Category limits</Text>
+                  <Text style={styles.healthBody}>
+                    {summary?.overBudgetCaps || 0} over limit
+                  </Text>
                 </View>
                 <Text style={styles.healthValue}>
-                  {summary?.activeBudgetCaps || 0} active
+                  {formatCurrency(summary?.budgetCapCents || 0, currencyCode)}
                 </Text>
-              </View>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
             </View>
           </View>
 
@@ -378,7 +440,19 @@ export function DashboardScreen({ navigation, profile }) {
               <View style={styles.activityList}>
                 {summary.recentExpenses.map((expense, index) => (
                   <View key={expense.id}>
-                    <View style={styles.activityRow}>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() =>
+                        navigation.navigate('ExpenseDetail', {
+                          expenseId: expense.id,
+                          currencyCode,
+                        })
+                      }
+                      style={({ pressed }) => [
+                        styles.activityRow,
+                        pressed && styles.activityRowPressed,
+                      ]}
+                    >
                       <View style={styles.activityIcon}>
                         <ReceiptText color={colors.inkMuted} size={19} />
                       </View>
@@ -393,7 +467,8 @@ export function DashboardScreen({ navigation, profile }) {
                       <Text style={styles.activityAmount}>
                         -{formatCurrency(expense.amount_cents, currencyCode)}
                       </Text>
-                    </View>
+                      <ChevronRight color={colors.inkMuted} size={17} />
+                    </Pressable>
                     {index < summary.recentExpenses.length - 1 ? (
                       <View style={styles.divider} />
                     ) : null}
@@ -504,7 +579,7 @@ const styles = StyleSheet.create({
     height: '100%',
     minWidth: 0,
     borderRadius: radius.sm,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.gold,
   },
   progressLabels: {
     flexDirection: 'row',
@@ -616,6 +691,29 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.lg,
   },
+  planStatus: {
+    minHeight: 88,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  planStatusHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  planStatusLabel: {
+    ...typography.section,
+  },
+  planStatusPercent: {
+    ...typography.label,
+  },
+  planStatusDetail: {
+    ...typography.caption,
+    color: colors.ink,
+  },
   healthRow: {
     minHeight: 72,
     flexDirection: 'row',
@@ -695,6 +793,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  activityRowPressed: {
+    backgroundColor: colors.surfaceMuted,
   },
   activityIcon: {
     width: 38,

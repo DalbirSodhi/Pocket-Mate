@@ -1,14 +1,15 @@
 import { supabase } from '../../../infrastructure/supabase/client';
+import { getNextMonthlyDateString } from '../utils/financeValidation.cjs';
 
 export const DEFAULT_EXPENSE_CATEGORIES = [
-  { name: 'Housing', color: '#744553', icon: 'house' },
-  { name: 'Food', color: '#8F6525', icon: 'utensils' },
-  { name: 'Transport', color: '#5E6B4D', icon: 'car' },
-  { name: 'Shopping', color: '#7A5D8A', icon: 'shopping-bag' },
-  { name: 'Health', color: '#9A4F55', icon: 'heart-pulse' },
-  { name: 'Bills', color: '#4F657A', icon: 'receipt' },
-  { name: 'Entertainment', color: '#8A624E', icon: 'clapperboard' },
-  { name: 'Other', color: '#746A60', icon: 'circle-ellipsis' },
+  { name: 'Housing', color: '#1F2A44', icon: 'house' },
+  { name: 'Food', color: '#9C7B31', icon: 'utensils' },
+  { name: 'Transport', color: '#476553', icon: 'car' },
+  { name: 'Shopping', color: '#596783', icon: 'shopping-bag' },
+  { name: 'Health', color: '#A33D4A', icon: 'heart-pulse' },
+  { name: 'Bills', color: '#6B7280', icon: 'receipt' },
+  { name: 'Entertainment', color: '#8E6F39', icon: 'clapperboard' },
+  { name: 'Other', color: '#626A78', icon: 'circle-ellipsis' },
 ];
 
 function unwrap(response) {
@@ -61,7 +62,7 @@ export async function createExpenseCategory({ userId, name }) {
     .insert({
       user_id: userId,
       name: name.trim(),
-      color: '#8F6525',
+      color: '#C6A75E',
       icon: 'tag',
       is_default: false,
     })
@@ -120,6 +121,65 @@ export async function createExpenseEntry({
       note: note.trim() || null,
     })
     .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function getExpenseDetail({ userId, expenseId }) {
+  const [expenseResponse, categories, recurringResponse] = await Promise.all([
+    supabase
+      .from('expenses')
+      .select('id, category_id, amount_cents, spent_on, merchant, note')
+      .eq('user_id', userId)
+      .eq('id', expenseId)
+      .single(),
+    getExpenseCategories(userId),
+    supabase
+      .from('recurring_expenses')
+      .select('id, starts_on, is_active')
+      .eq('user_id', userId)
+      .eq('source_expense_id', expenseId)
+      .maybeSingle(),
+  ]);
+
+  if (expenseResponse.error) {
+    throw expenseResponse.error;
+  }
+
+  if (recurringResponse.error) {
+    throw recurringResponse.error;
+  }
+
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+
+  return {
+    ...expenseResponse.data,
+    category: categoryById.get(expenseResponse.data.category_id) || null,
+    recurringExpense: recurringResponse.data || null,
+  };
+}
+
+export async function convertExpenseToRecurring({ userId, expense }) {
+  const startsOn = getNextMonthlyDateString(expense.spent_on);
+  const response = await supabase
+    .from('recurring_expenses')
+    .insert({
+      user_id: userId,
+      category_id: expense.category_id,
+      name: expense.merchant?.trim() || expense.category?.name || 'Monthly expense',
+      amount_cents: expense.amount_cents,
+      cadence: 'monthly',
+      charge_day: Number(startsOn.split('-')[2]),
+      starts_on: startsOn,
+      source_expense_id: expense.id,
+      note: expense.note || null,
+    })
+    .select('id, starts_on, is_active')
     .single();
 
   if (response.error) {

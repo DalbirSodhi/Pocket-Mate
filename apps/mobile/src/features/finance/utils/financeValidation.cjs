@@ -9,6 +9,19 @@ function getLocalDateString(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function getNextMonthlyDateString(sourceDate, date = new Date()) {
+  const chargeDay = Number(String(sourceDate).split('-')[2]);
+  const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  const lastDay = new Date(
+    nextMonth.getFullYear(),
+    nextMonth.getMonth() + 1,
+    0,
+  ).getDate();
+
+  nextMonth.setDate(Math.min(chargeDay, lastDay));
+  return getLocalDateString(nextMonth);
+}
+
 function parseAmountToCents(value) {
   const normalized = String(value || '')
     .replace(/[$,\s]/g, '')
@@ -78,6 +91,7 @@ function validateCardBill({ amount, statementDate, dueDate, lastFour = '' }) {
 
 module.exports = {
   getLocalDateString,
+  getNextMonthlyDateString,
   isValidDateString,
   parseAmountToCents,
   validateCardBill,

@@ -2,6 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  ChevronRight,
   CreditCard,
   ReceiptText,
 } from 'lucide-react-native';
@@ -146,7 +147,20 @@ export function TransactionsScreen({ navigation, route }) {
 
                 return (
                   <View key={`${transaction.type}-${transaction.id}`}>
-                    <View style={styles.row}>
+                    <Pressable
+                      accessibilityRole={transaction.type === 'expense' ? 'button' : undefined}
+                      disabled={transaction.type !== 'expense'}
+                      onPress={() =>
+                        navigation.navigate('ExpenseDetail', {
+                          expenseId: transaction.id,
+                          currencyCode,
+                        })
+                      }
+                      style={({ pressed }) => [
+                        styles.row,
+                        pressed && styles.rowPressed,
+                      ]}
+                    >
                       <View
                         style={[
                           styles.icon,
@@ -176,7 +190,10 @@ export function TransactionsScreen({ navigation, route }) {
                         {isIncome ? '+' : '-'}
                         {formatCurrency(transaction.amountCents, currencyCode)}
                       </Text>
-                    </View>
+                      {transaction.type === 'expense' ? (
+                        <ChevronRight color={colors.inkMuted} size={17} />
+                      ) : null}
+                    </Pressable>
                     {index < visibleTransactions.length - 1 ? (
                       <View style={styles.divider} />
                     ) : null}
@@ -258,6 +275,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  rowPressed: {
+    backgroundColor: colors.surfaceMuted,
   },
   icon: {
     width: 40,

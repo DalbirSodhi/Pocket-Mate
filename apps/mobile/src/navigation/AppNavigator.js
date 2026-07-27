@@ -23,12 +23,14 @@ import {
   CardBillScreen,
   CategoriesScreen,
   CreditCardsScreen,
+  ExpenseDetailScreen,
   FixedExpensesScreen,
   OneTimeExpenseScreen,
   RecurringExpenseScreen,
   TransactionsScreen,
 } from '../features/finance';
 import { ProfileGate } from '../features/profile';
+import { BudgetCapsScreen, SavingsGoalsScreen } from '../features/planning';
 
 const Stack = createNativeStackNavigator();
 
@@ -84,6 +86,9 @@ function MainNavigator() {
       <Stack.Screen component={CategoriesScreen} name="Categories" />
       <Stack.Screen component={FixedExpensesScreen} name="FixedExpenses" />
       <Stack.Screen component={CreditCardsScreen} name="CreditCards" />
+      <Stack.Screen component={ExpenseDetailScreen} name="ExpenseDetail" />
+      <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />
+      <Stack.Screen component={BudgetCapsScreen} name="BudgetCaps" />
       <Stack.Screen component={TransactionsScreen} name="Transactions" />
     </Stack.Navigator>
   );

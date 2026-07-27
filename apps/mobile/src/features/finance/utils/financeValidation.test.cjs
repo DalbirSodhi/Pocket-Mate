@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const {
   getLocalDateString,
+  getNextMonthlyDateString,
   isValidDateString,
   parseAmountToCents,
   validateCardBill,
@@ -30,6 +31,17 @@ test('isValidDateString rejects impossible calendar dates', () => {
 
 test('getLocalDateString returns an ISO local date', () => {
   assert.equal(getLocalDateString(new Date(2026, 6, 26, 12)), '2026-07-26');
+});
+
+test('getNextMonthlyDateString preserves or clamps the charge day', () => {
+  assert.equal(
+    getNextMonthlyDateString('2026-01-15', new Date(2026, 0, 20)),
+    '2026-02-15',
+  );
+  assert.equal(
+    getNextMonthlyDateString('2026-01-31', new Date(2026, 0, 20)),
+    '2026-02-28',
+  );
 });
 
 test('validateEntry reports amount and date errors together', () => {
