@@ -129,8 +129,195 @@ export async function createExpenseEntry({
   return response.data;
 }
 
+export async function createRecurringExpense({
+  userId,
+  categoryId,
+  name,
+  amountCents,
+  startsOn,
+  note,
+}) {
+  const response = await supabase
+    .from('recurring_expenses')
+    .insert({
+      user_id: userId,
+      category_id: categoryId,
+      name: name.trim(),
+      amount_cents: amountCents,
+      cadence: 'monthly',
+      charge_day: Number(startsOn.split('-')[2]),
+      starts_on: startsOn,
+      note: note.trim() || null,
+    })
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function getRecurringExpenses(userId) {
+  const [plansResponse, categories] = await Promise.all([
+    supabase
+      .from('recurring_expenses')
+      .select(
+        'id, category_id, name, amount_cents, cadence, charge_day, starts_on, ends_on, is_active, note',
+      )
+      .eq('user_id', userId)
+      .order('is_active', { ascending: false })
+      .order('charge_day', { ascending: true }),
+    getExpenseCategories(userId),
+  ]);
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+
+  return unwrap(plansResponse).map((plan) => ({
+    ...plan,
+    category: categoryById.get(plan.category_id) || null,
+  }));
+}
+
+export async function setRecurringExpenseActive({
+  userId,
+  recurringExpenseId,
+  isActive,
+}) {
+  const response = await supabase
+    .from('recurring_expenses')
+    .update({ is_active: isActive })
+    .eq('user_id', userId)
+    .eq('id', recurringExpenseId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function getCreditCards(userId) {
+  const response = await supabase
+    .from('credit_cards')
+    .select('id, nickname, issuer, last_four, is_active')
+    .eq('user_id', userId)
+    .order('is_active', { ascending: false })
+    .order('nickname', { ascending: true });
+
+  return unwrap(response);
+}
+
+export async function createCreditCard({ userId, nickname, issuer, lastFour }) {
+  const response = await supabase
+    .from('credit_cards')
+    .insert({
+      user_id: userId,
+      nickname: nickname.trim(),
+      issuer: issuer.trim() || null,
+      last_four: lastFour.trim() || null,
+    })
+    .select('id, nickname, issuer, last_four, is_active')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function setCreditCardActive({ userId, creditCardId, isActive }) {
+  const response = await supabase
+    .from('credit_cards')
+    .update({ is_active: isActive })
+    .eq('user_id', userId)
+    .eq('id', creditCardId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function createCreditCardBill({
+  userId,
+  creditCardId,
+  amountCents,
+  statementOn,
+  dueOn,
+  paidOn,
+  note,
+}) {
+  const response = await supabase
+    .from('credit_card_bills')
+    .insert({
+      user_id: userId,
+      credit_card_id: creditCardId,
+      amount_cents: amountCents,
+      statement_on: statementOn,
+      due_on: dueOn,
+      paid_on: paidOn || null,
+      note: note.trim() || null,
+    })
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function getCreditCardBills(userId, limit = 100) {
+  const [billsResponse, cards] = await Promise.all([
+    supabase
+      .from('credit_card_bills')
+      .select(
+        'id, credit_card_id, amount_cents, statement_on, due_on, paid_on, note, created_at',
+      )
+      .eq('user_id', userId)
+      .order('due_on', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    getCreditCards(userId),
+  ]);
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+
+  return unwrap(billsResponse).map((bill) => ({
+    ...bill,
+    card: cardById.get(bill.credit_card_id) || null,
+  }));
+}
+
+export async function setCreditCardBillPaid({
+  userId,
+  billId,
+  paidOn,
+}) {
+  const response = await supabase
+    .from('credit_card_bills')
+    .update({ paid_on: paidOn || null })
+    .eq('user_id', userId)
+    .eq('id', billId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
 export async function getTransactions(userId, limit = 100) {
-  const [incomeResponse, expenseResponse, categories] = await Promise.all([
+  const [incomeResponse, expenseResponse, categories, cardBills] = await Promise.all([
     supabase
       .from('income_entries')
       .select('id, amount_cents, source, received_on, note, created_at')
@@ -146,6 +333,7 @@ export async function getTransactions(userId, limit = 100) {
       .order('created_at', { ascending: false })
       .limit(limit),
     getExpenseCategories(userId),
+    getCreditCardBills(userId, limit),
   ]);
 
   const income = unwrap(incomeResponse).map((entry) => ({
@@ -173,7 +361,17 @@ export async function getTransactions(userId, limit = 100) {
     };
   });
 
-  return [...income, ...expenses]
+  const bills = cardBills.map((bill) => ({
+    id: bill.id,
+    type: 'card_bill',
+    amountCents: bill.amount_cents,
+    date: bill.paid_on || bill.due_on,
+    createdAt: bill.created_at,
+    title: bill.card?.nickname || 'Credit card bill',
+    subtitle: bill.paid_on ? 'Card bill paid' : 'Card bill due',
+  }));
+
+  return [...income, ...expenses, ...bills]
     .sort(
       (left, right) =>
         right.date.localeCompare(left.date) ||

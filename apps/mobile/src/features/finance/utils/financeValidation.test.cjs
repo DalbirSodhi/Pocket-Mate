@@ -5,6 +5,7 @@ const {
   getLocalDateString,
   isValidDateString,
   parseAmountToCents,
+  validateCardBill,
   validateEntry,
 } = require('./financeValidation.cjs');
 
@@ -36,4 +37,19 @@ test('validateEntry reports amount and date errors together', () => {
     amount: 'Enter an amount greater than zero with up to two decimals.',
     date: 'Use a valid date in YYYY-MM-DD format.',
   });
+});
+
+test('validateCardBill checks date order and optional last four digits', () => {
+  assert.deepEqual(
+    validateCardBill({
+      amount: '125.50',
+      statementDate: '2026-07-20',
+      dueDate: '2026-07-10',
+      lastFour: '12AB',
+    }),
+    {
+      dueDate: 'Due date cannot be before the statement date.',
+      lastFour: 'Enter exactly four digits.',
+    },
+  );
 });

@@ -20,7 +20,12 @@ import { DashboardScreen } from '../features/dashboard';
 import {
   AddExpenseScreen,
   AddIncomeScreen,
+  CardBillScreen,
   CategoriesScreen,
+  CreditCardsScreen,
+  FixedExpensesScreen,
+  OneTimeExpenseScreen,
+  RecurringExpenseScreen,
   TransactionsScreen,
 } from '../features/finance';
 import { ProfileGate } from '../features/profile';
@@ -73,7 +78,12 @@ function MainNavigator() {
       <Stack.Screen component={MainScreen} name="Dashboard" />
       <Stack.Screen component={AddExpenseScreen} name="AddExpense" />
       <Stack.Screen component={AddIncomeScreen} name="AddIncome" />
+      <Stack.Screen component={OneTimeExpenseScreen} name="OneTimeExpense" />
+      <Stack.Screen component={RecurringExpenseScreen} name="RecurringExpense" />
+      <Stack.Screen component={CardBillScreen} name="CardBill" />
       <Stack.Screen component={CategoriesScreen} name="Categories" />
+      <Stack.Screen component={FixedExpensesScreen} name="FixedExpenses" />
+      <Stack.Screen component={CreditCardsScreen} name="CreditCards" />
       <Stack.Screen component={TransactionsScreen} name="Transactions" />
     </Stack.Navigator>
   );

@@ -18,7 +18,25 @@ function getMonthRange(date = new Date()) {
   };
 }
 
+function calculatePlanTotals({
+  incomeCents,
+  expenseCents,
+  fixedExpenseCents,
+  cardBillCents,
+}) {
+  const committedCents = fixedExpenseCents + cardBillCents;
+  const totalOutflowCents = expenseCents + committedCents;
+
+  return {
+    committedCents,
+    totalOutflowCents,
+    availableCents: Math.max(incomeCents - totalOutflowCents, 0),
+    shortfallCents: Math.max(totalOutflowCents - incomeCents, 0),
+  };
+}
+
 module.exports = {
+  calculatePlanTotals,
   getMonthRange,
   sumCents,
 };
