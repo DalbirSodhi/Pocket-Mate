@@ -136,14 +136,10 @@ export function TransactionsScreen({ navigation, route }) {
                   : isCardBill
                     ? CreditCard
                     : ArrowUpRight;
-                const tone = isIncome
-                  ? { background: colors.primarySoft, foreground: colors.primary }
-                  : isCardBill
-                    ? {
-                        background: colors.warningSoft,
-                        foreground: colors.warning,
-                      }
-                    : { background: colors.accentSoft, foreground: colors.accent };
+                const tone = {
+                  background: colors.iconSurface,
+                  foreground: colors.iconInk,
+                };
 
                 return (
                   <View key={`${transaction.type}-${transaction.id}`}>
@@ -321,7 +317,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.iconSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },

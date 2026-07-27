@@ -251,19 +251,19 @@ export function DashboardScreen({ navigation, profile }) {
             <Metric
               icon={ArrowDownLeft}
               label="Income"
-              tone={{ background: colors.primarySoft, foreground: colors.primary }}
+              tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
               value={formatCurrency(incomeCents, currencyCode)}
             />
             <Metric
               icon={ArrowUpRight}
               label="Spent"
-              tone={{ background: colors.accentSoft, foreground: colors.accent }}
+              tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
               value={formatCurrency(expenseCents, currencyCode)}
             />
             <Metric
               icon={CalendarClock}
               label="Committed"
-              tone={{ background: colors.warningSoft, foreground: colors.warning }}
+              tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
               value={formatCurrency(committedCents, currencyCode)}
             />
           </View>
@@ -278,14 +278,14 @@ export function DashboardScreen({ navigation, profile }) {
                 onPress={() =>
                   navigation.navigate('AddExpense', { currencyCode })
                 }
-                tone={{ background: colors.accentSoft, foreground: colors.accent }}
+                tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
               />
               <QuickAction
                 detail="Salary or deposit"
                 icon={ArrowDownLeft}
                 label="Income"
                 onPress={() => navigation.navigate('AddIncome')}
-                tone={{ background: colors.primarySoft, foreground: colors.primary }}
+                tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
               />
             </View>
           </View>
@@ -380,7 +380,7 @@ export function DashboardScreen({ navigation, profile }) {
                 ]}
               >
                 <View style={styles.healthIcon}>
-                  <CreditCard color={colors.success} size={20} />
+                  <CreditCard color={colors.iconInk} size={20} />
                 </View>
                 <View style={styles.healthCopy}>
                   <Text style={styles.healthTitle}>Card bills</Text>
@@ -405,7 +405,7 @@ export function DashboardScreen({ navigation, profile }) {
                 ]}
               >
                 <View style={styles.healthIcon}>
-                  <Landmark color={colors.accent} size={20} />
+                  <Landmark color={colors.iconInk} size={20} />
                 </View>
                 <View style={styles.healthCopy}>
                   <Text style={styles.healthTitle}>Budget caps</Text>
@@ -454,7 +454,7 @@ export function DashboardScreen({ navigation, profile }) {
                       ]}
                     >
                       <View style={styles.activityIcon}>
-                        <ReceiptText color={colors.inkMuted} size={19} />
+                        <ReceiptText color={colors.iconInk} size={19} />
                       </View>
                       <View style={styles.activityCopy}>
                         <Text numberOfLines={1} style={styles.activityTitle}>
@@ -727,7 +727,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.iconSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -766,7 +766,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.iconSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -801,7 +801,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.iconSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },

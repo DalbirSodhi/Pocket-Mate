@@ -192,7 +192,7 @@ export function SavingsGoalsScreen({ navigation, route }) {
 
           <View style={styles.summary}>
             <View style={styles.summaryIcon}>
-              <PiggyBank color={colors.accent} size={23} />
+              <PiggyBank color={colors.iconInk} size={23} />
             </View>
             <View style={styles.summaryCopy}>
               <Text style={styles.summaryLabel}>Protected each month</Text>
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: radius.md,
-    backgroundColor: colors.accentSoft,
+    backgroundColor: colors.iconSurface,
     alignItems: 'center',
     justifyContent: 'center',
   },

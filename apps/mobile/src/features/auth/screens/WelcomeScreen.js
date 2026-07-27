@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   signalIcon: {
     width: 44,
     height: 44,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.iconSurface,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.md,
