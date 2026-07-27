@@ -29,7 +29,7 @@ import {
   RecurringExpenseScreen,
   TransactionsScreen,
 } from '../features/finance';
-import { ProfileGate } from '../features/profile';
+import { ProfileGate, SettingsScreen } from '../features/profile';
 import { BudgetCapsScreen, SavingsGoalsScreen } from '../features/planning';
 
 const Stack = createNativeStackNavigator();
@@ -66,18 +66,14 @@ function RecoveryNavigator() {
   );
 }
 
-function MainScreen({ navigation }) {
-  return (
-    <ProfileGate>
-      {(profile) => <DashboardScreen navigation={navigation} profile={profile} />}
-    </ProfileGate>
-  );
-}
-
-function MainNavigator() {
+function MainNavigator({ profile, onProfileChange }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen component={MainScreen} name="Dashboard" />
+      <Stack.Screen name="Dashboard">
+        {(screenProps) => (
+          <DashboardScreen {...screenProps} profile={profile} />
+        )}
+      </Stack.Screen>
       <Stack.Screen component={AddExpenseScreen} name="AddExpense" />
       <Stack.Screen component={AddIncomeScreen} name="AddIncome" />
       <Stack.Screen component={OneTimeExpenseScreen} name="OneTimeExpense" />
@@ -90,6 +86,15 @@ function MainNavigator() {
       <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />
       <Stack.Screen component={BudgetCapsScreen} name="BudgetCaps" />
       <Stack.Screen component={TransactionsScreen} name="Transactions" />
+      <Stack.Screen name="Settings">
+        {(screenProps) => (
+          <SettingsScreen
+            {...screenProps}
+            onProfileChange={onProfileChange}
+            profile={profile}
+          />
+        )}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -136,7 +141,14 @@ export function AppNavigator() {
       {isPasswordRecovery ? (
         <RecoveryNavigator />
       ) : isAuthenticated ? (
-        <MainNavigator />
+        <ProfileGate>
+          {(profile, onProfileChange) => (
+            <MainNavigator
+              onProfileChange={onProfileChange}
+              profile={profile}
+            />
+          )}
+        </ProfileGate>
       ) : (
         <AuthNavigator />
       )}

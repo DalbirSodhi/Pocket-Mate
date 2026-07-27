@@ -2,9 +2,13 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const {
+  calculateSafeToSpend,
   calculatePlanTotals,
+  getCycleSavingsContribution,
   getMonthRange,
+  getPayCycleRange,
   getPlanHealth,
+  isMonthlyChargeInRange,
   sumCents,
 } = require('./dashboardMath.cjs');
 
@@ -91,5 +95,106 @@ test('calculatePlanTotals reports a plan shortfall', () => {
       cardBillCents: 2000,
     }).shortfallCents,
     5000,
+  );
+});
+
+test('getPayCycleRange calculates weekly and bi-weekly boundaries from payday', () => {
+  assert.deepEqual(
+    getPayCycleRange({
+      payCycle: 'weekly',
+      anchorDate: '2026-07-03',
+      date: new Date(2026, 6, 27),
+    }),
+    {
+      startDate: '2026-07-24',
+      endDate: '2026-07-30',
+      nextPayday: '2026-07-31',
+      daysUntilNextPayday: 4,
+      label: 'Jul 24 - 30, 2026',
+      isConfigured: true,
+    },
+  );
+
+  assert.equal(
+    getPayCycleRange({
+      payCycle: 'bi_weekly',
+      anchorDate: '2026-07-03',
+      date: new Date(2026, 6, 27),
+    }).nextPayday,
+    '2026-07-31',
+  );
+});
+
+test('getPayCycleRange clamps monthly payday at month end', () => {
+  assert.deepEqual(
+    getPayCycleRange({
+      payCycle: 'monthly',
+      anchorDate: '2026-01-31',
+      date: new Date(2026, 1, 15),
+    }),
+    {
+      startDate: '2026-01-31',
+      endDate: '2026-02-27',
+      nextPayday: '2026-02-28',
+      daysUntilNextPayday: 13,
+      label: 'Jan 31 - Feb 27, 2026',
+      isConfigured: true,
+    },
+  );
+});
+
+test('getPayCycleRange supports semi-monthly payday pairs', () => {
+  const result = getPayCycleRange({
+    payCycle: 'semi_monthly',
+    anchorDate: '2026-07-15',
+    date: new Date(2026, 6, 27),
+  });
+
+  assert.equal(result.startDate, '2026-07-15');
+  assert.equal(result.nextPayday, '2026-07-30');
+  assert.equal(result.daysUntilNextPayday, 3);
+});
+
+test('safe-to-spend calculation divides available money across remaining days', () => {
+  assert.equal(
+    calculateSafeToSpend({
+      availableCents: 10000,
+      daysUntilNextPayday: 4,
+    }),
+    2500,
+  );
+  assert.equal(
+    calculateSafeToSpend({
+      availableCents: 10000,
+      daysUntilNextPayday: 4,
+      shortfallCents: 1,
+    }),
+    0,
+  );
+});
+
+test('monthly savings are normalized to the selected pay cycle', () => {
+  assert.equal(getCycleSavingsContribution(52000, 'weekly'), 12000);
+  assert.equal(getCycleSavingsContribution(52000, 'bi_weekly'), 24000);
+  assert.equal(getCycleSavingsContribution(52000, 'semi_monthly'), 26000);
+  assert.equal(getCycleSavingsContribution(52000, 'monthly'), 52000);
+});
+
+test('monthly recurring charges are reserved only when due in the cycle', () => {
+  assert.equal(
+    isMonthlyChargeInRange({
+      chargeDay: 31,
+      startDate: '2026-02-20',
+      endDate: '2026-03-05',
+    }),
+    true,
+  );
+  assert.equal(
+    isMonthlyChargeInRange({
+      chargeDay: 15,
+      startDate: '2026-02-20',
+      endDate: '2026-03-05',
+    }),
+    false,
   );
 });

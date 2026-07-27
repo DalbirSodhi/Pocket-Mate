@@ -65,5 +65,5 @@ export function ProfileGate({ children }) {
     return <OnboardingScreen onComplete={setProfile} user={user} />;
   }
 
-  return children(profile);
+  return children(profile, setProfile);
 }

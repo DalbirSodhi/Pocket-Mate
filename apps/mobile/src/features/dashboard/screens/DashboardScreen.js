@@ -11,7 +11,7 @@ import {
   LogOut,
   Plus,
   ReceiptText,
-  RefreshCw,
+  Settings2,
   Target,
   WalletCards,
 } from 'lucide-react-native';
@@ -81,6 +81,18 @@ function QuickAction({ icon: Icon, label, detail, onPress, tone }) {
   );
 }
 
+function formatShortDate(value) {
+  if (!value) {
+    return '';
+  }
+
+  const [year, month, day] = value.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-CA', {
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(year, month - 1, day));
+}
+
 export function DashboardScreen({ navigation, profile }) {
   const { user } = useAuthSession();
   const [summary, setSummary] = useState(null);
@@ -93,7 +105,7 @@ export function DashboardScreen({ navigation, profile }) {
     setError('');
 
     try {
-      const nextSummary = await getDashboardSummary(user.id);
+      const nextSummary = await getDashboardSummary(user.id, profile);
       setSummary(nextSummary);
     } catch (dashboardError) {
       setError(dashboardError.message || 'Unable to load your dashboard.');
@@ -101,13 +113,13 @@ export function DashboardScreen({ navigation, profile }) {
       setIsRefreshing(false);
       setIsInitialLoading(false);
     }
-  }, [user.id]);
+  }, [profile, user.id]);
 
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
 
-      getDashboardSummary(user.id)
+      getDashboardSummary(user.id, profile)
         .then((nextSummary) => {
           if (isActive) {
             setSummary(nextSummary);
@@ -128,7 +140,7 @@ export function DashboardScreen({ navigation, profile }) {
       return () => {
         isActive = false;
       };
-    }, [user.id]),
+    }, [profile, user.id]),
   );
 
   const firstName = useMemo(() => {
@@ -138,6 +150,7 @@ export function DashboardScreen({ navigation, profile }) {
 
   const currencyCode = profile.currency_code || 'CAD';
   const availableCents = summary?.availableCents || 0;
+  const safeToSpendCents = summary?.safeToSpendCents || 0;
   const incomeCents = summary?.incomeCents || 0;
   const expenseCents = summary?.expenseCents || 0;
   const committedCents = summary?.committedCents || 0;
@@ -184,13 +197,13 @@ export function DashboardScreen({ navigation, profile }) {
             <BrandMark compact />
             <View style={styles.headerActions}>
               <Pressable
-                accessibilityLabel="Refresh dashboard"
+                accessibilityLabel="Open settings"
                 accessibilityRole="button"
                 hitSlop={8}
-                onPress={refreshDashboard}
+                onPress={() => navigation.navigate('Settings')}
                 style={styles.iconButton}
               >
-                <RefreshCw color={colors.ink} size={20} />
+                <Settings2 color={colors.ink} size={20} />
               </Pressable>
               <Pressable
                 accessibilityLabel="Sign out"
@@ -215,14 +228,19 @@ export function DashboardScreen({ navigation, profile }) {
             <View style={styles.balanceHeading}>
               <View>
                 <Text style={styles.balanceLabel}>
-                  Available after commitments
+                  Safe to spend today
                 </Text>
                 <Text
                   adjustsFontSizeToFit
                   numberOfLines={1}
                   style={styles.balanceValue}
                 >
-                  {formatCurrency(availableCents, currencyCode)}
+                  {formatCurrency(safeToSpendCents, currencyCode)}
+                </Text>
+                <Text style={styles.balanceHint}>
+                  {formatCurrency(availableCents, currencyCode)} available across{' '}
+                  {summary?.daysUntilNextPayday || 1}{' '}
+                  {(summary?.daysUntilNextPayday || 1) === 1 ? 'day' : 'days'}
                 </Text>
               </View>
               <View style={styles.balanceIcon}>
@@ -242,9 +260,21 @@ export function DashboardScreen({ navigation, profile }) {
                 {formatCurrency(totalOutflowCents, currencyCode)} planned out
               </Text>
               <Text style={styles.progressText}>
-                {formatCurrency(incomeCents, currencyCode)} income
+                Payday {formatShortDate(summary?.nextPayday) || 'pending'}
               </Text>
             </View>
+            {summary && !summary.isPayCycleConfigured ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('Settings')}
+                style={styles.schedulePrompt}
+              >
+                <Settings2 color={colors.darkPanel} size={16} />
+                <Text style={styles.schedulePromptText}>
+                  Set your payday for accurate daily guidance
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={styles.metrics}>
@@ -291,7 +321,7 @@ export function DashboardScreen({ navigation, profile }) {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Monthly plan</Text>
+            <Text style={styles.sectionTitle}>Current plan</Text>
             <View
               style={[
                 styles.planStatus,
@@ -339,7 +369,7 @@ export function DashboardScreen({ navigation, profile }) {
                   </Text>
                 </View>
                 <Text style={styles.healthValue}>
-                  {formatCurrency(summary?.monthlySavingsCents || 0, currencyCode)}
+                  {formatCurrency(summary?.cycleSavingsCents || 0, currencyCode)}
                 </Text>
                 <ChevronRight color={colors.inkMuted} size={18} />
               </Pressable>
@@ -360,7 +390,7 @@ export function DashboardScreen({ navigation, profile }) {
                 <View style={styles.healthCopy}>
                   <Text style={styles.healthTitle}>Monthly fixed</Text>
                   <Text style={styles.healthBody}>
-                    {summary?.activeRecurringExpenses || 0} active
+                    {summary?.dueRecurringExpenses || 0} due this cycle
                   </Text>
                 </View>
                 <Text style={styles.healthValue}>
@@ -385,7 +415,7 @@ export function DashboardScreen({ navigation, profile }) {
                 <View style={styles.healthCopy}>
                   <Text style={styles.healthTitle}>Card bills</Text>
                   <Text style={styles.healthBody}>
-                    {summary?.unpaidCardBills || 0} unpaid this month
+                    {summary?.unpaidCardBills || 0} unpaid this cycle
                   </Text>
                 </View>
                 <Text style={styles.healthValue}>
@@ -561,6 +591,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     maxWidth: 280,
   },
+  balanceHint: {
+    ...typography.caption,
+    color: colors.panelMuted,
+    marginTop: spacing.xs,
+  },
   balanceIcon: {
     width: 48,
     height: 48,
@@ -589,6 +624,22 @@ const styles = StyleSheet.create({
   progressText: {
     ...typography.caption,
     color: colors.panelMuted,
+  },
+  schedulePrompt: {
+    minHeight: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.panelAccent,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  schedulePromptText: {
+    ...typography.caption,
+    color: colors.darkPanel,
+    fontWeight: '700',
+    flexShrink: 1,
   },
   metrics: {
     flexDirection: 'row',
