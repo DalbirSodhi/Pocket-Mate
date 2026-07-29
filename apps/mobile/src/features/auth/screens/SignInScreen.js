@@ -40,6 +40,7 @@ export function SignInScreen({ navigation }) {
         <FormField
           autoCapitalize="none"
           autoComplete="email"
+          autoCorrect={false}
           keyboardType="email-address"
           label="Email"
           onChangeText={setEmail}
@@ -50,11 +51,15 @@ export function SignInScreen({ navigation }) {
         <View>
           <FormField
             autoCapitalize="none"
-            autoComplete="password"
+            autoComplete="current-password"
+            autoCorrect={false}
             label="Password"
             onChangeText={setPassword}
+            onSubmitEditing={handleSignIn}
             placeholder="Enter your password"
+            returnKeyType="go"
             secureTextEntry
+            spellCheck={false}
             textContentType="password"
             value={password}
           />
