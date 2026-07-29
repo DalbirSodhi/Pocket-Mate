@@ -4,8 +4,10 @@ const test = require('node:test');
 const {
   calculateSafeToSpend,
   calculatePlanTotals,
+  getBudgetPressure,
   getCycleSavingsContribution,
   getMonthRange,
+  getNextMonthlyDueDate,
   getPayCycleRange,
   getPlanHealth,
   isMonthlyChargeInRange,
@@ -197,4 +199,39 @@ test('monthly recurring charges are reserved only when due in the cycle', () => 
     }),
     false,
   );
+});
+
+test('next monthly due date skips past charges and clamps month end', () => {
+  assert.equal(
+    getNextMonthlyDueDate({
+      chargeDay: 2,
+      date: new Date(2026, 6, 27),
+      endDate: '2026-08-09',
+    }),
+    '2026-08-02',
+  );
+  assert.equal(
+    getNextMonthlyDueDate({
+      chargeDay: 31,
+      date: new Date(2026, 1, 20),
+      endDate: '2026-03-05',
+    }),
+    '2026-02-28',
+  );
+});
+
+test('budget pressure reflects combined category-cap usage', () => {
+  assert.deepEqual(
+    getBudgetPressure([
+      { amount_cents: 40000, spentCents: 20000 },
+      { amount_cents: 60000, spentCents: 65000 },
+    ]),
+    {
+      label: 'High',
+      tone: 'warning',
+      usagePercent: 85,
+      detail: 'Little room remains in capped categories this month.',
+    },
+  );
+  assert.equal(getBudgetPressure([]).label, 'No caps');
 });

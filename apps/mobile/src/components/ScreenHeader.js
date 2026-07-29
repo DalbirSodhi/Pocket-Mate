@@ -6,15 +6,17 @@ import { colors, radius, spacing, typography } from '../theme/tokens';
 export function ScreenHeader({ title, subtitle, onBack, action }) {
   return (
     <View style={styles.header}>
-      <Pressable
-        accessibilityLabel="Go back"
-        accessibilityRole="button"
-        hitSlop={8}
-        onPress={onBack}
-        style={styles.backButton}
-      >
-        <ArrowLeft color={colors.ink} size={21} />
-      </Pressable>
+      {onBack ? (
+        <Pressable
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={onBack}
+          style={styles.backButton}
+        >
+          <ArrowLeft color={colors.ink} size={21} />
+        </Pressable>
+      ) : null}
       <View style={styles.copy}>
         <Text style={styles.title}>{title}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}

@@ -4,6 +4,7 @@ import {
   calculatePlanTotals,
   getCycleSavingsContribution,
   getMonthRange,
+  getNextMonthlyDueDate,
   getPayCycleRange,
   getPlanHealth,
   isMonthlyChargeInRange,
@@ -36,6 +37,7 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     budgetResponse,
     recurringResponse,
     cardBillResponse,
+    creditCardResponse,
   ] = await Promise.all([
     supabase
       .from('income_entries')
@@ -79,17 +81,21 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
       .eq('user_id', userId),
     supabase
       .from('recurring_expenses')
-      .select('id, amount_cents, charge_day')
+      .select('id, name, amount_cents, charge_day')
       .eq('user_id', userId)
       .eq('is_active', true)
       .lte('starts_on', cycle.endDate)
       .or(`ends_on.is.null,ends_on.gte.${cycle.startDate}`),
     supabase
       .from('credit_card_bills')
-      .select('id, amount_cents, paid_on')
+      .select('id, credit_card_id, amount_cents, due_on, paid_on')
       .eq('user_id', userId)
       .gte('due_on', cycle.startDate)
       .lte('due_on', cycle.endDate),
+    supabase
+      .from('credit_cards')
+      .select('id, nickname, last_four')
+      .eq('user_id', userId),
   ]);
 
   const income = unwrapResponse(incomeResponse);
@@ -108,7 +114,9 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
       }),
   );
   const cardBills = unwrapResponse(cardBillResponse);
+  const creditCards = unwrapResponse(creditCardResponse);
   const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const cardById = new Map(creditCards.map((card) => [card.id, card]));
   const incomeCents = sumCents(income, 'amount_cents');
   const expenseCents = sumCents(expenses, 'amount_cents');
   const fixedExpenseCents = sumCents(recurringExpenses, 'amount_cents');
@@ -159,6 +167,37 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     daysUntilNextPayday: cycle.daysUntilNextPayday,
     shortfallCents: planTotals.shortfallCents,
   });
+  const upcomingBills = [
+    ...recurringExpenses
+      .map((expense) => ({
+        id: `recurring-${expense.id}`,
+        type: 'recurring',
+        title: expense.name,
+        amountCents: expense.amount_cents,
+        dueOn: getNextMonthlyDueDate({
+          chargeDay: expense.charge_day,
+          date,
+          endDate: cycle.endDate,
+        }),
+      }))
+      .filter((expense) => expense.dueOn),
+    ...cardBills
+      .filter((bill) => !bill.paid_on)
+      .map((bill) => {
+        const card = cardById.get(bill.credit_card_id);
+        const cardNumber = card?.last_four ? ` • ${card.last_four}` : '';
+
+        return {
+          id: `card-${bill.id}`,
+          type: 'card',
+          title: `${card?.nickname || 'Credit card'}${cardNumber}`,
+          amountCents: bill.amount_cents,
+          dueOn: bill.due_on,
+        };
+      }),
+  ]
+    .sort((left, right) => left.dueOn.localeCompare(right.dueOn))
+    .slice(0, 4);
 
   return {
     periodLabel: cycle.label,
@@ -188,6 +227,7 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     dueRecurringExpenses: recurringExpenses.length,
     currentCardBills: cardBills.length,
     unpaidCardBills: cardBills.filter((bill) => !bill.paid_on).length,
+    upcomingBills,
     recentExpenses: recentExpenses.map((expense) => ({
       ...expense,
       category: categoryById.get(expense.category_id) || null,

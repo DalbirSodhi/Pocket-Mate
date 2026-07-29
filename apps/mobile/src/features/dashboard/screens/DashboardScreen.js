@@ -1,23 +1,17 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
 import {
   ArrowDownLeft,
   ArrowUpRight,
   CalendarClock,
   ChevronRight,
-  CircleDollarSign,
   CreditCard,
-  Landmark,
-  ListFilter,
-  LogOut,
   Plus,
   ReceiptText,
   Settings2,
-  Target,
-  WalletCards,
 } from 'lucide-react-native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -30,56 +24,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BrandMark } from '../../../components/BrandMark';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
-import { signOut, useAuthSession } from '../../auth';
+import { useAuthSession } from '../../auth';
 import { getDashboardSummary } from '../services/dashboardService';
 import { formatCurrency } from '../utils/formatCurrency';
-
-function Metric({ icon: Icon, label, value, tone }) {
-  return (
-    <View style={styles.metric}>
-      <View style={[styles.metricIcon, { backgroundColor: tone.background }]}>
-        <Icon color={tone.foreground} size={20} />
-      </View>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit style={styles.metricValue}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-function EmptyActivity() {
-  return (
-    <View style={styles.emptyState}>
-      <View style={styles.emptyIcon}>
-        <ReceiptText color={colors.inkMuted} size={24} />
-      </View>
-      <View style={styles.emptyCopy}>
-        <Text style={styles.emptyTitle}>No expenses yet</Text>
-        <Text style={styles.emptyBody}>Your latest activity will appear here.</Text>
-      </View>
-    </View>
-  );
-}
-
-function QuickAction({ icon: Icon, label, detail, onPress, tone }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
-    >
-      <View style={[styles.quickActionIcon, { backgroundColor: tone.background }]}>
-        <Icon color={tone.foreground} size={21} />
-      </View>
-      <View style={styles.quickActionCopy}>
-        <Text style={styles.quickActionLabel}>{label}</Text>
-        <Text style={styles.quickActionDetail}>{detail}</Text>
-      </View>
-      <Plus color={colors.inkMuted} size={18} />
-    </Pressable>
-  );
-}
 
 function formatShortDate(value) {
   if (!value) {
@@ -93,6 +40,30 @@ function formatShortDate(value) {
   }).format(new Date(year, month - 1, day));
 }
 
+function formatDashboardDate() {
+  return new Intl.DateTimeFormat('en-CA', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date());
+}
+
+function EmptyBills() {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyIcon}>
+        <CalendarClock color={colors.inkMuted} size={21} />
+      </View>
+      <View style={styles.emptyCopy}>
+        <Text style={styles.emptyTitle}>Nothing due this cycle</Text>
+        <Text style={styles.emptyBody}>
+          Fixed expenses and card bills will appear here.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export function DashboardScreen({ navigation, profile }) {
   const { user } = useAuthSession();
   const [summary, setSummary] = useState(null);
@@ -100,20 +71,24 @@ export function DashboardScreen({ navigation, profile }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
+  const loadDashboard = useCallback(async () => {
+    const nextSummary = await getDashboardSummary(user.id, profile);
+    setSummary(nextSummary);
+    setError('');
+  }, [profile, user.id]);
+
   const refreshDashboard = useCallback(async () => {
     setIsRefreshing(true);
-    setError('');
 
     try {
-      const nextSummary = await getDashboardSummary(user.id, profile);
-      setSummary(nextSummary);
+      await loadDashboard();
     } catch (dashboardError) {
       setError(dashboardError.message || 'Unable to load your dashboard.');
     } finally {
       setIsRefreshing(false);
       setIsInitialLoading(false);
     }
-  }, [profile, user.id]);
+  }, [loadDashboard]);
 
   useFocusEffect(
     useCallback(() => {
@@ -143,23 +118,20 @@ export function DashboardScreen({ navigation, profile }) {
     }, [profile, user.id]),
   );
 
-  const firstName = useMemo(() => {
-    const displayName = profile.display_name || user.email || 'there';
-    return displayName.split(' ')[0];
-  }, [profile.display_name, user.email]);
-
   const currencyCode = profile.currency_code || 'CAD';
   const availableCents = summary?.availableCents || 0;
   const safeToSpendCents = summary?.safeToSpendCents || 0;
   const incomeCents = summary?.incomeCents || 0;
   const expenseCents = summary?.expenseCents || 0;
-  const committedCents = summary?.committedCents || 0;
   const totalOutflowCents = summary?.totalOutflowCents || 0;
+  const daysUntilPayday = summary?.daysUntilNextPayday || 1;
+  const spendingProgress =
+    incomeCents > 0 ? Math.min(totalOutflowCents / incomeCents, 1) : 0;
   const planHealth = summary?.planHealth || {
     label: 'Add income',
     tone: 'neutral',
     allocationPercent: 0,
-    detail: 'Income is needed before plan health can be calculated.',
+    detail: 'Add income to calculate your current plan.',
   };
   const planTone =
     planHealth.tone === 'success'
@@ -168,351 +140,256 @@ export function DashboardScreen({ navigation, profile }) {
         ? { background: colors.dangerSoft, foreground: colors.danger }
         : planHealth.tone === 'warning'
           ? { background: colors.warningSoft, foreground: colors.warning }
-          : { background: colors.primarySoft, foreground: colors.primary };
-  const spendingProgress =
-    incomeCents > 0 ? Math.min(totalOutflowCents / incomeCents, 1) : 0;
-
-  function handleSignOut() {
-    Alert.alert('Sign out?', 'You can sign back in at any time.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: signOut },
-    ]);
-  }
+          : { background: colors.infoSoft, foreground: colors.info };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
+      <StatusBar style="light" />
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
             colors={[colors.primary]}
             onRefresh={refreshDashboard}
             refreshing={isRefreshing}
-            tintColor={colors.primary}
+            tintColor={colors.white}
           />
         }
+        style={styles.scroll}
       >
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <BrandMark compact />
-            <View style={styles.headerActions}>
+        <View style={styles.hero}>
+          <View style={styles.heroContent}>
+            <View style={styles.header}>
+              <BrandMark compact inverse />
               <Pressable
                 accessibilityLabel="Open settings"
                 accessibilityRole="button"
                 hitSlop={8}
-                onPress={() => navigation.navigate('Settings')}
-                style={styles.iconButton}
-              >
-                <Settings2 color={colors.ink} size={20} />
-              </Pressable>
-              <Pressable
-                accessibilityLabel="Sign out"
-                accessibilityRole="button"
-                hitSlop={8}
-                onPress={handleSignOut}
-                style={styles.iconButton}
-              >
-                <LogOut color={colors.ink} size={20} />
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.greeting}>
-            <Text style={styles.eyebrow}>{summary?.periodLabel || 'This month'}</Text>
-            <Text style={styles.title}>Good to see you, {firstName}.</Text>
-          </View>
-
-          <InlineNotice message={error} variant="error" />
-
-          <View style={styles.balancePanel}>
-            <View style={styles.balanceHeading}>
-              <View>
-                <Text style={styles.balanceLabel}>
-                  Safe to spend today
-                </Text>
-                <Text
-                  adjustsFontSizeToFit
-                  numberOfLines={1}
-                  style={styles.balanceValue}
-                >
-                  {formatCurrency(safeToSpendCents, currencyCode)}
-                </Text>
-                <Text style={styles.balanceHint}>
-                  {formatCurrency(availableCents, currencyCode)} available across{' '}
-                  {summary?.daysUntilNextPayday || 1}{' '}
-                  {(summary?.daysUntilNextPayday || 1) === 1 ? 'day' : 'days'}
-                </Text>
-              </View>
-              <View style={styles.balanceIcon}>
-                <WalletCards color={colors.darkPanel} size={24} />
-              </View>
-            </View>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.round(spendingProgress * 100)}%` },
+                onPress={() => navigation.navigate('SettingsTab')}
+                style={({ pressed }) => [
+                  styles.settingsButton,
+                  pressed && styles.heroButtonPressed,
                 ]}
-              />
+              >
+                <Settings2 color={colors.white} size={20} />
+              </Pressable>
             </View>
-            <View style={styles.progressLabels}>
-              <Text style={styles.progressText}>
-                {formatCurrency(totalOutflowCents, currencyCode)} planned out
+
+            <View style={styles.heroCopy}>
+              <Text style={styles.dateLabel}>{formatDashboardDate()}</Text>
+              <Text style={styles.balanceLabel}>Safe to spend today</Text>
+              <Text
+                adjustsFontSizeToFit
+                numberOfLines={1}
+                style={styles.balanceValue}
+              >
+                {formatCurrency(safeToSpendCents, currencyCode)}
               </Text>
-              <Text style={styles.progressText}>
-                Payday {formatShortDate(summary?.nextPayday) || 'pending'}
+              <View style={styles.balanceMeta}>
+                <Text style={styles.availableText}>
+                  {formatCurrency(availableCents, currencyCode)} available
+                </Text>
+                <View style={styles.metaDot} />
+                <Text style={styles.paydayText}>
+                  {daysUntilPayday} {daysUntilPayday === 1 ? 'day' : 'days'} to payday
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.forecast}>
+              <View style={styles.forecastHeading}>
+                <Text style={styles.forecastLabel}>Cycle forecast</Text>
+                <Text style={styles.forecastValue}>
+                  {Math.round(spendingProgress * 100)}% planned
+                </Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.round(spendingProgress * 100)}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.nextPayday}>
+                Next payday {formatShortDate(summary?.nextPayday) || 'not set'}
               </Text>
             </View>
-            {summary && !summary.isPayCycleConfigured ? (
+          </View>
+        </View>
+
+        <View style={styles.body}>
+          <View style={styles.bodyContent}>
+            <InlineNotice message={error} variant="error" />
+
+            {!summary?.isPayCycleConfigured && summary ? (
               <Pressable
                 accessibilityRole="button"
-                onPress={() => navigation.navigate('Settings')}
-                style={styles.schedulePrompt}
+                onPress={() => navigation.navigate('SettingsTab')}
+                style={styles.paydayPrompt}
               >
-                <Settings2 color={colors.darkPanel} size={16} />
-                <Text style={styles.schedulePromptText}>
-                  Set your payday for accurate daily guidance
-                </Text>
+                <CalendarClock color={colors.info} size={19} />
+                <View style={styles.paydayPromptCopy}>
+                  <Text style={styles.paydayPromptTitle}>Set your payday</Text>
+                  <Text style={styles.paydayPromptBody}>
+                    Get more accurate daily spending guidance.
+                  </Text>
+                </View>
+                <ChevronRight color={colors.info} size={18} />
               </Pressable>
             ) : null}
-          </View>
 
-          <View style={styles.metrics}>
-            <Metric
-              icon={ArrowDownLeft}
-              label="Income"
-              tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
-              value={formatCurrency(incomeCents, currencyCode)}
-            />
-            <Metric
-              icon={ArrowUpRight}
-              label="Spent"
-              tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
-              value={formatCurrency(expenseCents, currencyCode)}
-            />
-            <Metric
-              icon={CalendarClock}
-              label="Committed"
-              tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
-              value={formatCurrency(committedCents, currencyCode)}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick add</Text>
-            <View style={styles.quickActions}>
-              <QuickAction
-                detail="Choose expense type"
-                icon={CircleDollarSign}
-                label="Expense"
-                onPress={() =>
-                  navigation.navigate('AddExpense', { currencyCode })
-                }
-                tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
-              />
-              <QuickAction
-                detail="Salary or deposit"
-                icon={ArrowDownLeft}
-                label="Income"
+            <View style={styles.summary}>
+              <Pressable
+                accessibilityRole="button"
                 onPress={() => navigation.navigate('AddIncome')}
-                tone={{ background: colors.iconSurface, foreground: colors.iconInk }}
-              />
+                style={({ pressed }) => [
+                  styles.summaryItem,
+                  pressed && styles.summaryPressed,
+                ]}
+              >
+                <View style={styles.summaryLabelRow}>
+                  <ArrowDownLeft color={colors.success} size={17} />
+                  <Text style={styles.summaryLabel}>Income</Text>
+                </View>
+                <Text style={styles.summaryValue}>
+                  {formatCurrency(incomeCents, currencyCode)}
+                </Text>
+              </Pressable>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <View style={styles.summaryLabelRow}>
+                  <ArrowUpRight color={colors.danger} size={17} />
+                  <Text style={styles.summaryLabel}>Spent</Text>
+                </View>
+                <Text style={styles.summaryValue}>
+                  {formatCurrency(expenseCents, currencyCode)}
+                </Text>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current plan</Text>
-            <View
-              style={[
-                styles.planStatus,
-                { backgroundColor: planTone.background },
+            <View style={styles.section}>
+              <View style={styles.sectionHeading}>
+                <Text style={styles.sectionTitle}>Current plan</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={() => navigation.navigate('PlanTab')}
+                  style={styles.sectionLink}
+                >
+                  <Text style={styles.sectionLinkText}>Details</Text>
+                  <ChevronRight color={colors.inkMuted} size={16} />
+                </Pressable>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('PlanTab')}
+                style={[
+                  styles.planStatus,
+                  { backgroundColor: planTone.background },
+                ]}
+              >
+                <View style={styles.planStatusHeading}>
+                  <Text
+                    style={[
+                      styles.planStatusLabel,
+                      { color: planTone.foreground },
+                    ]}
+                  >
+                    {planHealth.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.planStatusPercent,
+                      { color: planTone.foreground },
+                    ]}
+                  >
+                    {planHealth.allocationPercent}% allocated
+                  </Text>
+                </View>
+                <Text style={styles.planStatusDetail}>{planHealth.detail}</Text>
+                <View style={styles.planTrack}>
+                  <View
+                    style={[
+                      styles.planFill,
+                      {
+                        backgroundColor: planTone.foreground,
+                        width: `${Math.min(planHealth.allocationPercent, 100)}%`,
+                      },
+                    ]}
+                  />
+                </View>
+              </Pressable>
+            </View>
+
+            <View style={styles.section}>
+              <View style={styles.sectionHeading}>
+                <Text style={styles.sectionTitle}>Upcoming bills</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={() =>
+                    navigation.navigate('FixedExpenses', { currencyCode })
+                  }
+                  style={styles.sectionLink}
+                >
+                  <Text style={styles.sectionLinkText}>Manage</Text>
+                  <ChevronRight color={colors.inkMuted} size={16} />
+                </Pressable>
+              </View>
+
+              {summary?.upcomingBills?.length ? (
+                <View style={styles.billList}>
+                  {summary.upcomingBills.map((bill, index) => {
+                    const Icon = bill.type === 'card' ? CreditCard : ReceiptText;
+
+                    return (
+                      <View key={bill.id}>
+                        <View style={styles.billRow}>
+                          <View style={styles.billIcon}>
+                            <Icon color={colors.ink} size={19} />
+                          </View>
+                          <View style={styles.billCopy}>
+                            <Text numberOfLines={1} style={styles.billTitle}>
+                              {bill.title}
+                            </Text>
+                            <Text style={styles.billDue}>
+                              Due {formatShortDate(bill.dueOn)}
+                            </Text>
+                          </View>
+                          <Text style={styles.billAmount}>
+                            {formatCurrency(bill.amountCents, currencyCode)}
+                          </Text>
+                        </View>
+                        {index < summary.upcomingBills.length - 1 ? (
+                          <View style={styles.billDivider} />
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <EmptyBills />
+              )}
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() =>
+                navigation.navigate('AddExpense', { currencyCode })
+              }
+              style={({ pressed }) => [
+                styles.addButton,
+                pressed && styles.addButtonPressed,
               ]}
             >
-              <View style={styles.planStatusHeading}>
-                <Text
-                  style={[
-                    styles.planStatusLabel,
-                    { color: planTone.foreground },
-                  ]}
-                >
-                  {planHealth.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.planStatusPercent,
-                    { color: planTone.foreground },
-                  ]}
-                >
-                  {planHealth.allocationPercent}% allocated
-                </Text>
-              </View>
-              <Text style={styles.planStatusDetail}>{planHealth.detail}</Text>
-            </View>
-            <View style={styles.healthRows}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  navigation.navigate('SavingsGoals', { currencyCode })
-                }
-                style={({ pressed }) => [
-                  styles.healthRow,
-                  pressed && styles.healthRowPressed,
-                ]}
-              >
-                <View style={styles.healthIcon}>
-                  <Target color={colors.primary} size={20} />
-                </View>
-                <View style={styles.healthCopy}>
-                  <Text style={styles.healthTitle}>Savings goals</Text>
-                  <Text style={styles.healthBody}>
-                    {summary?.activeSavingsGoals || 0} active
-                  </Text>
-                </View>
-                <Text style={styles.healthValue}>
-                  {formatCurrency(summary?.cycleSavingsCents || 0, currencyCode)}
-                </Text>
-                <ChevronRight color={colors.inkMuted} size={18} />
-              </Pressable>
-              <View style={styles.divider} />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  navigation.navigate('FixedExpenses', { currencyCode })
-                }
-                style={({ pressed }) => [
-                  styles.healthRow,
-                  pressed && styles.healthRowPressed,
-                ]}
-              >
-                <View style={styles.healthIcon}>
-                  <CalendarClock color={colors.primary} size={20} />
-                </View>
-                <View style={styles.healthCopy}>
-                  <Text style={styles.healthTitle}>Monthly fixed</Text>
-                  <Text style={styles.healthBody}>
-                    {summary?.dueRecurringExpenses || 0} due this cycle
-                  </Text>
-                </View>
-                <Text style={styles.healthValue}>
-                  {formatCurrency(summary?.fixedExpenseCents || 0, currencyCode)}
-                </Text>
-                <ChevronRight color={colors.inkMuted} size={18} />
-              </Pressable>
-              <View style={styles.divider} />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  navigation.navigate('CreditCards', { currencyCode })
-                }
-                style={({ pressed }) => [
-                  styles.healthRow,
-                  pressed && styles.healthRowPressed,
-                ]}
-              >
-                <View style={styles.healthIcon}>
-                  <CreditCard color={colors.iconInk} size={20} />
-                </View>
-                <View style={styles.healthCopy}>
-                  <Text style={styles.healthTitle}>Card bills</Text>
-                  <Text style={styles.healthBody}>
-                    {summary?.unpaidCardBills || 0} unpaid this cycle
-                  </Text>
-                </View>
-                <Text style={styles.healthValue}>
-                  {formatCurrency(summary?.cardBillCents || 0, currencyCode)}
-                </Text>
-                <ChevronRight color={colors.inkMuted} size={18} />
-              </Pressable>
-              <View style={styles.divider} />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  navigation.navigate('BudgetCaps', { currencyCode })
-                }
-                style={({ pressed }) => [
-                  styles.healthRow,
-                  pressed && styles.healthRowPressed,
-                ]}
-              >
-                <View style={styles.healthIcon}>
-                  <Landmark color={colors.iconInk} size={20} />
-                </View>
-                <View style={styles.healthCopy}>
-                  <Text style={styles.healthTitle}>Budget caps</Text>
-                  <Text style={styles.healthBody}>
-                    {summary?.overBudgetCaps || 0} over limit
-                  </Text>
-                </View>
-                <Text style={styles.healthValue}>
-                  {formatCurrency(summary?.budgetCapCents || 0, currencyCode)}
-                </Text>
-                <ChevronRight color={colors.inkMuted} size={18} />
-              </Pressable>
-            </View>
-          </View>
+              <Plus color={colors.white} size={20} strokeWidth={2.4} />
+              <Text style={styles.addButtonLabel}>Add expense</Text>
+            </Pressable>
 
-          <View style={styles.section}>
-            <View style={styles.sectionHeading}>
-              <Text style={styles.sectionTitle}>Recent activity</Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  navigation.navigate('Transactions', { currencyCode })
-                }
-                style={styles.textButton}
-              >
-                <ListFilter color={colors.primary} size={16} />
-                <Text style={styles.textButtonLabel}>See all</Text>
-                <ChevronRight color={colors.primary} size={16} />
-              </Pressable>
-            </View>
-            {summary?.recentExpenses?.length ? (
-              <View style={styles.activityList}>
-                {summary.recentExpenses.map((expense, index) => (
-                  <View key={expense.id}>
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() =>
-                        navigation.navigate('ExpenseDetail', {
-                          expenseId: expense.id,
-                          currencyCode,
-                        })
-                      }
-                      style={({ pressed }) => [
-                        styles.activityRow,
-                        pressed && styles.activityRowPressed,
-                      ]}
-                    >
-                      <View style={styles.activityIcon}>
-                        <ReceiptText color={colors.iconInk} size={19} />
-                      </View>
-                      <View style={styles.activityCopy}>
-                        <Text numberOfLines={1} style={styles.activityTitle}>
-                          {expense.merchant || expense.category?.name || 'Expense'}
-                        </Text>
-                        <Text style={styles.activityBody}>
-                          {expense.category?.name || expense.spent_on}
-                        </Text>
-                      </View>
-                      <Text style={styles.activityAmount}>
-                        -{formatCurrency(expense.amount_cents, currencyCode)}
-                      </Text>
-                      <ChevronRight color={colors.inkMuted} size={17} />
-                    </Pressable>
-                    {index < summary.recentExpenses.length - 1 ? (
-                      <View style={styles.divider} />
-                    ) : null}
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <EmptyActivity />
-            )}
+            {isInitialLoading ? (
+              <Text style={styles.loadingLabel}>Refreshing your plan...</Text>
+            ) : null}
           </View>
-
-          {isInitialLoading ? (
-            <Text style={styles.loadingLabel}>Refreshing totals...</Text>
-          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -522,231 +399,204 @@ export function DashboardScreen({ navigation, profile }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    backgroundColor: colors.darkPanel,
+  },
+  scroll: {
+    flex: 1,
     backgroundColor: colors.canvas,
   },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xxxl,
+  hero: {
+    backgroundColor: colors.darkPanel,
   },
-  content: {
+  heroContent: {
     width: '100%',
     maxWidth: 720,
     alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
     gap: spacing.xl,
   },
   header: {
-    minHeight: 48,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  headerActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  iconButton: {
+  settingsButton: {
     width: 42,
     height: 42,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderColor: colors.panelTrack,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  greeting: {
+  heroButtonPressed: {
+    backgroundColor: colors.panelTrack,
+  },
+  heroCopy: {
     gap: spacing.xs,
   },
-  eyebrow: {
-    ...typography.label,
-    color: colors.accent,
-    textTransform: 'uppercase',
-  },
-  title: {
-    ...typography.title,
-    color: colors.ink,
-  },
-  balancePanel: {
-    borderRadius: radius.md,
-    backgroundColor: colors.darkPanel,
-    padding: spacing.xl,
-    gap: spacing.lg,
-  },
-  balanceHeading: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: spacing.lg,
+  dateLabel: {
+    ...typography.caption,
+    color: colors.panelMuted,
   },
   balanceLabel: {
     ...typography.label,
-    color: colors.panelMuted,
+    color: colors.white,
+    marginTop: spacing.sm,
   },
   balanceValue: {
     color: colors.white,
-    fontSize: 38,
-    lineHeight: 46,
+    fontSize: 44,
+    lineHeight: 52,
     fontWeight: '800',
-    marginTop: spacing.xs,
-    maxWidth: 280,
+    maxWidth: 330,
   },
-  balanceHint: {
+  balanceMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  availableText: {
     ...typography.caption,
     color: colors.panelMuted,
-    marginTop: spacing.xs,
   },
-  balanceIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    backgroundColor: colors.panelAccent,
-    alignItems: 'center',
-    justifyContent: 'center',
+  metaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: radius.round,
+    backgroundColor: colors.panelMuted,
+  },
+  paydayText: {
+    ...typography.caption,
+    color: colors.panelMuted,
+  },
+  forecast: {
+    gap: spacing.sm,
+  },
+  forecastHeading: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  forecastLabel: {
+    ...typography.caption,
+    color: colors.panelMuted,
+  },
+  forecastValue: {
+    ...typography.caption,
+    color: colors.white,
   },
   progressTrack: {
-    height: 8,
-    borderRadius: radius.sm,
+    height: 5,
+    borderRadius: radius.round,
     backgroundColor: colors.panelTrack,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    minWidth: 0,
-    borderRadius: radius.sm,
-    backgroundColor: colors.gold,
+    borderRadius: radius.round,
+    backgroundColor: colors.primary,
   },
-  progressLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  progressText: {
+  nextPayday: {
     ...typography.caption,
     color: colors.panelMuted,
+    textAlign: 'right',
   },
-  schedulePrompt: {
-    minHeight: 40,
+  body: {
+    backgroundColor: colors.canvas,
+  },
+  bodyContent: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.xl,
+  },
+  paydayPrompt: {
+    minHeight: 64,
     borderRadius: radius.md,
-    backgroundColor: colors.panelAccent,
-    paddingHorizontal: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  schedulePromptText: {
-    ...typography.caption,
-    color: colors.darkPanel,
-    fontWeight: '700',
-    flexShrink: 1,
-  },
-  metrics: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  metric: {
-    flex: 1,
-    minWidth: 0,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.infoSoft,
     padding: spacing.md,
-    gap: spacing.sm,
-  },
-  metricIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.md,
   },
-  metricLabel: {
+  paydayPromptCopy: {
+    flex: 1,
+  },
+  paydayPromptTitle: {
+    ...typography.label,
+    color: colors.info,
+  },
+  paydayPromptBody: {
     ...typography.caption,
     color: colors.inkMuted,
   },
-  metricValue: {
+  summary: {
+    minHeight: 74,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  summaryItem: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+  },
+  summaryPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  summaryLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  summaryLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  summaryValue: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '700',
     color: colors.ink,
-    fontSize: 16,
-    lineHeight: 21,
-    fontWeight: '800',
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: colors.border,
   },
   section: {
     gap: spacing.md,
   },
   sectionHeading: {
-    minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
   },
   sectionTitle: {
     ...typography.section,
     color: colors.ink,
   },
-  quickActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  quickAction: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 84,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  quickActionPressed: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  quickActionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickActionCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  quickActionLabel: {
-    ...typography.label,
-    color: colors.ink,
-  },
-  quickActionDetail: {
-    ...typography.caption,
-    color: colors.inkMuted,
-  },
-  textButton: {
+  sectionLink: {
     minHeight: 32,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
   },
-  textButtonLabel: {
-    ...typography.label,
-    color: colors.primary,
-  },
-  healthRows: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
+  sectionLinkText: {
+    ...typography.caption,
+    color: colors.inkMuted,
   },
   planStatus: {
-    minHeight: 88,
     borderRadius: radius.md,
     padding: spacing.lg,
-    justifyContent: 'center',
     gap: spacing.sm,
   },
   planStatusHeading: {
@@ -756,25 +606,39 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   planStatusLabel: {
-    ...typography.section,
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '700',
   },
   planStatusPercent: {
-    ...typography.label,
+    ...typography.caption,
   },
   planStatusDetail: {
     ...typography.caption,
     color: colors.ink,
   },
-  healthRow: {
-    minHeight: 72,
+  planTrack: {
+    height: 4,
+    borderRadius: radius.round,
+    backgroundColor: 'rgba(16, 28, 44, 0.12)',
+    overflow: 'hidden',
+  },
+  planFill: {
+    height: '100%',
+    borderRadius: radius.round,
+  },
+  billList: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  billRow: {
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  healthRowPressed: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  healthIcon: {
+  billIcon: {
     width: 38,
     height: 38,
     borderRadius: radius.md,
@@ -782,47 +646,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  healthCopy: {
+  billCopy: {
     flex: 1,
+    minWidth: 0,
   },
-  healthTitle: {
+  billTitle: {
     ...typography.label,
     color: colors.ink,
   },
-  healthBody: {
+  billDue: {
     ...typography.caption,
     color: colors.inkMuted,
   },
-  healthValue: {
+  billAmount: {
     ...typography.label,
     color: colors.ink,
-    maxWidth: 120,
   },
-  divider: {
+  billDivider: {
     height: 1,
+    marginLeft: 50,
     backgroundColor: colors.border,
   },
   emptyState: {
-    minHeight: 96,
-    borderWidth: 1,
+    minHeight: 76,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
   emptyIcon: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.iconSurface,
+    backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyCopy: {
     flex: 1,
+    gap: 2,
   },
   emptyTitle: {
     ...typography.label,
@@ -832,46 +696,22 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.inkMuted,
   },
-  activityList: {
-    borderWidth: 1,
-    borderColor: colors.border,
+  addButton: {
+    minHeight: 52,
     borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-  },
-  activityRow: {
-    minHeight: 72,
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-  },
-  activityRowPressed: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  activityIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    backgroundColor: colors.iconSurface,
-    alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
   },
-  activityCopy: {
-    flex: 1,
-    minWidth: 0,
+  addButtonPressed: {
+    backgroundColor: colors.primaryPressed,
   },
-  activityTitle: {
+  addButtonLabel: {
     ...typography.label,
-    color: colors.ink,
-  },
-  activityBody: {
-    ...typography.caption,
-    color: colors.inkMuted,
-  },
-  activityAmount: {
-    ...typography.label,
-    color: colors.danger,
-    maxWidth: 120,
+    color: colors.white,
+    fontSize: 16,
   },
   loadingLabel: {
     ...typography.caption,

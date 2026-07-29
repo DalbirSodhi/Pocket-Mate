@@ -2,14 +2,14 @@ import { supabase } from '../../../infrastructure/supabase/client';
 import { getNextMonthlyDateString } from '../utils/financeValidation.cjs';
 
 export const DEFAULT_EXPENSE_CATEGORIES = [
-  { name: 'Housing', color: '#1F2A44', icon: 'house' },
-  { name: 'Food', color: '#9C7B31', icon: 'utensils' },
-  { name: 'Transport', color: '#476553', icon: 'car' },
-  { name: 'Shopping', color: '#596783', icon: 'shopping-bag' },
-  { name: 'Health', color: '#A33D4A', icon: 'heart-pulse' },
-  { name: 'Bills', color: '#6B7280', icon: 'receipt' },
-  { name: 'Entertainment', color: '#8E6F39', icon: 'clapperboard' },
-  { name: 'Other', color: '#626A78', icon: 'circle-ellipsis' },
+  { name: 'Housing', color: '#101C2C', icon: 'house' },
+  { name: 'Food', color: '#C56F42', icon: 'utensils' },
+  { name: 'Transport', color: '#287A5B', icon: 'car' },
+  { name: 'Shopping', color: '#2F5F8F', icon: 'shopping-bag' },
+  { name: 'Health', color: '#B94B55', icon: 'heart-pulse' },
+  { name: 'Bills', color: '#657180', icon: 'receipt' },
+  { name: 'Entertainment', color: '#6F5A8E', icon: 'clapperboard' },
+  { name: 'Other', color: '#7A6957', icon: 'circle-ellipsis' },
 ];
 
 function unwrap(response) {
@@ -62,7 +62,7 @@ export async function createExpenseCategory({ userId, name }) {
     .insert({
       user_id: userId,
       name: name.trim(),
-      color: '#C6A75E',
+      color: '#C56F42',
       icon: 'tag',
       is_default: false,
     })

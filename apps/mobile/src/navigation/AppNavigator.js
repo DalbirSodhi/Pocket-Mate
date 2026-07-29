@@ -1,5 +1,7 @@
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Clock3, Home, PieChart, Settings2 } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,9 +32,14 @@ import {
   TransactionsScreen,
 } from '../features/finance';
 import { ProfileGate, SettingsScreen } from '../features/profile';
-import { BudgetCapsScreen, SavingsGoalsScreen } from '../features/planning';
+import {
+  BudgetCapsScreen,
+  PlanOverviewScreen,
+  SavingsGoalsScreen,
+} from '../features/planning';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
 const navigationTheme = {
   ...DefaultTheme,
@@ -66,12 +73,86 @@ function RecoveryNavigator() {
   );
 }
 
+const tabIcons = {
+  HomeTab: Home,
+  ActivityTab: Clock3,
+  PlanTab: PieChart,
+  SettingsTab: Settings2,
+};
+
+function TabIcon({ focused, routeName }) {
+  const Icon = tabIcons[routeName];
+
+  return (
+    <View style={styles.tabIcon}>
+      {focused ? <View style={styles.tabIndicator} /> : null}
+      <Icon
+        color={focused ? colors.ink : colors.inkMuted}
+        size={21}
+        strokeWidth={focused ? 2.4 : 2}
+      />
+    </View>
+  );
+}
+
+function MainTabs({ profile, onProfileChange }) {
+  return (
+    <Tab.Navigator
+      initialRouteName="HomeTab"
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: colors.ink,
+        tabBarInactiveTintColor: colors.inkMuted,
+        tabBarHideOnKeyboard: true,
+        tabBarIcon: ({ focused }) => (
+          <TabIcon focused={focused} routeName={route.name} />
+        ),
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarStyle: styles.tabBar,
+      })}
+    >
+      <Tab.Screen name="HomeTab" options={{ title: 'Home' }}>
+        {(screenProps) => (
+          <DashboardScreen {...screenProps} profile={profile} />
+        )}
+      </Tab.Screen>
+      <Tab.Screen name="ActivityTab" options={{ title: 'Activity' }}>
+        {(screenProps) => (
+          <TransactionsScreen
+            {...screenProps}
+            currencyCode={profile.currency_code || 'CAD'}
+            isTabRoot
+          />
+        )}
+      </Tab.Screen>
+      <Tab.Screen name="PlanTab" options={{ title: 'Plan' }}>
+        {(screenProps) => (
+          <PlanOverviewScreen {...screenProps} profile={profile} />
+        )}
+      </Tab.Screen>
+      <Tab.Screen name="SettingsTab" options={{ title: 'Settings' }}>
+        {(screenProps) => (
+          <SettingsScreen
+            {...screenProps}
+            isTabRoot
+            onProfileChange={onProfileChange}
+            profile={profile}
+          />
+        )}
+      </Tab.Screen>
+    </Tab.Navigator>
+  );
+}
+
 function MainNavigator({ profile, onProfileChange }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Dashboard">
-        {(screenProps) => (
-          <DashboardScreen {...screenProps} profile={profile} />
+      <Stack.Screen name="MainTabs">
+        {() => (
+          <MainTabs
+            onProfileChange={onProfileChange}
+            profile={profile}
+          />
         )}
       </Stack.Screen>
       <Stack.Screen component={AddExpenseScreen} name="AddExpense" />
@@ -86,15 +167,6 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />
       <Stack.Screen component={BudgetCapsScreen} name="BudgetCaps" />
       <Stack.Screen component={TransactionsScreen} name="Transactions" />
-      <Stack.Screen name="Settings">
-        {(screenProps) => (
-          <SettingsScreen
-            {...screenProps}
-            onProfileChange={onProfileChange}
-            profile={profile}
-          />
-        )}
-      </Stack.Screen>
     </Stack.Navigator>
   );
 }
@@ -176,5 +248,35 @@ const styles = StyleSheet.create({
   errorTitle: {
     ...typography.title,
     color: colors.ink,
+  },
+  tabBar: {
+    height: 72,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  tabLabel: {
+    ...typography.caption,
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
+  },
+  tabIcon: {
+    width: 36,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    top: -10,
+    width: 24,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.primary,
   },
 });

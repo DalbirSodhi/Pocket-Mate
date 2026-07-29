@@ -1,6 +1,7 @@
-import { Save } from 'lucide-react-native';
+import { LogOut, Save } from 'lucide-react-native';
 import { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,6 +16,7 @@ import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, spacing, typography } from '../../../theme/tokens';
+import { signOut } from '../../auth';
 import { getLocalDateString } from '../../../utils/date.cjs';
 import { ProfileChoiceGroup } from '../components/ProfileChoiceGroup';
 import { currencyOptions, payCycleOptions } from '../profileOptions';
@@ -24,6 +26,7 @@ export function SettingsScreen({
   navigation,
   profile,
   onProfileChange,
+  isTabRoot = false,
 }) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [currencyCode, setCurrencyCode] = useState(
@@ -34,10 +37,12 @@ export function SettingsScreen({
     profile.pay_cycle_anchor_date || getLocalDateString(),
   );
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   async function handleSave() {
     setError('');
+    setSuccess('');
     setIsSaving(true);
 
     try {
@@ -49,12 +54,23 @@ export function SettingsScreen({
         payCycleAnchorDate,
       });
       onProfileChange(nextProfile);
-      navigation.goBack();
+      if (!isTabRoot) {
+        navigation.goBack();
+      } else {
+        setSuccess('Settings saved.');
+      }
     } catch (profileError) {
       setError(profileError.message || 'Unable to save your settings.');
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function handleSignOut() {
+    Alert.alert('Sign out?', 'You can sign back in at any time.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: signOut },
+    ]);
   }
 
   return (
@@ -69,12 +85,13 @@ export function SettingsScreen({
         >
           <View style={styles.content}>
             <ScreenHeader
-              onBack={navigation.goBack}
+              onBack={isTabRoot ? undefined : navigation.goBack}
               subtitle="Controls your dashboard calculations"
               title="Settings"
             />
 
             <InlineNotice message={error} variant="error" />
+            <InlineNotice message={success} variant="success" />
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Profile</Text>
@@ -122,6 +139,13 @@ export function SettingsScreen({
               isLoading={isSaving}
               label="Save settings"
               onPress={handleSave}
+            />
+
+            <AppButton
+              icon={LogOut}
+              label="Sign out"
+              onPress={handleSignOut}
+              variant="danger"
             />
           </View>
         </ScrollView>
