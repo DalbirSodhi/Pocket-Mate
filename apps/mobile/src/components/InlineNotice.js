@@ -15,8 +15,8 @@ const variants = {
     icon: CheckCircle2,
   },
   info: {
-    backgroundColor: colors.primarySoft,
-    color: colors.primary,
+    backgroundColor: colors.infoSoft,
+    color: colors.info,
     icon: Info,
   },
 };

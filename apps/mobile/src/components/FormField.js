@@ -22,12 +22,19 @@ export function FormField({
   numberOfLines,
 }) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const shouldHideValue = secureTextEntry && !isPasswordVisible;
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputShell, error && styles.inputShellError]}>
+      <View
+        style={[
+          styles.inputShell,
+          isFocused && styles.inputShellFocused,
+          error && styles.inputShellError,
+        ]}
+      >
         <TextInput
           autoCapitalize={autoCapitalize}
           autoComplete={autoComplete}
@@ -36,6 +43,8 @@ export function FormField({
           multiline={multiline}
           numberOfLines={numberOfLines}
           onChangeText={onChangeText}
+          onBlur={() => setIsFocused(false)}
+          onFocus={() => setIsFocused(true)}
           onSubmitEditing={onSubmitEditing}
           placeholder={placeholder}
           placeholderTextColor={colors.inkMuted}
@@ -79,9 +88,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceMuted,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  inputShellFocused: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
   },
   inputShellError: {
     borderColor: colors.danger,

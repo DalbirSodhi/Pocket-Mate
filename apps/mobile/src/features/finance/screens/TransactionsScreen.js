@@ -42,9 +42,14 @@ function formatDate(value) {
   }).format(new Date(year, month - 1, day));
 }
 
-export function TransactionsScreen({ navigation, route }) {
+export function TransactionsScreen({
+  navigation,
+  route,
+  currencyCode: currencyCodeProp,
+  isTabRoot = false,
+}) {
   const { user } = useAuthSession();
-  const currencyCode = route.params?.currencyCode || 'CAD';
+  const currencyCode = currencyCodeProp || route.params?.currencyCode || 'CAD';
   const [transactions, setTransactions] = useState([]);
   const [filter, setFilter] = useState('all');
   const [error, setError] = useState('');
@@ -94,7 +99,7 @@ export function TransactionsScreen({ navigation, route }) {
       >
         <View style={styles.content}>
           <ScreenHeader
-            onBack={navigation.goBack}
+            onBack={isTabRoot ? undefined : navigation.goBack}
             subtitle="Income and expenses in one place"
             title="Activity"
           />

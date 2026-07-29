@@ -238,6 +238,82 @@ function isMonthlyChargeInRange({ chargeDay, startDate, endDate }) {
   return false;
 }
 
+function getNextMonthlyDueDate({ chargeDay, date = new Date(), endDate }) {
+  const normalizedDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    12,
+  );
+
+  for (let monthOffset = 0; monthOffset < 2; monthOffset += 1) {
+    const month = new Date(
+      normalizedDate.getFullYear(),
+      normalizedDate.getMonth() + monthOffset,
+      1,
+      12,
+    );
+    const dueDate = addMonthsClamped(month, 0, Number(chargeDay));
+    const dueDateString = getLocalDateString(dueDate);
+
+    if (dueDate >= normalizedDate && dueDateString <= endDate) {
+      return dueDateString;
+    }
+  }
+
+  return null;
+}
+
+function getBudgetPressure(caps = []) {
+  const capCents = sumCents(caps, 'amount_cents');
+  const spentCents = sumCents(caps, 'spentCents');
+  const usagePercent =
+    capCents > 0 ? Math.round((spentCents / capCents) * 100) : 0;
+
+  if (caps.length === 0) {
+    return {
+      label: 'No caps',
+      tone: 'neutral',
+      usagePercent: 0,
+      detail: 'Set category limits to track budget pressure.',
+    };
+  }
+
+  if (usagePercent >= 100) {
+    return {
+      label: 'Over limit',
+      tone: 'danger',
+      usagePercent,
+      detail: 'Capped categories have reached their combined limit.',
+    };
+  }
+
+  if (usagePercent >= 80) {
+    return {
+      label: 'High',
+      tone: 'warning',
+      usagePercent,
+      detail: 'Little room remains in capped categories this month.',
+    };
+  }
+
+  if (usagePercent >= 50) {
+    return {
+      label: 'Moderate',
+      tone: 'neutral',
+      usagePercent,
+      detail: 'More than half of capped spending has been used.',
+    };
+  }
+
+  return {
+    label: 'Low',
+    tone: 'success',
+    usagePercent,
+    detail: 'Capped categories still have comfortable room.',
+  };
+}
+
 function getPlanHealth({ incomeCents, totalOutflowCents, overBudgetCaps = 0 }) {
   if (incomeCents <= 0) {
     return {
@@ -298,8 +374,10 @@ function getPlanHealth({ incomeCents, totalOutflowCents, overBudgetCaps = 0 }) {
 module.exports = {
   calculateSafeToSpend,
   calculatePlanTotals,
+  getBudgetPressure,
   getCycleSavingsContribution,
   getMonthRange,
+  getNextMonthlyDueDate,
   getPayCycleRange,
   getPlanHealth,
   isMonthlyChargeInRange,
