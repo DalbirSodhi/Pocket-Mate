@@ -22,6 +22,7 @@ export function FormField({
   maxLength,
   multiline = false,
   numberOfLines,
+  editable = true,
 }) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -35,12 +36,14 @@ export function FormField({
           styles.inputShell,
           isFocused && styles.inputShellFocused,
           error && styles.inputShellError,
+          !editable && styles.inputShellDisabled,
         ]}
       >
         <TextInput
           autoCapitalize={autoCapitalize}
           autoComplete={autoComplete}
           autoCorrect={autoCorrect}
+          editable={editable}
           keyboardType={keyboardType}
           maxLength={maxLength}
           multiline={multiline}
@@ -102,6 +105,9 @@ const styles = StyleSheet.create({
   },
   inputShellError: {
     borderColor: colors.danger,
+  },
+  inputShellDisabled: {
+    opacity: 0.72,
   },
   input: {
     ...typography.body,

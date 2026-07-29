@@ -325,11 +325,15 @@ export function DashboardScreen({ navigation, profile }) {
                     const isCard = bill.type === 'card';
                     const isCardSetup = bill.type === 'card_setup';
                     const Icon = isCard || isCardSetup ? CreditCard : ReceiptText;
-                    const dueLabel = isCardSetup
-                      ? 'No statement added'
-                      : bill.isOverdue
-                        ? `Overdue ${formatShortDate(bill.dueOn)}`
-                        : `Due ${formatShortDate(bill.dueOn)}`;
+                    const dueLabel = bill.paymentPlan
+                      ? bill.paymentPlan.status === 'completed'
+                        ? 'Payment plan complete'
+                        : `${bill.paymentPlan.paidCount}/${bill.paymentPlan.installmentCount} paid • Next ${formatShortDate(bill.paymentPlan.nextPaymentOn)}`
+                      : isCardSetup
+                        ? 'No statement added'
+                        : bill.isOverdue
+                          ? `Overdue ${formatShortDate(bill.dueOn)}`
+                          : `Due ${formatShortDate(bill.dueOn)}`;
                     const amountLabel = isCardSetup
                       ? 'Add bill'
                       : formatCurrency(bill.amountCents, currencyCode);
@@ -339,10 +343,18 @@ export function DashboardScreen({ navigation, profile }) {
                           creditCardId: bill.creditCardId,
                           currencyCode,
                         });
-                      } else if (isCard) {
-                        navigation.navigate('CreditCards', { currencyCode });
                       } else {
-                        navigation.navigate('FixedExpenses', { currencyCode });
+                        navigation.navigate('BillPaymentPlan', {
+                          creditCardBillId: bill.creditCardBillId,
+                          recurringExpenseId: bill.recurringExpenseId,
+                          periodStart:
+                            bill.periodStart ||
+                            `${bill.dueOn.slice(0, 7)}-01`,
+                          title: bill.title,
+                          amountCents: bill.amountCents,
+                          dueOn: bill.dueOn,
+                          currencyCode,
+                        });
                       }
                     };
 
