@@ -39,6 +39,7 @@ export function SettingsScreen({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   async function handleSave() {
     setError('');
@@ -66,10 +67,36 @@ export function SettingsScreen({
     }
   }
 
+  async function performSignOut() {
+    setError('');
+    setSuccess('');
+    setIsSigningOut(true);
+
+    try {
+      await signOut();
+    } catch (signOutError) {
+      setError(signOutError.message || 'Unable to sign out. Try again.');
+      setIsSigningOut(false);
+    }
+  }
+
   function handleSignOut() {
+    if (Platform.OS === 'web') {
+      const shouldSignOut =
+        typeof window !== 'undefined'
+          ? window.confirm('Sign out of Pocket-Mate?')
+          : true;
+
+      if (shouldSignOut) {
+        performSignOut();
+      }
+
+      return;
+    }
+
     Alert.alert('Sign out?', 'You can sign back in at any time.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: signOut },
+      { text: 'Sign out', style: 'destructive', onPress: performSignOut },
     ]);
   }
 
@@ -143,6 +170,7 @@ export function SettingsScreen({
 
             <AppButton
               icon={LogOut}
+              isLoading={isSigningOut}
               label="Sign out"
               onPress={handleSignOut}
               variant="danger"
