@@ -13,6 +13,8 @@ export function FormField({
   keyboardType = 'default',
   autoCapitalize = 'sentences',
   autoComplete,
+  autoCorrect = true,
+  spellCheck = true,
   textContentType,
   returnKeyType,
   onSubmitEditing,
@@ -38,6 +40,7 @@ export function FormField({
         <TextInput
           autoCapitalize={autoCapitalize}
           autoComplete={autoComplete}
+          autoCorrect={autoCorrect}
           keyboardType={keyboardType}
           maxLength={maxLength}
           multiline={multiline}
@@ -50,6 +53,7 @@ export function FormField({
           placeholderTextColor={colors.inkMuted}
           returnKeyType={returnKeyType}
           secureTextEntry={shouldHideValue}
+          spellCheck={spellCheck}
           style={[styles.input, multiline && styles.multilineInput]}
           textContentType={textContentType}
           value={value}

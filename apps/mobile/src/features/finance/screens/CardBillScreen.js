@@ -59,7 +59,9 @@ export function CardBillScreen({ navigation, route }) {
       const nextCards = await getCreditCards(user.id);
       setCards(nextCards);
       setCreditCardId((current) =>
-        nextCards.some((card) => card.id === current)
+        nextCards.some((card) => card.id === route.params?.creditCardId)
+          ? route.params.creditCardId
+          : nextCards.some((card) => card.id === current)
           ? current
           : nextCards.find((card) => card.is_active)?.id || '',
       );
@@ -70,7 +72,7 @@ export function CardBillScreen({ navigation, route }) {
     } finally {
       setIsLoadingCards(false);
     }
-  }, [user.id]);
+  }, [route.params?.creditCardId, user.id]);
 
   useFocusEffect(
     useCallback(() => {

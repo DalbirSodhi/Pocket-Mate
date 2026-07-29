@@ -17,9 +17,8 @@ import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, spacing, typography } from '../../../theme/tokens';
 import { signOut } from '../../auth';
-import { getLocalDateString } from '../../../utils/date.cjs';
 import { ProfileChoiceGroup } from '../components/ProfileChoiceGroup';
-import { currencyOptions, payCycleOptions } from '../profileOptions';
+import { currencyOptions } from '../profileOptions';
 import { saveProfile } from '../services/profileService';
 
 export function SettingsScreen({
@@ -32,13 +31,10 @@ export function SettingsScreen({
   const [currencyCode, setCurrencyCode] = useState(
     profile.currency_code || 'CAD',
   );
-  const [payCycle, setPayCycle] = useState(profile.pay_cycle || 'monthly');
-  const [payCycleAnchorDate, setPayCycleAnchorDate] = useState(
-    profile.pay_cycle_anchor_date || getLocalDateString(),
-  );
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   async function handleSave() {
     setError('');
@@ -50,8 +46,6 @@ export function SettingsScreen({
         userId: profile.id,
         displayName,
         currencyCode,
-        payCycle,
-        payCycleAnchorDate,
       });
       onProfileChange(nextProfile);
       if (!isTabRoot) {
@@ -66,10 +60,36 @@ export function SettingsScreen({
     }
   }
 
+  async function performSignOut() {
+    setError('');
+    setSuccess('');
+    setIsSigningOut(true);
+
+    try {
+      await signOut();
+    } catch (signOutError) {
+      setError(signOutError.message || 'Unable to sign out. Try again.');
+      setIsSigningOut(false);
+    }
+  }
+
   function handleSignOut() {
+    if (Platform.OS === 'web') {
+      const shouldSignOut =
+        typeof window !== 'undefined'
+          ? window.confirm('Sign out of Pocket-Mate?')
+          : true;
+
+      if (shouldSignOut) {
+        performSignOut();
+      }
+
+      return;
+    }
+
     Alert.alert('Sign out?', 'You can sign back in at any time.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: signOut },
+      { text: 'Sign out', style: 'destructive', onPress: performSignOut },
     ]);
   }
 
@@ -86,7 +106,7 @@ export function SettingsScreen({
           <View style={styles.content}>
             <ScreenHeader
               onBack={isTabRoot ? undefined : navigation.goBack}
-              subtitle="Controls your dashboard calculations"
+              subtitle="Profile and account preferences"
               title="Settings"
             />
 
@@ -112,29 +132,15 @@ export function SettingsScreen({
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Pay schedule</Text>
+              <Text style={styles.sectionTitle}>Monthly tracking</Text>
               <Text style={styles.sectionBody}>
-                Pocket-Mate uses a known payday to calculate your active cycle,
-                next payday, and daily spending capacity.
+                Income, spending, bills, and goals are calculated from the first
+                day through the last day of each month.
               </Text>
-              <ProfileChoiceGroup
-                label="Pay cycle"
-                onSelect={setPayCycle}
-                options={payCycleOptions}
-                selectedValue={payCycle}
-              />
-              <FormField
-                autoCapitalize="none"
-                label="Most recent payday"
-                maxLength={10}
-                onChangeText={setPayCycleAnchorDate}
-                placeholder="YYYY-MM-DD"
-                value={payCycleAnchorDate}
-              />
             </View>
 
             <AppButton
-              disabled={!displayName || !payCycleAnchorDate}
+              disabled={!displayName}
               icon={Save}
               isLoading={isSaving}
               label="Save settings"
@@ -143,6 +149,7 @@ export function SettingsScreen({
 
             <AppButton
               icon={LogOut}
+              isLoading={isSigningOut}
               label="Sign out"
               onPress={handleSignOut}
               variant="danger"

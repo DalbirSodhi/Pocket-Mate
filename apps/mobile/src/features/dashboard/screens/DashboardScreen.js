@@ -55,9 +55,9 @@ function EmptyBills() {
         <CalendarClock color={colors.inkMuted} size={21} />
       </View>
       <View style={styles.emptyCopy}>
-        <Text style={styles.emptyTitle}>Nothing due this cycle</Text>
+        <Text style={styles.emptyTitle}>No bills added yet</Text>
         <Text style={styles.emptyBody}>
-          Fixed expenses and card bills will appear here.
+          Add fixed expenses or a statement for a saved card.
         </Text>
       </View>
     </View>
@@ -124,7 +124,7 @@ export function DashboardScreen({ navigation, profile }) {
   const incomeCents = summary?.incomeCents || 0;
   const expenseCents = summary?.expenseCents || 0;
   const totalOutflowCents = summary?.totalOutflowCents || 0;
-  const daysUntilPayday = summary?.daysUntilNextPayday || 1;
+  const daysUntilReset = summary?.daysUntilReset || 1;
   const spendingProgress =
     incomeCents > 0 ? Math.min(totalOutflowCents / incomeCents, 1) : 0;
   const planHealth = summary?.planHealth || {
@@ -189,15 +189,16 @@ export function DashboardScreen({ navigation, profile }) {
                   {formatCurrency(availableCents, currencyCode)} available
                 </Text>
                 <View style={styles.metaDot} />
-                <Text style={styles.paydayText}>
-                  {daysUntilPayday} {daysUntilPayday === 1 ? 'day' : 'days'} to payday
+                <Text style={styles.remainingText}>
+                  {daysUntilReset} {daysUntilReset === 1 ? 'day' : 'days'} left
+                  this month
                 </Text>
               </View>
             </View>
 
             <View style={styles.forecast}>
               <View style={styles.forecastHeading}>
-                <Text style={styles.forecastLabel}>Cycle forecast</Text>
+                <Text style={styles.forecastLabel}>Monthly forecast</Text>
                 <Text style={styles.forecastValue}>
                   {Math.round(spendingProgress * 100)}% planned
                 </Text>
@@ -210,8 +211,8 @@ export function DashboardScreen({ navigation, profile }) {
                   ]}
                 />
               </View>
-              <Text style={styles.nextPayday}>
-                Next payday {formatShortDate(summary?.nextPayday) || 'not set'}
+              <Text style={styles.resetDate}>
+                Resets {formatShortDate(summary?.nextMonthStartDate)}
               </Text>
             </View>
           </View>
@@ -220,23 +221,6 @@ export function DashboardScreen({ navigation, profile }) {
         <View style={styles.body}>
           <View style={styles.bodyContent}>
             <InlineNotice message={error} variant="error" />
-
-            {!summary?.isPayCycleConfigured && summary ? (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => navigation.navigate('SettingsTab')}
-                style={styles.paydayPrompt}
-              >
-                <CalendarClock color={colors.info} size={19} />
-                <View style={styles.paydayPromptCopy}>
-                  <Text style={styles.paydayPromptTitle}>Set your payday</Text>
-                  <Text style={styles.paydayPromptBody}>
-                    Get more accurate daily spending guidance.
-                  </Text>
-                </View>
-                <ChevronRight color={colors.info} size={18} />
-              </Pressable>
-            ) : null}
 
             <View style={styles.summary}>
               <Pressable
@@ -327,9 +311,7 @@ export function DashboardScreen({ navigation, profile }) {
                 <Pressable
                   accessibilityRole="button"
                   hitSlop={8}
-                  onPress={() =>
-                    navigation.navigate('FixedExpenses', { currencyCode })
-                  }
+                  onPress={() => navigation.navigate('PlanTab')}
                   style={styles.sectionLink}
                 >
                   <Text style={styles.sectionLinkText}>Manage</Text>
@@ -340,11 +322,40 @@ export function DashboardScreen({ navigation, profile }) {
               {summary?.upcomingBills?.length ? (
                 <View style={styles.billList}>
                   {summary.upcomingBills.map((bill, index) => {
-                    const Icon = bill.type === 'card' ? CreditCard : ReceiptText;
+                    const isCard = bill.type === 'card';
+                    const isCardSetup = bill.type === 'card_setup';
+                    const Icon = isCard || isCardSetup ? CreditCard : ReceiptText;
+                    const dueLabel = isCardSetup
+                      ? 'No statement added'
+                      : bill.isOverdue
+                        ? `Overdue ${formatShortDate(bill.dueOn)}`
+                        : `Due ${formatShortDate(bill.dueOn)}`;
+                    const amountLabel = isCardSetup
+                      ? 'Add bill'
+                      : formatCurrency(bill.amountCents, currencyCode);
+                    const handlePress = () => {
+                      if (isCardSetup) {
+                        navigation.navigate('CardBill', {
+                          creditCardId: bill.creditCardId,
+                          currencyCode,
+                        });
+                      } else if (isCard) {
+                        navigation.navigate('CreditCards', { currencyCode });
+                      } else {
+                        navigation.navigate('FixedExpenses', { currencyCode });
+                      }
+                    };
 
                     return (
                       <View key={bill.id}>
-                        <View style={styles.billRow}>
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={handlePress}
+                          style={({ pressed }) => [
+                            styles.billRow,
+                            pressed && styles.billRowPressed,
+                          ]}
+                        >
                           <View style={styles.billIcon}>
                             <Icon color={colors.ink} size={19} />
                           </View>
@@ -353,13 +364,14 @@ export function DashboardScreen({ navigation, profile }) {
                               {bill.title}
                             </Text>
                             <Text style={styles.billDue}>
-                              Due {formatShortDate(bill.dueOn)}
+                              {dueLabel}
                             </Text>
                           </View>
                           <Text style={styles.billAmount}>
-                            {formatCurrency(bill.amountCents, currencyCode)}
+                            {amountLabel}
                           </Text>
-                        </View>
+                          <ChevronRight color={colors.inkMuted} size={16} />
+                        </Pressable>
                         {index < summary.upcomingBills.length - 1 ? (
                           <View style={styles.billDivider} />
                         ) : null}
@@ -470,7 +482,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.round,
     backgroundColor: colors.panelMuted,
   },
-  paydayText: {
+  remainingText: {
     ...typography.caption,
     color: colors.panelMuted,
   },
@@ -500,7 +512,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.round,
     backgroundColor: colors.primary,
   },
-  nextPayday: {
+  resetDate: {
     ...typography.caption,
     color: colors.panelMuted,
     textAlign: 'right',
@@ -516,26 +528,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: spacing.xxxl,
     gap: spacing.xl,
-  },
-  paydayPrompt: {
-    minHeight: 64,
-    borderRadius: radius.md,
-    backgroundColor: colors.infoSoft,
-    padding: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  paydayPromptCopy: {
-    flex: 1,
-  },
-  paydayPromptTitle: {
-    ...typography.label,
-    color: colors.info,
-  },
-  paydayPromptBody: {
-    ...typography.caption,
-    color: colors.inkMuted,
   },
   summary: {
     minHeight: 74,
@@ -637,6 +629,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  billRowPressed: {
+    backgroundColor: colors.surfaceMuted,
   },
   billIcon: {
     width: 38,

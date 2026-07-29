@@ -37,6 +37,10 @@ function assertAllowedValue(value, allowedValues, fieldName) {
   }
 }
 
+function getCurrentMonthStartDate() {
+  return `${getLocalDateString().slice(0, 7)}-01`;
+}
+
 export async function getProfile(userId) {
   const response = await supabase
     .from('profiles')
@@ -53,8 +57,8 @@ export async function saveProfile({
   userId,
   displayName,
   currencyCode,
-  payCycle,
-  payCycleAnchorDate,
+  payCycle = 'monthly',
+  payCycleAnchorDate = getCurrentMonthStartDate(),
 }) {
   assertAllowedValue(currencyCode, supportedCurrencies, 'currency');
   assertAllowedValue(payCycle, supportedPayCycles, 'pay cycle');

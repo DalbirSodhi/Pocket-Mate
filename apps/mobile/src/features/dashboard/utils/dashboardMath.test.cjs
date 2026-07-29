@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const {
+  calculateActualBalance,
   calculateSafeToSpend,
   calculatePlanTotals,
   getBudgetPressure,
@@ -13,6 +14,16 @@ const {
   isMonthlyChargeInRange,
   sumCents,
 } = require('./dashboardMath.cjs');
+
+test('actual balance is monthly income minus recorded spending', () => {
+  assert.equal(
+    calculateActualBalance({
+      incomeCents: 82700,
+      expenseCents: 26513,
+    }),
+    56187,
+  );
+});
 
 test('getMonthRange returns the full leap-year month', () => {
   const result = getMonthRange(new Date(2028, 1, 10));
@@ -27,6 +38,13 @@ test('getMonthRange returns the full leap-year month', () => {
       endDate: '2028-02-29',
     },
   );
+});
+
+test('getMonthRange resets on the first and counts the remaining month days', () => {
+  const result = getMonthRange(new Date(2026, 6, 29));
+
+  assert.equal(result.nextMonthStartDate, '2026-08-01');
+  assert.equal(result.daysUntilReset, 3);
 });
 
 test('sumCents adds numeric and serialized database values', () => {
@@ -161,14 +179,14 @@ test('safe-to-spend calculation divides available money across remaining days', 
   assert.equal(
     calculateSafeToSpend({
       availableCents: 10000,
-      daysUntilNextPayday: 4,
+      daysRemaining: 4,
     }),
     2500,
   );
   assert.equal(
     calculateSafeToSpend({
       availableCents: 10000,
-      daysUntilNextPayday: 4,
+      daysRemaining: 4,
       shortfallCents: 1,
     }),
     0,

@@ -136,7 +136,7 @@ export function PlanOverviewScreen({ navigation, profile }) {
           <View style={styles.health}>
             <View style={styles.healthHeading}>
               <View>
-                <Text style={styles.healthEyebrow}>CURRENT CYCLE</Text>
+                <Text style={styles.healthEyebrow}>THIS MONTH</Text>
                 <Text style={styles.healthTitle}>{planHealth.label}</Text>
               </View>
               <Text style={styles.healthPercent}>
@@ -165,9 +165,9 @@ export function PlanOverviewScreen({ navigation, profile }) {
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Available</Text>
+              <Text style={styles.summaryLabel}>After commitments</Text>
               <Text style={styles.summaryValue}>
-                {formatCurrency(summary?.availableCents || 0, currencyCode)}
+                {formatCurrency(summary?.spendableCents || 0, currencyCode)}
               </Text>
             </View>
           </View>
@@ -259,12 +259,12 @@ export function PlanOverviewScreen({ navigation, profile }) {
                 }
                 title="Savings goals"
                 value={formatCurrency(
-                  summary?.cycleSavingsCents || 0,
+                  summary?.monthlySavingsCents || 0,
                   currencyCode,
                 )}
               />
               <PlanRow
-                detail={`${summary?.dueRecurringExpenses || 0} due this cycle`}
+                detail={`${summary?.dueRecurringExpenses || 0} due this month`}
                 icon={CalendarClock}
                 onPress={() =>
                   navigation.navigate('FixedExpenses', { currencyCode })
