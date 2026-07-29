@@ -15,9 +15,8 @@ import { BrandMark } from '../../../components/BrandMark';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { colors, spacing, typography } from '../../../theme/tokens';
-import { getLocalDateString } from '../../../utils/date.cjs';
 import { ProfileChoiceGroup } from '../components/ProfileChoiceGroup';
-import { currencyOptions, payCycleOptions } from '../profileOptions';
+import { currencyOptions } from '../profileOptions';
 import { saveProfile } from '../services/profileService';
 
 export function OnboardingScreen({
@@ -32,10 +31,6 @@ export function OnboardingScreen({
   );
   const [displayName, setDisplayName] = useState(initialName);
   const [currencyCode, setCurrencyCode] = useState('CAD');
-  const [payCycle, setPayCycle] = useState('monthly');
-  const [payCycleAnchorDate, setPayCycleAnchorDate] = useState(
-    getLocalDateString(),
-  );
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -48,8 +43,6 @@ export function OnboardingScreen({
         userId: user.id,
         displayName,
         currencyCode,
-        payCycle,
-        payCycleAnchorDate,
       });
       onComplete(profile);
     } catch (profileError) {
@@ -100,19 +93,9 @@ export function OnboardingScreen({
                   options={currencyOptions}
                   selectedValue={currencyCode}
                 />
-                <ProfileChoiceGroup
-                  label="Pay cycle"
-                  onSelect={setPayCycle}
-                  options={payCycleOptions}
-                  selectedValue={payCycle}
-                />
-                <FormField
-                  autoCapitalize="none"
-                  label="Most recent payday"
-                  maxLength={10}
-                  onChangeText={setPayCycleAnchorDate}
-                  placeholder="YYYY-MM-DD"
-                  value={payCycleAnchorDate}
+                <InlineNotice
+                  message="Your income, spending, and plan reset together on the first day of each month."
+                  variant="info"
                 />
                 <AppButton
                   disabled={!displayName}

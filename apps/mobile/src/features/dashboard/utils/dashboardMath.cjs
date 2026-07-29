@@ -10,15 +10,26 @@ function sumCents(rows, fieldName) {
   return rows.reduce((total, row) => total + Number(row[fieldName] || 0), 0);
 }
 
+function calculateActualBalance({ incomeCents, expenseCents }) {
+  return Number(incomeCents || 0) - Number(expenseCents || 0);
+}
+
 function getMonthRange(date = new Date()) {
   const year = date.getFullYear();
   const month = date.getMonth();
   const lastDay = new Date(year, month + 1, 0).getDate();
   const monthNumber = String(month + 1).padStart(2, '0');
+  const normalizedDate = new Date(year, month, date.getDate(), 12);
+  const nextMonthStart = new Date(year, month + 1, 1, 12);
 
   return {
     startDate: `${year}-${monthNumber}-01`,
     endDate: `${year}-${monthNumber}-${String(lastDay).padStart(2, '0')}`,
+    nextMonthStartDate: getLocalDateString(nextMonthStart),
+    daysUntilReset: Math.max(
+      getCalendarDayDifference(normalizedDate, nextMonthStart),
+      1,
+    ),
     label: date.toLocaleDateString('en-CA', {
       month: 'long',
       year: 'numeric',
@@ -202,6 +213,7 @@ function getCycleSavingsContribution(monthlyContributionCents, payCycle) {
 
 function calculateSafeToSpend({
   availableCents,
+  daysRemaining,
   daysUntilNextPayday,
   shortfallCents = 0,
 }) {
@@ -211,7 +223,7 @@ function calculateSafeToSpend({
 
   return Math.floor(
     Math.max(Number(availableCents || 0), 0) /
-      Math.max(Number(daysUntilNextPayday || 1), 1),
+      Math.max(Number(daysRemaining || daysUntilNextPayday || 1), 1),
   );
 }
 
@@ -332,7 +344,7 @@ function getPlanHealth({ incomeCents, totalOutflowCents, overBudgetCaps = 0 }) {
       label: 'Overcommitted',
       tone: 'danger',
       allocationPercent,
-      detail: "Planned outflow is higher than this cycle's income.",
+      detail: "Planned outflow is higher than this month's income.",
     };
   }
 
@@ -372,6 +384,7 @@ function getPlanHealth({ incomeCents, totalOutflowCents, overBudgetCaps = 0 }) {
 }
 
 module.exports = {
+  calculateActualBalance,
   calculateSafeToSpend,
   calculatePlanTotals,
   getBudgetPressure,

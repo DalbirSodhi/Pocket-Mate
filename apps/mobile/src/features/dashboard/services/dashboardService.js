@@ -1,11 +1,10 @@
 import { supabase } from '../../../infrastructure/supabase/client';
 import {
+  calculateActualBalance,
   calculateSafeToSpend,
   calculatePlanTotals,
-  getCycleSavingsContribution,
   getMonthRange,
   getNextMonthlyDueDate,
-  getPayCycleRange,
   getPlanHealth,
   isMonthlyChargeInRange,
   sumCents,
@@ -19,18 +18,13 @@ function unwrapResponse(response) {
   return response.data || [];
 }
 
-export async function getDashboardSummary(userId, profile, date = new Date()) {
+export async function getDashboardSummary(userId, _profile, date = new Date()) {
   const month = getMonthRange(date);
-  const cycle = getPayCycleRange({
-    payCycle: profile.pay_cycle,
-    anchorDate: profile.pay_cycle_anchor_date,
-    date,
-  });
+  const today = getLocalDateValue(date);
 
   const [
     incomeResponse,
     expenseResponse,
-    budgetExpenseResponse,
     recentExpenseResponse,
     categoryResponse,
     savingsResponse,
@@ -43,14 +37,8 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
       .from('income_entries')
       .select('amount_cents')
       .eq('user_id', userId)
-      .gte('received_on', cycle.startDate)
-      .lte('received_on', cycle.endDate),
-    supabase
-      .from('expenses')
-      .select('amount_cents, category_id')
-      .eq('user_id', userId)
-      .gte('spent_on', cycle.startDate)
-      .lte('spent_on', cycle.endDate),
+      .gte('received_on', month.startDate)
+      .lte('received_on', month.endDate),
     supabase
       .from('expenses')
       .select('amount_cents, category_id')
@@ -84,23 +72,23 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
       .select('id, name, amount_cents, charge_day')
       .eq('user_id', userId)
       .eq('is_active', true)
-      .lte('starts_on', cycle.endDate)
-      .or(`ends_on.is.null,ends_on.gte.${cycle.startDate}`),
+      .lte('starts_on', month.endDate)
+      .or(`ends_on.is.null,ends_on.gte.${month.startDate}`),
     supabase
       .from('credit_card_bills')
       .select('id, credit_card_id, amount_cents, due_on, paid_on')
       .eq('user_id', userId)
-      .gte('due_on', cycle.startDate)
-      .lte('due_on', cycle.endDate),
+      .is('paid_on', null)
+      .order('due_on', { ascending: true }),
     supabase
       .from('credit_cards')
       .select('id, nickname, last_four')
-      .eq('user_id', userId),
+      .eq('user_id', userId)
+      .eq('is_active', true),
   ]);
 
   const income = unwrapResponse(incomeResponse);
   const expenses = unwrapResponse(expenseResponse);
-  const budgetExpenses = unwrapResponse(budgetExpenseResponse);
   const recentExpenses = unwrapResponse(recentExpenseResponse);
   const categories = unwrapResponse(categoryResponse);
   const savingsGoals = unwrapResponse(savingsResponse);
@@ -109,32 +97,31 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     (expense) =>
       isMonthlyChargeInRange({
         chargeDay: expense.charge_day,
-        startDate: cycle.startDate,
-        endDate: cycle.endDate,
+        startDate: month.startDate,
+        endDate: month.endDate,
       }),
   );
-  const cardBills = unwrapResponse(cardBillResponse);
+  const unpaidCardBills = unwrapResponse(cardBillResponse);
   const creditCards = unwrapResponse(creditCardResponse);
+  const committedCardBills = unpaidCardBills.filter(
+    (bill) => bill.due_on <= month.endDate,
+  );
   const categoryById = new Map(categories.map((category) => [category.id, category]));
   const cardById = new Map(creditCards.map((card) => [card.id, card]));
   const incomeCents = sumCents(income, 'amount_cents');
   const expenseCents = sumCents(expenses, 'amount_cents');
   const fixedExpenseCents = sumCents(recurringExpenses, 'amount_cents');
-  const cardBillCents = sumCents(cardBills, 'amount_cents');
-  const cycleSavingsCents = savingsGoals.reduce(
+  const cardBillCents = sumCents(committedCardBills, 'amount_cents');
+  const monthlySavingsCents = savingsGoals.reduce(
     (total, goal) =>
-      total +
-      getCycleSavingsContribution(
-        goal.monthly_contribution_cents,
-        profile.pay_cycle,
-      ),
+      total + Number(goal.monthly_contribution_cents || 0),
     0,
   );
   const budgetSpentCents = budgets.reduce(
     (total, budget) =>
       total +
       sumCents(
-        budgetExpenses.filter(
+        expenses.filter(
           (expense) => expense.category_id === budget.category_id,
         ),
         'amount_cents',
@@ -143,7 +130,7 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
   );
   const overBudgetCaps = budgets.filter((budget) => {
     const spentCents = sumCents(
-      budgetExpenses.filter(
+      expenses.filter(
         (expense) => expense.category_id === budget.category_id,
       ),
       'amount_cents',
@@ -155,7 +142,7 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     expenseCents,
     fixedExpenseCents,
     cardBillCents,
-    savingsContributionCents: cycleSavingsCents,
+    savingsContributionCents: monthlySavingsCents,
   });
   const planHealth = getPlanHealth({
     incomeCents,
@@ -164,9 +151,16 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
   });
   const safeToSpendCents = calculateSafeToSpend({
     availableCents: planTotals.availableCents,
-    daysUntilNextPayday: cycle.daysUntilNextPayday,
+    daysRemaining: month.daysUntilReset,
     shortfallCents: planTotals.shortfallCents,
   });
+  const actualAvailableCents = calculateActualBalance({
+    incomeCents,
+    expenseCents,
+  });
+  const cardsWithUnpaidBills = new Set(
+    unpaidCardBills.map((bill) => bill.credit_card_id),
+  );
   const upcomingBills = [
     ...recurringExpenses
       .map((expense) => ({
@@ -177,44 +171,58 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
         dueOn: getNextMonthlyDueDate({
           chargeDay: expense.charge_day,
           date,
-          endDate: cycle.endDate,
+          endDate: month.endDate,
         }),
       }))
       .filter((expense) => expense.dueOn),
-    ...cardBills
-      .filter((bill) => !bill.paid_on)
-      .map((bill) => {
-        const card = cardById.get(bill.credit_card_id);
-        const cardNumber = card?.last_four ? ` • ${card.last_four}` : '';
+    ...unpaidCardBills.map((bill) => {
+      const card = cardById.get(bill.credit_card_id);
+      const cardNumber = card?.last_four ? ` • ${card.last_four}` : '';
 
-        return {
-          id: `card-${bill.id}`,
-          type: 'card',
-          title: `${card?.nickname || 'Credit card'}${cardNumber}`,
-          amountCents: bill.amount_cents,
-          dueOn: bill.due_on,
-        };
-      }),
+      return {
+        id: `card-${bill.id}`,
+        type: 'card',
+        title: `${card?.nickname || 'Credit card'}${cardNumber}`,
+        amountCents: bill.amount_cents,
+        dueOn: bill.due_on,
+        creditCardId: bill.credit_card_id,
+        isOverdue: bill.due_on < today,
+      };
+    }),
+    ...creditCards
+      .filter((card) => !cardsWithUnpaidBills.has(card.id))
+      .map((card) => ({
+        id: `card-setup-${card.id}`,
+        type: 'card_setup',
+        title: `${card.nickname}${card.last_four ? ` • ${card.last_four}` : ''}`,
+        amountCents: null,
+        dueOn: null,
+        creditCardId: card.id,
+      })),
   ]
-    .sort((left, right) => left.dueOn.localeCompare(right.dueOn))
+    .sort((left, right) => {
+      if (!left.dueOn) return 1;
+      if (!right.dueOn) return -1;
+      return left.dueOn.localeCompare(right.dueOn);
+    })
     .slice(0, 4);
 
   return {
-    periodLabel: cycle.label,
-    cycleStartDate: cycle.startDate,
-    cycleEndDate: cycle.endDate,
-    nextPayday: cycle.nextPayday,
-    daysUntilNextPayday: cycle.daysUntilNextPayday,
-    isPayCycleConfigured: cycle.isConfigured,
+    periodLabel: month.label,
+    monthStartDate: month.startDate,
+    monthEndDate: month.endDate,
+    nextMonthStartDate: month.nextMonthStartDate,
+    daysUntilReset: month.daysUntilReset,
     safeToSpendCents,
     incomeCents,
     expenseCents,
     fixedExpenseCents,
     cardBillCents,
-    cycleSavingsCents,
+    monthlySavingsCents,
     committedCents: planTotals.committedCents,
     totalOutflowCents: planTotals.totalOutflowCents,
-    availableCents: planTotals.availableCents,
+    availableCents: actualAvailableCents,
+    spendableCents: planTotals.availableCents,
     shortfallCents: planTotals.shortfallCents,
     savingsCurrentCents: sumCents(savingsGoals, 'current_amount_cents'),
     savingsTargetCents: sumCents(savingsGoals, 'target_amount_cents'),
@@ -225,12 +233,20 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     overBudgetCaps,
     planHealth,
     dueRecurringExpenses: recurringExpenses.length,
-    currentCardBills: cardBills.length,
-    unpaidCardBills: cardBills.filter((bill) => !bill.paid_on).length,
+    currentCardBills: committedCardBills.length,
+    unpaidCardBills: unpaidCardBills.length,
     upcomingBills,
     recentExpenses: recentExpenses.map((expense) => ({
       ...expense,
       category: categoryById.get(expense.category_id) || null,
     })),
   };
+}
+
+function getLocalDateValue(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 }
