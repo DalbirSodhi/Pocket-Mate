@@ -107,6 +107,11 @@ future-schedule replacement, and completed-payment preservation happen in one
 transaction. Dashboard reads treat completed installments as actual cash
 outflow and only the unpaid balance as a commitment.
 
+Purchase-impact checks are client-side, deterministic projections over the
+dashboard summary and category-cap service results. The calculator does not
+write hypothetical purchases. Confirmation hands validated values to the normal
+expense-entry flow, keeping Supabase writes behind the finance service boundary.
+
 Detailed table planning is maintained in [database-schema.md](./database-schema.md).
 
 ## Security Rules

@@ -36,6 +36,7 @@ import {
   BillPaymentPlanScreen,
   BudgetCapsScreen,
   PlanOverviewScreen,
+  PurchaseImpactScreen,
   SavingsGoalsScreen,
 } from '../features/planning';
 
@@ -168,6 +169,7 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={BillPaymentPlanScreen} name="BillPaymentPlan" />
       <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />
       <Stack.Screen component={BudgetCapsScreen} name="BudgetCaps" />
+      <Stack.Screen component={PurchaseImpactScreen} name="PurchaseImpact" />
       <Stack.Screen component={TransactionsScreen} name="Transactions" />
     </Stack.Navigator>
   );

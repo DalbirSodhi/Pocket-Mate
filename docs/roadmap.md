@@ -32,6 +32,8 @@
 - Recent expense list.
 - Savings progress.
 - Paid-installment cash flow and remaining bill commitments.
+- Purchase-impact guidance using available cash, commitments, daily pace, and
+  category caps.
 
 ## Phase 4: Quality And Trust
 

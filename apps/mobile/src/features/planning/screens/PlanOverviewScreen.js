@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import {
   CalendarClock,
   ChevronRight,
+  CircleDollarSign,
   CreditCard,
   Gauge,
   Landmark,
@@ -251,6 +252,15 @@ export function PlanOverviewScreen({ navigation, profile }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Manage plan</Text>
             <View style={styles.planList}>
+              <PlanRow
+                detail="Preview cash, daily pace, and category limits"
+                icon={CircleDollarSign}
+                onPress={() =>
+                  navigation.navigate('PurchaseImpact', { currencyCode })
+                }
+                title="Check a purchase"
+                value="Try it"
+              />
               <PlanRow
                 detail={`${summary?.activeSavingsGoals || 0} active goals`}
                 icon={Target}
