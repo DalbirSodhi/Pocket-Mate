@@ -76,6 +76,17 @@ Savings should show:
 - Progress.
 - Suggested contribution.
 
+### Bill Payment Plans
+
+Bill planning should show:
+
+- Editable statement total.
+- Fixed issuer due date.
+- Equal or custom payment amounts.
+- A date picker for every payment.
+- Paid and remaining progress.
+- A warning when a planned payment is after the issuer due date.
+
 ## UX Principle
 
 The app should prefer clear answers over complex charts.

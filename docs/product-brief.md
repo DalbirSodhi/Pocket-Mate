@@ -46,6 +46,8 @@ The first complete version should include:
 - Dashboard summary.
 - Safe-to-spend calculation.
 - Budget pressure warning.
+- Recurring expenses and credit card statements.
+- Editable bill payment plans with user-selected payment dates.
 
 ## Non-Goals For First Version
 

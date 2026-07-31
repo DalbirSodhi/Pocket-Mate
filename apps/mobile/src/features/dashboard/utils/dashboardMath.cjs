@@ -14,6 +14,56 @@ function calculateActualBalance({ incomeCents, expenseCents }) {
   return Number(incomeCents || 0) - Number(expenseCents || 0);
 }
 
+function getPaidInstallmentCents(plan, startDate, endDate) {
+  return (plan?.bill_payment_installments || []).reduce(
+    (total, installment) => {
+      if (!installment.paid_on) {
+        return total;
+      }
+
+      if (startDate && installment.paid_on < startDate) {
+        return total;
+      }
+
+      if (endDate && installment.paid_on > endDate) {
+        return total;
+      }
+
+      return total + Number(installment.amount_cents || 0);
+    },
+    0,
+  );
+}
+
+function getRemainingPaymentPlanCents(plan, fallbackTotalCents = 0) {
+  const totalCents = Number(
+    plan?.total_amount_cents ?? fallbackTotalCents ?? 0,
+  );
+
+  return Math.max(totalCents - getPaidInstallmentCents(plan), 0);
+}
+
+function getPlannedInstallmentCents(plan, startDate, endDate) {
+  return (plan?.bill_payment_installments || []).reduce(
+    (total, installment) => {
+      if (installment.paid_on) {
+        return total;
+      }
+
+      if (startDate && installment.planned_on < startDate) {
+        return total;
+      }
+
+      if (endDate && installment.planned_on > endDate) {
+        return total;
+      }
+
+      return total + Number(installment.amount_cents || 0);
+    },
+    0,
+  );
+}
+
 function getMonthRange(date = new Date()) {
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -391,8 +441,11 @@ module.exports = {
   getCycleSavingsContribution,
   getMonthRange,
   getNextMonthlyDueDate,
+  getPaidInstallmentCents,
   getPayCycleRange,
   getPlanHealth,
+  getPlannedInstallmentCents,
+  getRemainingPaymentPlanCents,
   isMonthlyChargeInRange,
   sumCents,
 };

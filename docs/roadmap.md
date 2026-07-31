@@ -20,6 +20,8 @@
 - Expense entries.
 - Budget caps.
 - Savings goals.
+- Recurring expenses and credit card statements.
+- Dynamic bill payment plans.
 
 ## Phase 3: Decision Dashboard
 
@@ -29,6 +31,7 @@
 - Category progress.
 - Recent expense list.
 - Savings progress.
+- Paid-installment cash flow and remaining bill commitments.
 
 ## Phase 4: Quality And Trust
 

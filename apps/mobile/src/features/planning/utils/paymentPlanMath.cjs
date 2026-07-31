@@ -1,5 +1,6 @@
 const {
   addDays,
+  addMonthsClamped,
   getCalendarDayDifference,
   getLocalDateString,
   isValidDateString,
@@ -19,17 +20,33 @@ function getMonthEndDateString(date = new Date()) {
   );
 }
 
+function hasEqualInstallmentAmounts(installments) {
+  if (installments.length < 2) {
+    return true;
+  }
+
+  const amounts = installments.map((installment) =>
+    Number(installment.amount_cents ?? parseAmountToCents(installment.amount) ?? 0),
+  );
+
+  return Math.max(...amounts) - Math.min(...amounts) <= 1;
+}
+
 function getPeriodStartDateString(value) {
   return `${String(value).slice(0, 7)}-01`;
 }
 
 function getPaymentPlanWindow({ dueOn, date = new Date() }) {
   const startDate = getLocalDateString(date);
+  const endDate = getLocalDateString(addMonthsClamped(date, 12));
   const monthEndDate = getMonthEndDateString(date);
+  const suggestedEndDate =
+    dueOn && dueOn >= startDate && dueOn <= endDate ? dueOn : monthEndDate;
 
   return {
     startDate,
-    endDate: dueOn > monthEndDate ? dueOn : monthEndDate,
+    endDate,
+    suggestedEndDate,
   };
 }
 
@@ -81,6 +98,41 @@ function buildEqualInstallments({
   }));
 }
 
+function rebalancePaymentAmounts({ installments, totalAmountCents }) {
+  const lockedAmountCents = installments.reduce((total, installment) => {
+    if (!installment.isPaid) {
+      return total;
+    }
+
+    return total + (parseAmountToCents(installment.amount) || 0);
+  }, 0);
+  const editableInstallments = installments.filter(
+    (installment) => !installment.isPaid,
+  );
+  const remainingCents = Number(totalAmountCents || 0) - lockedAmountCents;
+
+  if (remainingCents <= 0 || editableInstallments.length === 0) {
+    return installments;
+  }
+
+  const amounts = splitAmount(remainingCents, editableInstallments.length);
+  let editableIndex = 0;
+
+  return installments.map((installment) => {
+    if (installment.isPaid) {
+      return installment;
+    }
+
+    const amount = amounts[editableIndex];
+    editableIndex += 1;
+
+    return {
+      ...installment,
+      amount: formatCentsForInput(amount),
+    };
+  });
+}
+
 function validatePaymentPlan({
   installments,
   totalAmountCents,
@@ -103,9 +155,9 @@ function validatePaymentPlan({
 
     if (!isValidDateString(installment.plannedOn)) {
       installmentErrors.date = 'Use YYYY-MM-DD.';
-    } else if (installment.plannedOn < startDate) {
+    } else if (!installment.isPaid && installment.plannedOn < startDate) {
       installmentErrors.date = 'Payment cannot be before today.';
-    } else if (installment.plannedOn > endDate) {
+    } else if (!installment.isPaid && installment.plannedOn > endDate) {
       installmentErrors.date = `Schedule by ${endDate}.`;
     }
 
@@ -139,6 +191,8 @@ module.exports = {
   formatCentsForInput,
   getPaymentPlanWindow,
   getPeriodStartDateString,
+  hasEqualInstallmentAmounts,
+  rebalancePaymentAmounts,
   splitAmount,
   spreadDates,
   validatePaymentPlan,

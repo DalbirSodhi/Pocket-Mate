@@ -51,6 +51,32 @@ flowchart TD
     H --> I["Return to dashboard"]
 ```
 
+Saving a one-time, recurring, or card-bill expense must close the entry flow and
+return to the dashboard. A successful save must never leave the user on a form
+that appears frozen.
+
+## Bill Payment Plan Flow
+
+```mermaid
+flowchart TD
+    A["Open an upcoming bill"] --> B["Review statement total and due date"]
+    B --> C["Revise total if the statement changed"]
+    C --> D["Choose equal or custom amounts"]
+    D --> E["Select a date for every payment"]
+    E --> F["Save 2 to 8 payments within 12 months"]
+    F --> G["Mark a completed payment"]
+    G --> H["Move that amount from committed to spent"]
+    H --> I["Refresh available and safe-to-spend amounts"]
+    I --> J{"Balance changed?"}
+    J -->|Yes| C
+    J -->|No| K["Continue plan"]
+```
+
+Completed installments are immutable history while remaining installments can
+be rescheduled. A card statement total cannot be reduced below the amount
+already paid. Dates after the issuer due date are allowed for planning but must
+show an interest-and-fee warning.
+
 ## Planned Purchase Flow
 
 ```mermaid
@@ -86,3 +112,5 @@ The dashboard should make these visible without digging:
 - Days until next payday.
 - Category warnings.
 - Recent expenses.
+- Paid bill installments included in spent and available totals.
+- Remaining bill installments included in committed totals.

@@ -175,6 +175,45 @@ created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
 ```
 
+### bill_payment_plans
+
+Stores the current user-managed payoff plan for a card statement or one monthly
+instance of a recurring bill.
+
+```text
+id uuid primary key
+user_id uuid not null references auth.users(id)
+credit_card_bill_id uuid references credit_card_bills(id)
+recurring_expense_id uuid references recurring_expenses(id)
+period_start date not null
+title text not null
+total_amount_cents integer not null
+due_on date not null
+status text not null default 'active'
+created_at timestamptz not null default now()
+updated_at timestamptz not null default now()
+```
+
+Exactly one bill source is required. Card-plan total changes also update the
+linked statement balance atomically.
+
+### bill_payment_installments
+
+```text
+id uuid primary key
+user_id uuid not null references auth.users(id)
+payment_plan_id uuid not null references bill_payment_plans(id)
+amount_cents integer not null
+planned_on date not null
+paid_on date
+created_at timestamptz not null default now()
+updated_at timestamptz not null default now()
+```
+
+Paid installments are retained when a plan is edited. Only unpaid installments
+are replaced. The database validates ownership, a 2-to-8 payment limit, exact
+cent totals, and a maximum 12-month planning horizon.
+
 ### budget_caps
 
 Stores category spending limits for a cycle.
@@ -241,11 +280,16 @@ erDiagram
     auth_users ||--o{ recurring_expenses : owns
     auth_users ||--o{ credit_cards : owns
     auth_users ||--o{ credit_card_bills : owns
+    auth_users ||--o{ bill_payment_plans : owns
+    auth_users ||--o{ bill_payment_installments : owns
     auth_users ||--o{ budget_caps : owns
     auth_users ||--o{ savings_goals : owns
     expense_categories ||--o{ expenses : classifies
     expense_categories ||--o{ recurring_expenses : classifies
     credit_cards ||--o{ credit_card_bills : receives
+    credit_card_bills ||--o| bill_payment_plans : schedules
+    recurring_expenses ||--o{ bill_payment_plans : schedules
+    bill_payment_plans ||--|{ bill_payment_installments : contains
     expense_categories ||--o{ budget_caps : limits
 ```
 
@@ -259,8 +303,9 @@ Required calculations:
 
 - total income in current cycle
 - total expenses in current cycle
+- completed bill installments in the current cycle
 - active fixed commitments in current cycle
-- card bills due in current cycle
+- remaining card-bill commitments in current cycle
 - total protected savings
 - remaining balance
 - category spent amount
@@ -275,8 +320,9 @@ Initial version:
 ```text
 cycle_income
 - cycle_expenses
-- active_fixed_expenses
-- card_bills_due
+- completed_bill_installments
+- remaining_fixed_expenses
+- remaining_card_bill_commitments
 - protected_savings_remaining
 = remaining_spendable
 
@@ -301,6 +347,8 @@ savings_goals(user_id, is_active)
 recurring_expenses(user_id, is_active, starts_on, ends_on)
 credit_cards(user_id, is_active)
 credit_card_bills(user_id, due_on)
+bill_payment_plans(user_id, status)
+bill_payment_installments(payment_plan_id, planned_on)
 ```
 
 ## Row Level Security Plan
@@ -357,6 +405,8 @@ Create tables in this order:
 7. recurring_expenses
 8. credit_cards
 9. credit_card_bills
+10. bill_payment_plans
+11. bill_payment_installments
 
 Then add:
 
@@ -371,6 +421,8 @@ The first schema migration is maintained at:
 supabase/migrations/202607110001_create_finance_core.sql
 supabase/migrations/202607270001_add_recurring_expenses_and_card_bills.sql
 supabase/migrations/202607270002_complete_monthly_plan.sql
+supabase/migrations/202607290001_add_bill_payment_plans.sql
+supabase/migrations/202607310001_make_bill_payment_plans_dynamic.sql
 ```
 
 ## Open Decisions

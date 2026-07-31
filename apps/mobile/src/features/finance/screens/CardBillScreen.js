@@ -185,7 +185,7 @@ export function CardBillScreen({ navigation, route }) {
         paidOn: isPaid ? getLocalDateString() : null,
         note,
       });
-      navigation.popTo('Dashboard');
+      navigation.popToTop();
     } catch (error) {
       setRequestError(
         getFinanceErrorMessage(
