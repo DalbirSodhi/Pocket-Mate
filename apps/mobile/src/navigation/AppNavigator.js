@@ -33,6 +33,7 @@ import {
 } from '../features/finance';
 import { ProfileGate, SettingsScreen } from '../features/profile';
 import {
+  BillPaymentPlanScreen,
   BudgetCapsScreen,
   PlanOverviewScreen,
   SavingsGoalsScreen,
@@ -164,6 +165,7 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={FixedExpensesScreen} name="FixedExpenses" />
       <Stack.Screen component={CreditCardsScreen} name="CreditCards" />
       <Stack.Screen component={ExpenseDetailScreen} name="ExpenseDetail" />
+      <Stack.Screen component={BillPaymentPlanScreen} name="BillPaymentPlan" />
       <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />
       <Stack.Screen component={BudgetCapsScreen} name="BudgetCaps" />
       <Stack.Screen component={TransactionsScreen} name="Transactions" />
