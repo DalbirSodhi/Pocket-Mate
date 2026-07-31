@@ -16,6 +16,9 @@
 - Start every task from the latest `origin/Development`.
 - Create one focused `feature/`, `fix/`, or `chore/` branch with a descriptive
   kebab-case name.
+- Group related roadmap work into a milestone-sized pull request instead of
+  creating many small pull requests. Prefer one cohesive commit when practical,
+  while preserving clear ownership boundaries and reliable verification.
 - Use conventional commit messages and never include agent or tool names.
 - Push the task branch and create a pull request targeting `Development`.
 - Merge the pull request only after required CI checks pass.

@@ -20,7 +20,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { InlineNotice } from '../../../components/InlineNotice';
+import { LoadingScreen } from '../../../components/LoadingScreen';
+import { RetryNotice } from '../../../components/RetryNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
@@ -68,6 +69,7 @@ export function PlanOverviewScreen({ navigation, profile }) {
   const [budgetCaps, setBudgetCaps] = useState([]);
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const currencyCode = profile.currency_code || 'CAD';
 
   const loadPlan = useCallback(async () => {
@@ -85,6 +87,7 @@ export function PlanOverviewScreen({ navigation, profile }) {
       setError(requestError.message || 'Unable to load your plan.');
     } finally {
       setIsRefreshing(false);
+      setIsInitialLoading(false);
     }
   }, [profile, user.id]);
 
@@ -112,6 +115,10 @@ export function PlanOverviewScreen({ navigation, profile }) {
     .sort((left, right) => right.usageRatio - left.usageRatio)
     .slice(0, 3);
 
+  if (isInitialLoading && !summary) {
+    return <LoadingScreen message="Loading your plan..." />;
+  }
+
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar style="dark" />
@@ -132,7 +139,11 @@ export function PlanOverviewScreen({ navigation, profile }) {
             title="Plan"
           />
 
-          <InlineNotice message={error} variant="error" />
+          <RetryNotice
+            isRetrying={isRefreshing}
+            message={error}
+            onRetry={loadPlan}
+          />
 
           <View style={styles.health}>
             <View style={styles.healthHeading}>

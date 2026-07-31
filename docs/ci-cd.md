@@ -35,15 +35,18 @@ chore/some-change -> pull request -> Development -> final merge -> main
 
 ## What CI Checks Today
 
-CI checks that documentation exists, that the monorepo folders exist, and that the mobile app can run its package scripts.
-
-## What CI Will Check After App Setup
-
-The workflow detects `apps/mobile/package.json` and runs:
+The workflow validates the repository structure and runs:
 
 - dependency installation
-- lint script, if present
-- test script, if present
+- mobile lint
+- JavaScript finance calculation tests
+- a clean local Supabase stack built from migrations
+- Postgres schema linting at warning level
+- pgTAP tests for RLS isolation, table privileges, and protected bill-plan
+  functions
+
+Database tests use fixed synthetic users inside transactions. They never connect
+to or modify the hosted Supabase project.
 
 ## Why This Matters
 
@@ -58,4 +61,4 @@ Future deployment steps:
 - create Expo preview builds for pull requests
 - create EAS builds for release branches
 - deploy web preview if Expo web is enabled
-- run Supabase migration checks before backend changes merge
+- add EAS preview and release builds after project credentials are configured

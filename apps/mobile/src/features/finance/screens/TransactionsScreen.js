@@ -17,7 +17,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { InlineNotice } from '../../../components/InlineNotice';
+import { LoadingScreen } from '../../../components/LoadingScreen';
+import { RetryNotice } from '../../../components/RetryNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
@@ -54,6 +55,7 @@ export function TransactionsScreen({
   const [filter, setFilter] = useState('all');
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const loadTransactions = useCallback(async () => {
     setIsRefreshing(true);
@@ -67,6 +69,7 @@ export function TransactionsScreen({
       );
     } finally {
       setIsRefreshing(false);
+      setIsInitialLoading(false);
     }
   }, [user.id]);
 
@@ -83,6 +86,10 @@ export function TransactionsScreen({
         : transactions.filter((transaction) => transaction.type === filter),
     [filter, transactions],
   );
+
+  if (isInitialLoading) {
+    return <LoadingScreen message="Loading your activity..." />;
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -129,7 +136,11 @@ export function TransactionsScreen({
             })}
           </View>
 
-          <InlineNotice message={error} variant="error" />
+          <RetryNotice
+            isRetrying={isRefreshing}
+            message={error}
+            onRetry={loadTransactions}
+          />
 
           {visibleTransactions.length > 0 ? (
             <View style={styles.list}>
