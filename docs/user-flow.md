@@ -81,14 +81,22 @@ show an interest-and-fee warning.
 
 ```mermaid
 flowchart TD
-    A["User enters planned purchase"] --> B["Choose amount and category"]
-    B --> C["Calculate impact"]
-    C --> D{"Inside budget?"}
-    D -->|Yes| E["Show safe result"]
-    D -->|No| F["Show warning and alternatives"]
-    E --> G["User confirms or cancels"]
+    A["Open Check a purchase from Plan"] --> B["Enter amount and category"]
+    B --> C["Calculate live impact without saving"]
+    C --> D{"Inside cash, commitments, and cap?"}
+    D -->|Yes| E["Show available and safe-per-day result"]
+    D -->|No| F["Show warning and maximum amount within plan"]
+    E --> G{"Continue?"}
     F --> G
+    G -->|Yes| H["Open prefilled one-time expense"]
+    G -->|No| I["Return without changing finance data"]
+    H --> J["Save through normal expense service"]
 ```
+
+Purchase checks are hypothetical. They must not create database rows until the
+user confirms and saves the prefilled expense. Results use the current calendar
+month and update from the same dashboard summary and budget-cap services as the
+Plan screen.
 
 ## Main Navigation
 

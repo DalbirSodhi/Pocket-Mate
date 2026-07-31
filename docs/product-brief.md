@@ -46,6 +46,7 @@ The first complete version should include:
 - Dashboard summary.
 - Safe-to-spend calculation.
 - Budget pressure warning.
+- Purchase-impact check before recording an expense.
 - Recurring expenses and credit card statements.
 - Editable bill payment plans with user-selected payment dates.
 

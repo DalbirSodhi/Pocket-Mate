@@ -29,12 +29,23 @@ import {
 } from '../utils/financeValidation.cjs';
 import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
 
-export function OneTimeExpenseScreen({ navigation }) {
+function formatPrefillAmount(amountCents) {
+  if (!Number.isInteger(amountCents) || amountCents <= 0) {
+    return '';
+  }
+
+  return (amountCents / 100).toFixed(2);
+}
+
+export function OneTimeExpenseScreen({ navigation, route }) {
   const { user } = useAuthSession();
+  const prefill = route.params?.prefill;
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState('');
-  const [amount, setAmount] = useState('');
-  const [merchant, setMerchant] = useState('');
+  const [amount, setAmount] = useState(() =>
+    formatPrefillAmount(prefill?.amountCents),
+  );
+  const [merchant, setMerchant] = useState(prefill?.merchant || '');
   const [date, setDate] = useState(getLocalDateString());
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState({});
@@ -51,7 +62,17 @@ export function OneTimeExpenseScreen({ navigation }) {
       setCategories(nextCategories);
       setCategoryId((current) => {
         const stillExists = nextCategories.some((category) => category.id === current);
-        return stillExists ? current : nextCategories[0]?.id || '';
+        const prefilledCategoryExists = nextCategories.some(
+          (category) => category.id === prefill?.categoryId,
+        );
+
+        if (stillExists) {
+          return current;
+        }
+
+        return prefilledCategoryExists
+          ? prefill.categoryId
+          : nextCategories[0]?.id || '';
       });
     } catch (error) {
       setRequestError(
@@ -60,7 +81,7 @@ export function OneTimeExpenseScreen({ navigation }) {
     } finally {
       setIsLoadingCategories(false);
     }
-  }, [user.id]);
+  }, [prefill?.categoryId, user.id]);
 
   useFocusEffect(
     useCallback(() => {
