@@ -209,12 +209,14 @@ export async function saveBillPaymentPlan({
   creditCardBillId,
   recurringExpenseId,
   periodStart,
+  totalAmountCents,
   installments,
 }) {
   const response = await supabase.rpc('save_bill_payment_plan', {
     p_credit_card_bill_id: creditCardBillId || null,
     p_recurring_expense_id: recurringExpenseId || null,
     p_period_start: periodStart,
+    p_total_amount_cents: totalAmountCents,
     p_installments: installments,
   });
 

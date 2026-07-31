@@ -9,8 +9,11 @@ const {
   getCycleSavingsContribution,
   getMonthRange,
   getNextMonthlyDueDate,
+  getPaidInstallmentCents,
   getPayCycleRange,
   getPlanHealth,
+  getPlannedInstallmentCents,
+  getRemainingPaymentPlanCents,
   isMonthlyChargeInRange,
   sumCents,
 } = require('./dashboardMath.cjs');
@@ -22,6 +25,42 @@ test('actual balance is monthly income minus recorded spending', () => {
       expenseCents: 26513,
     }),
     56187,
+  );
+});
+
+test('paid bill installments move from commitments into actual spending', () => {
+  const plan = {
+    total_amount_cents: 60000,
+    bill_payment_installments: [
+      { amount_cents: 20000, paid_on: '2026-07-10' },
+      { amount_cents: 20000, paid_on: '2026-06-10' },
+      { amount_cents: 20000, planned_on: '2026-08-10', paid_on: null },
+    ],
+  };
+
+  assert.equal(
+    getPaidInstallmentCents(plan, '2026-07-01', '2026-07-31'),
+    20000,
+  );
+  assert.equal(getRemainingPaymentPlanCents(plan), 20000);
+  assert.equal(
+    getPlannedInstallmentCents(plan, '2026-07-01', '2026-07-31'),
+    0,
+  );
+});
+
+test('monthly commitments include only unpaid chunks planned in that month', () => {
+  const plan = {
+    bill_payment_installments: [
+      { amount_cents: 15000, planned_on: '2026-07-12', paid_on: null },
+      { amount_cents: 25000, planned_on: '2026-08-12', paid_on: null },
+      { amount_cents: 10000, planned_on: '2026-07-05', paid_on: '2026-07-05' },
+    ],
+  };
+
+  assert.equal(
+    getPlannedInstallmentCents(plan, '2026-07-01', '2026-07-31'),
+    15000,
   );
 });
 

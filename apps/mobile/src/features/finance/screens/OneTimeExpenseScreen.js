@@ -93,7 +93,7 @@ export function OneTimeExpenseScreen({ navigation }) {
         merchant,
         note,
       });
-      navigation.popTo('Dashboard');
+      navigation.popToTop();
     } catch (error) {
       setRequestError(
         getFinanceErrorMessage(error, 'Unable to save this expense.'),

@@ -22,12 +22,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '../../../components/AppButton';
+import { DateField } from '../../../components/DateField';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
 import { formatCurrency } from '../../dashboard/utils/formatCurrency';
+import { parseAmountToCents } from '../../finance/utils/financeValidation.cjs';
 import {
   getBillPaymentPlan,
   saveBillPaymentPlan,
@@ -37,6 +39,8 @@ import {
   buildEqualInstallments,
   formatCentsForInput,
   getPaymentPlanWindow,
+  hasEqualInstallmentAmounts,
+  rebalancePaymentAmounts,
   validatePaymentPlan,
 } from '../utils/paymentPlanMath.cjs';
 
@@ -106,6 +110,9 @@ export function BillPaymentPlanScreen({ navigation, route }) {
     [dueOn],
   );
   const [plan, setPlan] = useState(null);
+  const [totalAmount, setTotalAmount] = useState(() =>
+    formatCentsForInput(amountCents),
+  );
   const [mode, setMode] = useState('equal');
   const [splitCount, setSplitCount] = useState(2);
   const [installments, setInstallments] = useState(() =>
@@ -113,7 +120,7 @@ export function BillPaymentPlanScreen({ navigation, route }) {
       totalAmountCents: amountCents,
       count: 2,
       startDate: planWindow.startDate,
-      endDate: planWindow.endDate,
+      endDate: planWindow.suggestedEndDate,
     }),
   );
   const [errors, setErrors] = useState({ installments: {} });
@@ -135,7 +142,10 @@ export function BillPaymentPlanScreen({ navigation, route }) {
       });
       setPlan(nextPlan);
 
-      if (!nextPlan) {
+      if (nextPlan) {
+        setTotalAmount(formatCentsForInput(nextPlan.total_amount_cents));
+        setSplitCount(nextPlan.installments.length);
+      } else {
         setIsEditing(true);
       }
     } catch (error) {
@@ -169,8 +179,14 @@ export function BillPaymentPlanScreen({ navigation, route }) {
   );
   const paidCount =
     plan?.installments?.filter((installment) => installment.paid_on).length || 0;
+  const editableTotalCents = parseAmountToCents(totalAmount);
+  const displayedTotalCents = isEditing
+    ? editableTotalCents || 0
+    : plan?.total_amount_cents || amountCents;
   const progress =
-    amountCents > 0 ? Math.min(paidCents / amountCents, 1) : 0;
+    displayedTotalCents > 0
+      ? Math.min(paidCents / displayedTotalCents, 1)
+      : 0;
   const plannedCents = installments.reduce((total, installment) => {
     const numericAmount = Number(
       String(installment.amount || '').replace(/[$,\s]/g, ''),
@@ -180,15 +196,31 @@ export function BillPaymentPlanScreen({ navigation, route }) {
   }, 0);
 
   function applyEqualSplit(nextCount) {
-    const count = Math.min(Math.max(nextCount, 2), 8);
+    const minimumCount = Math.max(paidCount + 1, 2);
+    const count = Math.min(Math.max(nextCount, minimumCount), 8);
+    const paidInstallments =
+      plan?.installments
+        ?.filter((installment) => installment.paid_on)
+        .map((installment) => ({
+          amount: formatCentsForInput(installment.amount_cents),
+          id: installment.id,
+          isPaid: true,
+          plannedOn: installment.planned_on,
+        })) || [];
+    const remainingTotalCents = Math.max(
+      Number(editableTotalCents || 0) - paidCents,
+      0,
+    );
     setSplitCount(count);
     setInstallments(
-      buildEqualInstallments({
-        totalAmountCents: amountCents,
-        count,
-        startDate: planWindow.startDate,
-        endDate: planWindow.endDate,
-      }),
+      paidInstallments.concat(
+        buildEqualInstallments({
+          totalAmountCents: remainingTotalCents,
+          count: count - paidInstallments.length,
+          startDate: planWindow.startDate,
+          endDate: planWindow.suggestedEndDate,
+        }),
+      ),
     );
     setErrors({ installments: {} });
   }
@@ -197,7 +229,14 @@ export function BillPaymentPlanScreen({ navigation, route }) {
     setMode(nextMode);
 
     if (nextMode === 'equal') {
-      applyEqualSplit(splitCount);
+      setSplitCount(installments.length);
+      setInstallments((current) =>
+        rebalancePaymentAmounts({
+          installments: current,
+          totalAmountCents: editableTotalCents || 0,
+        }),
+      );
+      setErrors({ installments: {} });
     }
   }
 
@@ -212,6 +251,22 @@ export function BillPaymentPlanScreen({ navigation, route }) {
     setErrors({ installments: {} });
   }
 
+  function updateTotalAmount(value) {
+    const nextTotalCents = parseAmountToCents(value);
+    setTotalAmount(value);
+
+    if (mode === 'equal' && nextTotalCents !== null) {
+      setInstallments((current) =>
+        rebalancePaymentAmounts({
+          installments: current,
+          totalAmountCents: nextTotalCents,
+        }),
+      );
+    }
+
+    setErrors({ installments: {} });
+  }
+
   function addInstallment() {
     if (installments.length >= 8) {
       return;
@@ -219,12 +274,12 @@ export function BillPaymentPlanScreen({ navigation, route }) {
 
     setInstallments((current) => [
       ...current,
-      { amount: '', plannedOn: planWindow.endDate },
+      { amount: '', plannedOn: planWindow.suggestedEndDate },
     ]);
   }
 
   function removeInstallment(index) {
-    if (installments.length <= 2) {
+    if (installments.length <= 2 || installments[index]?.isPaid) {
       return;
     }
 
@@ -234,10 +289,16 @@ export function BillPaymentPlanScreen({ navigation, route }) {
   }
 
   function beginEdit() {
-    setMode('custom');
+    setMode(
+      hasEqualInstallmentAmounts(plan.installments) ? 'equal' : 'custom',
+    );
+    setTotalAmount(formatCentsForInput(plan.total_amount_cents));
+    setSplitCount(plan.installments.length);
     setInstallments(
       plan.installments.map((installment) => ({
         amount: formatCentsForInput(installment.amount_cents),
+        id: installment.id,
+        isPaid: Boolean(installment.paid_on),
         plannedOn: installment.planned_on,
       })),
     );
@@ -246,16 +307,26 @@ export function BillPaymentPlanScreen({ navigation, route }) {
   }
 
   async function handleSave() {
+    const totalAmountCents = parseAmountToCents(totalAmount);
     const validation = validatePaymentPlan({
       installments,
-      totalAmountCents: amountCents,
+      totalAmountCents: totalAmountCents || 0,
       startDate: planWindow.startDate,
       endDate: planWindow.endDate,
     });
-    setErrors(validation.errors);
+    const nextErrors = {
+      ...validation.errors,
+      totalAmount:
+        totalAmountCents === null
+          ? 'Enter a valid total amount.'
+          : totalAmountCents <= paidCents
+            ? 'Total must be greater than completed payments.'
+            : undefined,
+    };
+    setErrors(nextErrors);
     setRequestError('');
 
-    if (!validation.isValid) {
+    if (!validation.isValid || nextErrors.totalAmount) {
       return;
     }
 
@@ -267,10 +338,17 @@ export function BillPaymentPlanScreen({ navigation, route }) {
         creditCardBillId,
         recurringExpenseId,
         periodStart,
-        installments: installments.map((installment, index) => ({
-          amountCents: validation.amountCents[index],
-          plannedOn: installment.plannedOn,
-        })),
+        totalAmountCents,
+        installments: installments
+          .map((installment, index) => ({
+            ...installment,
+            amountCents: validation.amountCents[index],
+          }))
+          .filter((installment) => !installment.isPaid)
+          .map((installment) => ({
+            amountCents: installment.amountCents,
+            plannedOn: installment.plannedOn,
+          })),
       });
       setPlan(nextPlan);
       setIsEditing(false);
@@ -334,7 +412,7 @@ export function BillPaymentPlanScreen({ navigation, route }) {
                 numberOfLines={1}
                 style={styles.billTotal}
               >
-                {formatCurrency(amountCents, currencyCode)}
+                {formatCurrency(displayedTotalCents, currencyCode)}
               </Text>
             </View>
 
@@ -343,10 +421,26 @@ export function BillPaymentPlanScreen({ navigation, route }) {
             ) : isEditing ? (
               <>
                 <View style={styles.section}>
+                  <FormField
+                    error={errors.totalAmount}
+                    keyboardType="decimal-pad"
+                    label="Total amount due"
+                    onChangeText={updateTotalAmount}
+                    placeholder="0.00"
+                    value={totalAmount}
+                  />
+                  <Text style={styles.sectionBody}>
+                    Updating the total recalculates equal payments. For a card,
+                    this also updates the statement balance.
+                  </Text>
+                </View>
+
+                <View style={styles.section}>
                   <View>
                     <Text style={styles.sectionTitle}>Split method</Text>
                     <Text style={styles.sectionBody}>
-                      Keep an equal schedule or adjust each payment yourself.
+                      Equal split balances the amounts. Payment dates are always
+                      yours to choose.
                     </Text>
                   </View>
                   <View style={styles.segmentedControl}>
@@ -416,7 +510,7 @@ export function BillPaymentPlanScreen({ navigation, route }) {
                     <View>
                       <Text style={styles.sectionTitle}>Payment schedule</Text>
                       <Text style={styles.sectionBody}>
-                        Schedule through {formatDate(planWindow.endDate)}.
+                        Choose dates through {formatDate(planWindow.endDate)}.
                       </Text>
                     </View>
                     {mode === 'custom' && installments.length < 8 ? (
@@ -439,7 +533,7 @@ export function BillPaymentPlanScreen({ navigation, route }) {
                         </View>
                         <View style={styles.editorFields}>
                           <FormField
-                            editable={mode === 'custom'}
+                            editable={mode === 'custom' && !installment.isPaid}
                             error={errors.installments?.[index]?.amount}
                             keyboardType="decimal-pad"
                             label="Amount"
@@ -448,20 +542,24 @@ export function BillPaymentPlanScreen({ navigation, route }) {
                             }
                             value={installment.amount}
                           />
-                          <FormField
-                            autoCapitalize="none"
-                            editable={mode === 'custom'}
+                          <DateField
+                            disabled={installment.isPaid}
                             error={errors.installments?.[index]?.date}
-                            keyboardType="numbers-and-punctuation"
                             label="Payment date"
-                            maxLength={10}
-                            onChangeText={(value) =>
+                            maximumDate={planWindow.endDate}
+                            minimumDate={planWindow.startDate}
+                            onChange={(value) =>
                               updateInstallment(index, 'plannedOn', value)
                             }
                             value={installment.plannedOn}
                           />
+                          {installment.isPaid ? (
+                            <Text style={styles.completedEditorLabel}>
+                              Completed payment retained
+                            </Text>
+                          ) : null}
                         </View>
-                        {mode === 'custom' ? (
+                        {mode === 'custom' && !installment.isPaid ? (
                           <Pressable
                             accessibilityLabel={`Remove payment ${index + 1}`}
                             accessibilityRole="button"
@@ -487,11 +585,21 @@ export function BillPaymentPlanScreen({ navigation, route }) {
                   <View style={styles.totalCheckRight}>
                     <Text style={styles.totalCheckLabel}>Bill total</Text>
                     <Text style={styles.totalCheckValue}>
-                      {formatCurrency(amountCents, currencyCode)}
+                      {formatCurrency(displayedTotalCents, currencyCode)}
                     </Text>
                   </View>
                 </View>
                 <InlineNotice message={errors.plan || errors.total} variant="error" />
+                {dueOn &&
+                installments.some(
+                  (installment) =>
+                    !installment.isPaid && installment.plannedOn > dueOn,
+                ) ? (
+                  <InlineNotice
+                    message="A planned payment is after the statement due date. Your card issuer may charge interest or fees."
+                    variant="warning"
+                  />
+                ) : null}
 
                 <AppButton
                   icon={Save}
@@ -547,7 +655,7 @@ export function BillPaymentPlanScreen({ navigation, route }) {
                         Tap a payment when it has been completed.
                       </Text>
                     </View>
-                    {paidCount === 0 ? (
+                    {plan.status !== 'completed' ? (
                       <Pressable
                         accessibilityLabel="Edit payment schedule"
                         accessibilityRole="button"
@@ -577,7 +685,7 @@ export function BillPaymentPlanScreen({ navigation, route }) {
 
                 {paidCount > 0 && paidCount < plan.installments.length ? (
                   <InlineNotice
-                    message="The schedule is locked after the first completed payment. You can still mark payments paid or unpaid."
+                    message="Completed payments stay locked. You can revise the remaining balance, amounts, and dates."
                     variant="info"
                   />
                 ) : null}
@@ -768,6 +876,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: spacing.md,
+  },
+  completedEditorLabel: {
+    ...typography.caption,
+    color: colors.success,
   },
   removeButton: {
     width: 38,

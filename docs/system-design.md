@@ -95,7 +95,17 @@ expense_categories
 expenses
 budget_caps
 savings_goals
+recurring_expenses
+credit_cards
+credit_card_bills
+bill_payment_plans
+bill_payment_installments
 ```
+
+Bill-plan writes use authenticated Postgres functions so statement updates,
+future-schedule replacement, and completed-payment preservation happen in one
+transaction. Dashboard reads treat completed installments as actual cash
+outflow and only the unpaid balance as a commitment.
 
 Detailed table planning is maintained in [database-schema.md](./database-schema.md).
 

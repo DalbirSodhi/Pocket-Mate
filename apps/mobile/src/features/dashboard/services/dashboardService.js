@@ -5,7 +5,10 @@ import {
   calculatePlanTotals,
   getMonthRange,
   getNextMonthlyDueDate,
+  getPaidInstallmentCents,
   getPlanHealth,
+  getPlannedInstallmentCents,
+  getRemainingPaymentPlanCents,
   isMonthlyChargeInRange,
   sumCents,
 } from '../utils/dashboardMath.cjs';
@@ -33,6 +36,7 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     cardBillResponse,
     creditCardResponse,
     paymentPlanResponse,
+    paidInstallmentResponse,
   ] = await Promise.all([
     supabase
       .from('income_entries')
@@ -89,11 +93,17 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     supabase
       .from('bill_payment_plans')
       .select(
-        'id, credit_card_bill_id, recurring_expense_id, period_start, status, bill_payment_installments(amount_cents, planned_on, paid_on)',
+        'id, credit_card_bill_id, recurring_expense_id, period_start, total_amount_cents, status, bill_payment_installments(amount_cents, planned_on, paid_on)',
       )
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
       .limit(100),
+    supabase
+      .from('bill_payment_installments')
+      .select('amount_cents')
+      .eq('user_id', userId)
+      .gte('paid_on', month.startDate)
+      .lte('paid_on', month.endDate),
   ]);
 
   const income = unwrapResponse(incomeResponse);
@@ -113,28 +123,55 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
   const unpaidCardBills = unwrapResponse(cardBillResponse);
   const creditCards = unwrapResponse(creditCardResponse);
   const paymentPlans = unwrapResponse(paymentPlanResponse);
-  const committedCardBills = unpaidCardBills.filter(
-    (bill) => bill.due_on <= month.endDate,
-  );
+  const paidInstallments = unwrapResponse(paidInstallmentResponse);
   const categoryById = new Map(categories.map((category) => [category.id, category]));
   const cardById = new Map(creditCards.map((card) => [card.id, card]));
   const cardPlanByBillId = new Map(
     paymentPlans
       .filter((plan) => plan.credit_card_bill_id)
-      .map((plan) => [plan.credit_card_bill_id, summarizePaymentPlan(plan)]),
+      .map((plan) => [
+        plan.credit_card_bill_id,
+        summarizePaymentPlan(plan, month.startDate, month.endDate),
+      ]),
   );
   const recurringPlanBySource = new Map(
     paymentPlans
       .filter((plan) => plan.recurring_expense_id)
       .map((plan) => [
         `${plan.recurring_expense_id}-${plan.period_start}`,
-        summarizePaymentPlan(plan),
+        summarizePaymentPlan(plan, month.startDate, month.endDate),
       ]),
   );
+  const committedCardBills = unpaidCardBills.filter((bill) => {
+    const paymentPlan = cardPlanByBillId.get(bill.id);
+
+    return paymentPlan
+      ? paymentPlan.plannedCents > 0
+      : bill.due_on <= month.endDate;
+  });
   const incomeCents = sumCents(income, 'amount_cents');
-  const expenseCents = sumCents(expenses, 'amount_cents');
-  const fixedExpenseCents = sumCents(recurringExpenses, 'amount_cents');
-  const cardBillCents = sumCents(committedCardBills, 'amount_cents');
+  const ordinaryExpenseCents = sumCents(expenses, 'amount_cents');
+  const paidBillInstallmentCents = sumCents(
+    paidInstallments,
+    'amount_cents',
+  );
+  const expenseCents = ordinaryExpenseCents + paidBillInstallmentCents;
+  const fixedExpenseCents = recurringExpenses.reduce((total, expense) => {
+    const paymentPlan = recurringPlanBySource.get(
+      `${expense.id}-${month.startDate}`,
+    );
+
+    return total + (paymentPlan?.plannedCents ?? expense.amount_cents);
+  }, 0);
+  const cardBillCents = unpaidCardBills.reduce((total, bill) => {
+    const paymentPlan = cardPlanByBillId.get(bill.id);
+
+    if (paymentPlan) {
+      return total + paymentPlan.plannedCents;
+    }
+
+    return total + (bill.due_on <= month.endDate ? bill.amount_cents : 0);
+  }, 0);
   const monthlySavingsCents = savingsGoals.reduce(
     (total, goal) =>
       total + Number(goal.monthly_contribution_cents || 0),
@@ -186,22 +223,27 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
   );
   const upcomingBills = [
     ...recurringExpenses
-      .map((expense) => ({
-        id: `recurring-${expense.id}`,
-        type: 'recurring',
-        title: expense.name,
-        amountCents: expense.amount_cents,
-        recurringExpenseId: expense.id,
-        periodStart: month.startDate,
-        paymentPlan: recurringPlanBySource.get(
+      .map((expense) => {
+        const paymentPlan = recurringPlanBySource.get(
           `${expense.id}-${month.startDate}`,
-        ),
-        dueOn: getNextMonthlyDueDate({
-          chargeDay: expense.charge_day,
-          date,
-          endDate: month.endDate,
-        }),
-      }))
+        );
+
+        return {
+          id: `recurring-${expense.id}`,
+          type: 'recurring',
+          title: expense.name,
+          amountCents:
+            paymentPlan?.totalAmountCents ?? expense.amount_cents,
+          recurringExpenseId: expense.id,
+          periodStart: month.startDate,
+          paymentPlan,
+          dueOn: getNextMonthlyDueDate({
+            chargeDay: expense.charge_day,
+            date,
+            endDate: month.endDate,
+          }),
+        };
+      })
       .filter((expense) => expense.dueOn),
     ...unpaidCardBills.map((bill) => {
       const card = cardById.get(bill.credit_card_id);
@@ -246,6 +288,8 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     safeToSpendCents,
     incomeCents,
     expenseCents,
+    ordinaryExpenseCents,
+    paidBillInstallmentCents,
     fixedExpenseCents,
     cardBillCents,
     monthlySavingsCents,
@@ -281,7 +325,7 @@ function getLocalDateValue(date) {
   return `${year}-${month}-${day}`;
 }
 
-function summarizePaymentPlan(plan) {
+function summarizePaymentPlan(plan, startDate, endDate) {
   const installments = plan.bill_payment_installments || [];
   const paidCount = installments.filter(
     (installment) => installment.paid_on,
@@ -295,6 +339,10 @@ function summarizePaymentPlan(plan) {
     status: plan.status,
     installmentCount: installments.length,
     paidCount,
+    paidCents: getPaidInstallmentCents(plan),
+    plannedCents: getPlannedInstallmentCents(plan, startDate, endDate),
+    remainingCents: getRemainingPaymentPlanCents(plan),
+    totalAmountCents: plan.total_amount_cents,
     nextPaymentOn: nextInstallment?.planned_on || null,
     nextPaymentAmountCents: nextInstallment?.amount_cents || null,
   };
