@@ -4,13 +4,20 @@
     "slug": "pocket-mate",
     "scheme": "pocketmate",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dalbirsodhi.pocketmate",
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.dalbirsodhi.pocketmate",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -22,7 +29,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-dev-client"
     ]
   }
 }

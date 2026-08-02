@@ -1,0 +1,77 @@
+name: EAS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to build
+        required: true
+        default: ios
+        type: choice
+        options:
+          - ios
+          - android
+          - all
+      profile:
+        description: EAS build profile
+        required: true
+        default: preview
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+
+concurrency:
+  group: eas-${{ inputs.platform }}-${{ inputs.profile }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Trigger ${{ inputs.profile }} ${{ inputs.platform }} build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Protect production builds
+        if: inputs.profile == 'production' && github.ref != 'refs/heads/main'
+        run: |
+          echo "Production builds must be triggered from main."
+          exit 1
+
+      - name: Check Expo token
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "Add EXPO_TOKEN as a GitHub Actions repository secret."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Set up Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: 21.4.0
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: apps/mobile
+        run: npm ci
+
+      - name: Validate release configuration
+        working-directory: apps/mobile
+        run: npm run release:check
+
+      - name: Trigger EAS build
+        working-directory: apps/mobile
+        run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive --no-wait

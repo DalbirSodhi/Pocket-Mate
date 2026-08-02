@@ -46,11 +46,13 @@
 
 ## Phase 5: Deployment
 
-- Supabase project configuration.
-- Environment configuration.
-- Expo development build.
-- EAS preview build.
-- Store-readiness checklist.
+- [x] Supabase project configuration and secret boundaries.
+- [x] Development, preview, and production environment configuration.
+- [x] Expo development-client profile while preserving Expo Go.
+- [x] Installable EAS preview profile.
+- [x] Manual GitHub Actions build workflow.
+- [x] Store-readiness and internal iOS distribution checklist.
+- [ ] Link the Expo account and create the first signed preview build.
 
 ## Later Ideas
 

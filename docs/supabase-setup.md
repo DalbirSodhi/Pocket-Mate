@@ -75,6 +75,11 @@ apps/mobile/src/config/env.js
 
 Do not create Supabase clients directly inside screens. Import the shared client or call feature services that use it.
 
+EAS builds load these same public values from explicit `development`,
+`preview`, and `production` environments. Configuration steps are documented in
+[deployment.md](./deployment.md). Never place local `.env` files or a service
+role key in an EAS build profile.
+
 Auth screens should call the auth feature service documented in [auth-service-contract.md](./auth-service-contract.md).
 
 The hosted Supabase Auth redirect allow list includes:

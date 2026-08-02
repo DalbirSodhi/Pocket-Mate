@@ -116,3 +116,18 @@ jobs:
         if: steps.js_project.outputs.exists == 'true'
         working-directory: apps/mobile
         run: npm test --if-present
+
+      - name: Audit production dependencies
+        if: steps.js_project.outputs.exists == 'true'
+        working-directory: apps/mobile
+        run: npm run audit:production
+
+      - name: Validate release configuration
+        if: steps.js_project.outputs.exists == 'true'
+        working-directory: apps/mobile
+        run: npm run release:check
+
+      - name: Validate Expo dependencies
+        if: steps.js_project.outputs.exists == 'true'
+        working-directory: apps/mobile
+        run: npx expo-doctor

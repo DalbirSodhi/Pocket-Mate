@@ -33,6 +33,10 @@
 - For mobile-facing changes, verify both web and iOS Expo production bundles.
 - Validate Supabase migrations with a dry run before applying them.
 - Do not merge when tests, lint, required CI, or database migrations fail.
+- Run Expo and EAS commands from `apps/mobile`; its `eas.json` owns native build
+  profiles for this repository.
+- Trigger production EAS builds only from `main`. Preview and development builds
+  may use task or `Development` branches after CI passes.
 
 ## Delivery
 
