@@ -17,6 +17,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  database-checks:
+    name: Database security checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Lint database schema
+        run: supabase db lint --local --level warning
+
+      - name: Test database policies and functions
+        shell: bash
+        run: |
+          set -o pipefail
+          supabase test db 2>&1 | tee database-test-output.txt
+
+      - name: Report database test failure
+        if: failure()
+        shell: bash
+        run: |
+          message="$(tail -c 12000 database-test-output.txt)"
+          message="${message//'%'/'%25'}"
+          message="${message//$'\r'/'%0D'}"
+          message="${message//$'\n'/'%0A'}"
+          echo "::error file=supabase/tests/database,title=Database tests failed::$message"
+
+      - name: Publish database test output
+        if: always()
+        shell: bash
+        run: |
+          echo "## Database test output" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat database-test-output.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
   project-checks:
     name: Project checks
     runs-on: ubuntu-latest

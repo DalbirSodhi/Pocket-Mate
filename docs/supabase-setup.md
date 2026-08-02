@@ -107,3 +107,25 @@ For finance features, prefer this order:
 4. wire mobile UI to the service boundary
 
 Screens should not directly own database logic.
+
+## Local Database Security Tests
+
+Database tests live in:
+
+```text
+supabase/tests/database/
+```
+
+Run them against an isolated local stack:
+
+```bash
+npx supabase start
+npx supabase db lint --local --level warning
+npx supabase test db
+```
+
+The tests verify that every user-owned table has RLS enabled, anonymous users
+have no finance access, authenticated users only see their own rows, and
+security-definer bill-plan functions reject cross-user operations. CI creates a
+fresh local database from migrations and never runs these tests against hosted
+user data.

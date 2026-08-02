@@ -22,7 +22,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandMark } from '../../../components/BrandMark';
-import { InlineNotice } from '../../../components/InlineNotice';
+import { LoadingScreen } from '../../../components/LoadingScreen';
+import { RetryNotice } from '../../../components/RetryNotice';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
 import { getDashboardSummary } from '../services/dashboardService';
@@ -142,6 +143,10 @@ export function DashboardScreen({ navigation, profile }) {
           ? { background: colors.warningSoft, foreground: colors.warning }
           : { background: colors.infoSoft, foreground: colors.info };
 
+  if (isInitialLoading && !summary) {
+    return <LoadingScreen message="Loading your monthly plan..." />;
+  }
+
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <StatusBar style="light" />
@@ -220,7 +225,11 @@ export function DashboardScreen({ navigation, profile }) {
 
         <View style={styles.body}>
           <View style={styles.bodyContent}>
-            <InlineNotice message={error} variant="error" />
+            <RetryNotice
+              isRetrying={isRefreshing}
+              message={error}
+              onRetry={refreshDashboard}
+            />
 
             <View style={styles.summary}>
               <Pressable
@@ -410,9 +419,6 @@ export function DashboardScreen({ navigation, profile }) {
               <Text style={styles.addButtonLabel}>Add expense</Text>
             </Pressable>
 
-            {isInitialLoading ? (
-              <Text style={styles.loadingLabel}>Refreshing your plan...</Text>
-            ) : null}
           </View>
         </View>
       </ScrollView>
@@ -719,10 +725,5 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.white,
     fontSize: 16,
-  },
-  loadingLabel: {
-    ...typography.caption,
-    color: colors.inkMuted,
-    textAlign: 'center',
   },
 });

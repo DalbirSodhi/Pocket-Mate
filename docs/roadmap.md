@@ -37,12 +37,12 @@
 
 ## Phase 4: Quality And Trust
 
-- Input validation.
-- Finance calculation tests.
-- RLS policy tests.
-- Error states.
-- Loading states.
-- Empty states.
+- [x] Input validation.
+- [x] Finance calculation tests.
+- [x] RLS policy and protected-function tests.
+- [x] Recoverable error states on primary data screens.
+- [x] Initial loading states that do not display false zero balances.
+- [x] Empty states for dashboard, activity, budgets, savings, bills, and cards.
 
 ## Phase 5: Deployment
 
