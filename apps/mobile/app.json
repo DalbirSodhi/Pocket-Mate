@@ -31,6 +31,12 @@
     "plugins": [
       "@react-native-community/datetimepicker",
       "expo-dev-client"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7a15c436-d6e0-414d-a4b7-106ef1a296b9"
+      }
+    },
+    "owner": "dalbir-tech"
   }
 }
