@@ -40,6 +40,9 @@ The workflow validates the repository structure and runs:
 - dependency installation
 - mobile lint
 - JavaScript finance calculation tests
+- production dependency audit that blocks high and critical advisories
+- Expo dependency compatibility checks
+- EAS release configuration and native identifier validation
 - a clean local Supabase stack built from migrations
 - Postgres schema linting at warning level
 - pgTAP tests for RLS isolation, table privileges, and protected bill-plan
@@ -52,13 +55,15 @@ to or modify the hosted Supabase project.
 
 CI protects shared branches by checking changes before merge. It also teaches whether the project can be installed, linted, and tested in a clean machine environment.
 
-## Later CD Steps
+## Deployment Workflow
 
-CD should be added after the app can run locally.
+Native builds are configured in `apps/mobile/eas.json`. GitHub Actions includes
+a manual `EAS Build` workflow so preview or production builds are intentional
+and do not consume build quota on every pull request.
 
-Future deployment steps:
+The workflow requires the `EXPO_TOKEN` repository secret and one successful
+interactive EAS build for each platform before it can run non-interactively.
+Production builds are accepted only from `main`.
 
-- create Expo preview builds for pull requests
-- create EAS builds for release branches
-- deploy web preview if Expo web is enabled
-- add EAS preview and release builds after project credentials are configured
+See [deployment.md](./deployment.md) for environment setup, physical iPhone
+registration, preview builds, and the store release checklist.

@@ -1,0 +1,12 @@
+.git/
+.github/
+.expo/
+node_modules/
+coverage/
+dist/
+web-build/
+.env
+.env.*
+!.env.example
+*.log
+README.md
