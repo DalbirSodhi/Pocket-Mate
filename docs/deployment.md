@@ -4,6 +4,8 @@ Pocket-Mate uses Expo Application Services (EAS) for native builds. Run every
 Expo and EAS command from `apps/mobile`, which is the app root inside this
 repository.
 
+Linked EAS project: `@dalbir-tech/pocket-mate`
+
 ## Deployment Environments
 
 | EAS profile | Environment | Artifact | Intended use |
@@ -37,17 +39,18 @@ client, use `npm run start:dev-client` instead.
 
 ## Link The Expo Project
 
-The Expo account owner performs this once. Browser login prevents credentials
-from being placed in commands or repository files.
+The project is linked. The Expo account owner can repeat these commands only
+when repairing the local CLI session. Browser login prevents credentials from
+being placed in commands or repository files.
 
 ```bash
 cd apps/mobile
 npx eas-cli@21.4.0 login --browser
-npx eas-cli@21.4.0 project:init
+npx eas-cli@21.4.0 project:info
 ```
 
-Commit the generated EAS project ID in `app.json`. The project ID is public
-configuration, not a secret.
+The generated EAS project ID is committed in `app.json`. The project ID is
+public configuration, not a secret.
 
 ## Configure EAS Environments
 

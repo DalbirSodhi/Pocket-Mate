@@ -52,7 +52,8 @@
 - [x] Installable EAS preview profile.
 - [x] Manual GitHub Actions build workflow.
 - [x] Store-readiness and internal iOS distribution checklist.
-- [ ] Link the Expo account and create the first signed preview build.
+- [x] Link the Expo account and EAS project.
+- [ ] Register an iPhone and create the first Apple-signed preview build.
 
 ## Later Ideas
 

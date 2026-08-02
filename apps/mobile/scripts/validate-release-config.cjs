@@ -28,6 +28,13 @@ function validateIdentifier(value, label) {
 
 assert(/^\d+\.\d+\.\d+$/.test(appConfig.version), 'App version must be semantic');
 assert(appConfig.scheme === 'pocketmate', 'Deep-link scheme must remain pocketmate');
+assert(appConfig.owner === 'dalbir-tech', 'EAS project must remain under dalbir-tech');
+assert(
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
+    appConfig.extra?.eas?.projectId,
+  ),
+  'A valid EAS project ID must be configured',
+);
 assert(
   appConfig.runtimeVersion?.policy === 'appVersion',
   'Runtime version must track the public app version',
