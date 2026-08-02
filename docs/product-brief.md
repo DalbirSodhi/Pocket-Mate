@@ -49,6 +49,8 @@ The first complete version should include:
 - Purchase-impact check before recording an expense.
 - Recurring expenses and credit card statements.
 - Editable bill payment plans with user-selected payment dates.
+- Searchable monthly activity with correction and deletion controls.
+- Monthly category insights that reconcile completed bill payments.
 
 ## Non-Goals For First Version
 
@@ -69,3 +71,7 @@ Every core screen should answer at least one of these questions:
 - Am I still inside my limit?
 - How much did I protect for savings?
 - What happens if I make this purchase?
+
+Finance totals must follow one cash-movement rule: unpaid bills are commitments,
+while completed bill payments and recorded expenses are spending. Dashboard,
+Activity, and Insights must reconcile to that same rule.

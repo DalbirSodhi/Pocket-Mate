@@ -55,6 +55,37 @@ Saving a one-time, recurring, or card-bill expense must close the entry flow and
 return to the dashboard. A successful save must never leave the user on a form
 that appears frozen.
 
+## Activity And Correction Flow
+
+```mermaid
+flowchart TD
+    A["Open Activity"] --> B["Select calendar month"]
+    B --> C["Search or filter by type and category"]
+    C --> D{"Choose an entry"}
+    D -->|Income| E["Review income details"]
+    D -->|Expense| F["Review expense details"]
+    D -->|Bill payment| G["Review payment plan or saved card"]
+    E --> H{"Edit or delete?"}
+    F --> H
+    H --> I["Confirm change"]
+    I --> J["Recalculate activity, dashboard, and insights"]
+```
+
+Activity is a cash-movement ledger. It includes income, one-time expenses,
+completed bill-plan installments, and directly paid card statements. Unpaid
+statements remain in Upcoming bills and are not counted as spending until paid.
+
+## Monthly Insights Flow
+
+```mermaid
+flowchart TD
+    A["Open Spent or Spending breakdown"] --> B["Choose month"]
+    B --> C["Review total and category shares"]
+    C --> D["Check category cap status"]
+    D --> E["Choose a category"]
+    E --> F["Open Activity with month and category applied"]
+```
+
 ## Bill Payment Plan Flow
 
 ```mermaid
@@ -101,10 +132,9 @@ Plan screen.
 ## Main Navigation
 
 ```text
-Dashboard
-Expenses
-Budgets
-Savings
+Home
+Activity
+Plan
 Settings
 ```
 
@@ -113,12 +143,13 @@ Settings
 The dashboard should make these visible without digging:
 
 - Safe-to-spend today.
-- Income this cycle.
-- Spent this cycle.
+- Income this calendar month.
+- Spent this calendar month.
 - Savings protected.
 - Remaining balance.
 - Days until next payday.
 - Category warnings.
+- Top category spending with access to the full monthly breakdown.
 - Recent expenses.
 - Paid bill installments included in spent and available totals.
 - Remaining bill installments included in committed totals.

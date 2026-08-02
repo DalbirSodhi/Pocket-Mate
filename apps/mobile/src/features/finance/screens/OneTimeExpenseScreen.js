@@ -1,5 +1,5 @@
 import { Check, Tags } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,12 +15,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import { AppButton } from '../../../components/AppButton';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
+import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
 import {
   createExpenseEntry,
   ensureExpenseCategories,
+  getExpenseDetail,
+  updateExpenseEntry,
 } from '../services/financeService';
 import {
   getLocalDateString,
@@ -40,6 +43,9 @@ function formatPrefillAmount(amountCents) {
 export function OneTimeExpenseScreen({ navigation, route }) {
   const { user } = useAuthSession();
   const prefill = route.params?.prefill;
+  const expenseId = route.params?.expenseId;
+  const isEditing = Boolean(expenseId);
+  const hasLoadedExpense = useRef(false);
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState('');
   const [amount, setAmount] = useState(() =>
@@ -58,8 +64,24 @@ export function OneTimeExpenseScreen({ navigation, route }) {
     setRequestError('');
 
     try {
-      const nextCategories = await ensureExpenseCategories(user.id);
+      const [nextCategories, expense] = await Promise.all([
+        ensureExpenseCategories(user.id),
+        isEditing && !hasLoadedExpense.current
+          ? getExpenseDetail({ userId: user.id, expenseId })
+          : Promise.resolve(null),
+      ]);
       setCategories(nextCategories);
+
+      if (expense) {
+        setAmount(formatPrefillAmount(expense.amount_cents));
+        setMerchant(expense.merchant || '');
+        setDate(expense.spent_on);
+        setNote(expense.note || '');
+        setCategoryId(expense.category_id || '');
+        hasLoadedExpense.current = true;
+        return;
+      }
+
       setCategoryId((current) => {
         const stillExists = nextCategories.some((category) => category.id === current);
         const prefilledCategoryExists = nextCategories.some(
@@ -81,7 +103,7 @@ export function OneTimeExpenseScreen({ navigation, route }) {
     } finally {
       setIsLoadingCategories(false);
     }
-  }, [prefill?.categoryId, user.id]);
+  }, [expenseId, isEditing, prefill?.categoryId, user.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -106,15 +128,22 @@ export function OneTimeExpenseScreen({ navigation, route }) {
     setIsSaving(true);
 
     try {
-      await createExpenseEntry({
+      const entry = {
         userId: user.id,
         categoryId,
         amountCents: parseAmountToCents(amount),
         spentOn: date,
         merchant,
         note,
-      });
-      navigation.popToTop();
+      };
+
+      if (isEditing) {
+        await updateExpenseEntry({ ...entry, expenseId });
+        navigation.goBack();
+      } else {
+        await createExpenseEntry(entry);
+        navigation.popToTop();
+      }
     } catch (error) {
       setRequestError(
         getFinanceErrorMessage(error, 'Unable to save this expense.'),
@@ -122,6 +151,10 @@ export function OneTimeExpenseScreen({ navigation, route }) {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (isEditing && isLoadingCategories) {
+    return <LoadingScreen message="Loading expense..." />;
   }
 
   return (
@@ -137,8 +170,8 @@ export function OneTimeExpenseScreen({ navigation, route }) {
           <View style={styles.content}>
             <ScreenHeader
               onBack={navigation.goBack}
-              subtitle="Record where money went"
-              title="One-time expense"
+              subtitle={isEditing ? 'Correct where money went' : 'Record where money went'}
+              title={isEditing ? 'Edit expense' : 'One-time expense'}
             />
 
             <InlineNotice message={requestError} variant="error" />
@@ -240,7 +273,7 @@ export function OneTimeExpenseScreen({ navigation, route }) {
               disabled={isLoadingCategories}
               icon={Check}
               isLoading={isSaving}
-              label="Save expense"
+              label={isEditing ? 'Save changes' : 'Save expense'}
               onPress={handleSave}
             />
           </View>

@@ -249,7 +249,19 @@ export function DashboardScreen({ navigation, profile }) {
                 </Text>
               </Pressable>
               <View style={styles.summaryDivider} />
-              <View style={styles.summaryItem}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('MonthlyInsights', {
+                    currencyCode,
+                    monthKey: summary?.monthStartDate?.slice(0, 7),
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.summaryItem,
+                  pressed && styles.summaryPressed,
+                ]}
+              >
                 <View style={styles.summaryLabelRow}>
                   <ArrowUpRight color={colors.danger} size={17} />
                   <Text style={styles.summaryLabel}>Spent</Text>
@@ -257,7 +269,91 @@ export function DashboardScreen({ navigation, profile }) {
                 <Text style={styles.summaryValue}>
                   {formatCurrency(expenseCents, currencyCode)}
                 </Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.section}>
+              <View style={styles.sectionHeading}>
+                <Text style={styles.sectionTitle}>Spending breakdown</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  onPress={() =>
+                    navigation.navigate('MonthlyInsights', {
+                      currencyCode,
+                      monthKey: summary?.monthStartDate?.slice(0, 7),
+                    })
+                  }
+                  style={styles.sectionLink}
+                >
+                  <Text style={styles.sectionLinkText}>View all</Text>
+                  <ChevronRight color={colors.inkMuted} size={16} />
+                </Pressable>
               </View>
+
+              {summary?.categoryInsights?.length ? (
+                <View style={styles.breakdownList}>
+                  {summary.categoryInsights.slice(0, 3).map((row) => (
+                    <Pressable
+                      accessibilityRole="button"
+                      key={row.categoryId}
+                      onPress={() =>
+                        navigation.navigate('Transactions', {
+                          currencyCode,
+                          initialMonthKey: summary.monthStartDate.slice(0, 7),
+                          initialCategoryId:
+                            row.categoryId === 'bill-payments'
+                              ? 'all'
+                              : row.categoryId,
+                          initialType:
+                            row.categoryId === 'bill-payments'
+                              ? 'bill_payment'
+                              : 'expense',
+                        })
+                      }
+                      style={({ pressed }) => [
+                        styles.breakdownRow,
+                        pressed && styles.breakdownRowPressed,
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.breakdownSwatch,
+                          { backgroundColor: row.color },
+                        ]}
+                      />
+                      <View style={styles.breakdownCopy}>
+                        <View style={styles.breakdownHeading}>
+                          <Text numberOfLines={1} style={styles.breakdownName}>
+                            {row.name}
+                          </Text>
+                          <Text style={styles.breakdownAmount}>
+                            {formatCurrency(row.amountCents, currencyCode)}
+                          </Text>
+                        </View>
+                        <View style={styles.breakdownTrack}>
+                          <View
+                            style={[
+                              styles.breakdownFill,
+                              {
+                                backgroundColor: row.color,
+                                width: `${Math.max(row.sharePercent, 2)}%`,
+                              },
+                            ]}
+                          />
+                        </View>
+                      </View>
+                      <Text style={styles.breakdownShare}>
+                        {row.sharePercent}%
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.breakdownEmpty}>
+                  Add an expense to see where your money goes.
+                </Text>
+              )}
             </View>
 
             <View style={styles.section}>
@@ -603,6 +699,69 @@ const styles = StyleSheet.create({
   sectionLinkText: {
     ...typography.caption,
     color: colors.inkMuted,
+  },
+  breakdownList: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  breakdownRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  breakdownRowPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  breakdownSwatch: {
+    width: 10,
+    height: 36,
+    borderRadius: radius.sm,
+  },
+  breakdownCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: spacing.sm,
+  },
+  breakdownHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  breakdownName: {
+    ...typography.label,
+    color: colors.ink,
+    flex: 1,
+  },
+  breakdownAmount: {
+    ...typography.caption,
+    color: colors.ink,
+  },
+  breakdownTrack: {
+    height: 4,
+    borderRadius: radius.round,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+  },
+  breakdownFill: {
+    height: '100%',
+    borderRadius: radius.round,
+  },
+  breakdownShare: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    width: 36,
+    textAlign: 'right',
+  },
+  breakdownEmpty: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
   },
   planStatus: {
     borderRadius: radius.md,

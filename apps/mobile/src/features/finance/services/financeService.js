@@ -102,6 +102,65 @@ export async function createIncomeEntry({
   return response.data;
 }
 
+export async function getIncomeDetail({ userId, incomeId }) {
+  const response = await supabase
+    .from('income_entries')
+    .select('id, amount_cents, source, received_on, note')
+    .eq('user_id', userId)
+    .eq('id', incomeId)
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function updateIncomeEntry({
+  userId,
+  incomeId,
+  amountCents,
+  source,
+  receivedOn,
+  note,
+}) {
+  const response = await supabase
+    .from('income_entries')
+    .update({
+      amount_cents: amountCents,
+      source: source.trim() || null,
+      received_on: receivedOn,
+      note: note.trim() || null,
+    })
+    .eq('user_id', userId)
+    .eq('id', incomeId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function deleteIncomeEntry({ userId, incomeId }) {
+  const response = await supabase
+    .from('income_entries')
+    .delete()
+    .eq('user_id', userId)
+    .eq('id', incomeId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
 export async function createExpenseEntry({
   userId,
   categoryId,
@@ -162,6 +221,52 @@ export async function getExpenseDetail({ userId, expenseId }) {
     category: categoryById.get(expenseResponse.data.category_id) || null,
     recurringExpense: recurringResponse.data || null,
   };
+}
+
+export async function updateExpenseEntry({
+  userId,
+  expenseId,
+  categoryId,
+  amountCents,
+  spentOn,
+  merchant,
+  note,
+}) {
+  const response = await supabase
+    .from('expenses')
+    .update({
+      category_id: categoryId,
+      amount_cents: amountCents,
+      spent_on: spentOn,
+      merchant: merchant.trim() || null,
+      note: note.trim() || null,
+    })
+    .eq('user_id', userId)
+    .eq('id', expenseId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function deleteExpenseEntry({ userId, expenseId }) {
+  const response = await supabase
+    .from('expenses')
+    .delete()
+    .eq('user_id', userId)
+    .eq('id', expenseId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
 }
 
 export async function convertExpenseToRecurring({ userId, expense }) {
@@ -376,24 +481,77 @@ export async function setCreditCardBillPaid({
   return response.data;
 }
 
-export async function getTransactions(userId, limit = 100) {
-  const [incomeResponse, expenseResponse, categories, cardBills] = await Promise.all([
-    supabase
-      .from('income_entries')
-      .select('id, amount_cents, source, received_on, note, created_at')
-      .eq('user_id', userId)
-      .order('received_on', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(limit),
-    supabase
-      .from('expenses')
-      .select('id, amount_cents, merchant, spent_on, note, category_id, created_at')
-      .eq('user_id', userId)
-      .order('spent_on', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(limit),
+export async function getTransactions(
+  userId,
+  { startDate, endDate, limit = 500 } = {},
+) {
+  let incomeQuery = supabase
+    .from('income_entries')
+    .select('id, amount_cents, source, received_on, note, created_at')
+    .eq('user_id', userId)
+    .order('received_on', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  let expenseQuery = supabase
+    .from('expenses')
+    .select('id, amount_cents, merchant, spent_on, note, category_id, created_at')
+    .eq('user_id', userId)
+    .order('spent_on', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  let installmentQuery = supabase
+    .from('bill_payment_installments')
+    .select(
+      'id, amount_cents, paid_on, created_at, bill_payment_plans(id, title, total_amount_cents, due_on, period_start, credit_card_bill_id, recurring_expense_id)',
+    )
+    .eq('user_id', userId)
+    .not('paid_on', 'is', null)
+    .order('paid_on', { ascending: false })
+    .limit(limit);
+  let paidCardBillQuery = supabase
+    .from('credit_card_bills')
+    .select(
+      'id, credit_card_id, amount_cents, paid_on, due_on, created_at',
+    )
+    .eq('user_id', userId)
+    .not('paid_on', 'is', null)
+    .order('paid_on', { ascending: false })
+    .limit(limit);
+
+  if (startDate) {
+    incomeQuery = incomeQuery.gte('received_on', startDate);
+    expenseQuery = expenseQuery.gte('spent_on', startDate);
+    installmentQuery = installmentQuery.gte('paid_on', startDate);
+    paidCardBillQuery = paidCardBillQuery.gte('paid_on', startDate);
+  }
+
+  if (endDate) {
+    incomeQuery = incomeQuery.lte('received_on', endDate);
+    expenseQuery = expenseQuery.lte('spent_on', endDate);
+    installmentQuery = installmentQuery.lte('paid_on', endDate);
+    paidCardBillQuery = paidCardBillQuery.lte('paid_on', endDate);
+  }
+
+  const [
+    incomeResponse,
+    expenseResponse,
+    categories,
+    installmentResponse,
+    paidCardBillResponse,
+    cards,
+    planResponse,
+  ] = await Promise.all([
+    incomeQuery,
+    expenseQuery,
     getExpenseCategories(userId),
-    getCreditCardBills(userId, limit),
+    installmentQuery,
+    paidCardBillQuery,
+    getCreditCards(userId),
+    supabase
+      .from('bill_payment_plans')
+      .select('credit_card_bill_id')
+      .eq('user_id', userId)
+      .not('credit_card_bill_id', 'is', null),
   ]);
 
   const income = unwrap(incomeResponse).map((entry) => ({
@@ -404,6 +562,8 @@ export async function getTransactions(userId, limit = 100) {
     createdAt: entry.created_at,
     title: entry.source || 'Income',
     subtitle: entry.note || 'Money received',
+    note: entry.note,
+    categoryId: null,
   }));
   const categoryById = new Map(categories.map((category) => [category.id, category]));
   const expenses = unwrap(expenseResponse).map((entry) => {
@@ -417,21 +577,48 @@ export async function getTransactions(userId, limit = 100) {
       createdAt: entry.created_at,
       title: entry.merchant || category?.name || 'Expense',
       subtitle: category?.name || entry.note || 'Uncategorized',
+      note: entry.note,
+      categoryId: entry.category_id,
       color: category?.color,
     };
   });
+  const installments = unwrap(installmentResponse).map((installment) => {
+    const plan = installment.bill_payment_plans;
 
-  const bills = cardBills.map((bill) => ({
-    id: bill.id,
-    type: 'card_bill',
-    amountCents: bill.amount_cents,
-    date: bill.paid_on || bill.due_on,
-    createdAt: bill.created_at,
-    title: bill.card?.nickname || 'Credit card bill',
-    subtitle: bill.paid_on ? 'Card bill paid' : 'Card bill due',
-  }));
+    return {
+      id: installment.id,
+      type: 'bill_payment',
+      amountCents: installment.amount_cents,
+      date: installment.paid_on,
+      createdAt: installment.created_at,
+      title: plan?.title || 'Bill payment',
+      subtitle: 'Payment completed',
+      note: null,
+      categoryId: null,
+      paymentPlan: plan || null,
+    };
+  });
+  const plannedCardBillIds = new Set(
+    unwrap(planResponse).map((plan) => plan.credit_card_bill_id),
+  );
+  const cardById = new Map(cards.map((card) => [card.id, card]));
+  const directCardPayments = unwrap(paidCardBillResponse)
+    .filter((bill) => !plannedCardBillIds.has(bill.id))
+    .map((bill) => ({
+      id: bill.id,
+      type: 'bill_payment',
+      amountCents: bill.amount_cents,
+      date: bill.paid_on,
+      createdAt: bill.created_at,
+      title: cardById.get(bill.credit_card_id)?.nickname || 'Credit card bill',
+      subtitle: 'Statement paid',
+      note: null,
+      categoryId: null,
+      paymentPlan: null,
+      cardBillId: bill.id,
+    }));
 
-  return [...income, ...expenses, ...bills]
+  return [...income, ...expenses, ...installments, ...directCardPayments]
     .sort(
       (left, right) =>
         right.date.localeCompare(left.date) ||

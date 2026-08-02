@@ -3,7 +3,8 @@
 Pocket-Mate is a JavaScript finance-planning app built with Expo, React Native,
 and Supabase. It tracks monthly income and spending, fixed commitments, credit
 card bills, installment plans, budgets, savings goals, and safe-to-spend
-guidance.
+guidance. Its monthly activity ledger supports search, correction, and category
+insights while keeping unpaid commitments separate from completed spending.
 
 ## Repository
 

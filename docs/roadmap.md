@@ -55,9 +55,17 @@
 - [x] Link the Expo account and EAS project.
 - [ ] Register an iPhone and create the first Apple-signed preview build.
 
+## Phase 6: Transaction Control And Insights
+
+- [x] Monthly activity ledger with income, spending, and net totals.
+- [x] Search and filter activity by month, type, and expense category.
+- [x] Income and one-time expense detail, edit, and delete flows.
+- [x] Reconcile completed bill payments with dashboard spending.
+- [x] Monthly category breakdown with budget-cap status.
+- [x] Dashboard drill-down to filtered activity and full insights.
+
 ## Later Ideas
 
-- Recurring transactions.
 - CSV export.
 - Optional cloud backup.
 - Optional bank sync.
