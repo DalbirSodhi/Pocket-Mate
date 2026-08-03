@@ -1,7 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { CalendarClock, CheckCircle2, ReceiptText } from 'lucide-react-native';
+import {
+  CalendarClock,
+  CheckCircle2,
+  Pencil,
+  ReceiptText,
+  Trash2,
+} from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '../../../components/AppButton';
@@ -13,6 +19,7 @@ import { useAuthSession } from '../../auth';
 import { formatCurrency } from '../../dashboard/utils/formatCurrency';
 import {
   convertExpenseToRecurring,
+  deleteExpenseEntry,
   getExpenseDetail,
 } from '../services/financeService';
 import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
@@ -33,6 +40,7 @@ export function ExpenseDetailScreen({ navigation, route }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isConverting, setIsConverting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadExpense = useCallback(async () => {
     setError('');
@@ -75,6 +83,41 @@ export function ExpenseDetailScreen({ navigation, route }) {
     } finally {
       setIsConverting(false);
     }
+  }
+
+  function confirmDelete() {
+    const monthlyNote = expense?.recurringExpense
+      ? ' The separate monthly plan will remain active.'
+      : '';
+
+    Alert.alert(
+      'Delete expense?',
+      `This updates your monthly totals immediately and cannot be undone.${monthlyNote}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            setError('');
+
+            try {
+              await deleteExpenseEntry({ userId: user.id, expenseId });
+              navigation.goBack();
+            } catch (requestError) {
+              setError(
+                getFinanceErrorMessage(
+                  requestError,
+                  'Unable to delete this expense.',
+                ),
+              );
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    );
   }
 
   if (isLoading) {
@@ -120,6 +163,29 @@ export function ExpenseDetailScreen({ navigation, route }) {
                     <DetailRow label="Note" value={expense.note} />
                   </>
                 ) : null}
+              </View>
+
+              <View style={styles.editActions}>
+                <AppButton
+                  icon={Pencil}
+                  label="Edit expense"
+                  onPress={() =>
+                    navigation.navigate('OneTimeExpense', {
+                      expenseId,
+                      currencyCode,
+                    })
+                  }
+                  style={styles.editAction}
+                  variant="secondary"
+                />
+                <AppButton
+                  icon={Trash2}
+                  isLoading={isDeleting}
+                  label="Delete"
+                  onPress={confirmDelete}
+                  style={styles.editAction}
+                  variant="danger"
+                />
               </View>
 
               {expense.recurringExpense ? (
@@ -229,6 +295,13 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: colors.border,
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  editAction: {
+    flex: 1,
   },
   actionSection: {
     gap: spacing.lg,

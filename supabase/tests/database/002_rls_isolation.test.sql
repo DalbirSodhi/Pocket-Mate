@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(21);
 
 insert into auth.users (id, email)
 values
@@ -242,6 +242,48 @@ select results_eq(
   $$,
   $$select 1 where false$$,
   'a user cannot delete another user card'
+);
+
+select results_eq(
+  $$
+    update public.income_entries
+    set amount_cents = 1
+    where user_id = '20000000-0000-0000-0000-000000000002'
+    returning 1
+  $$,
+  $$select 1 where false$$,
+  'a user cannot update another user income entry'
+);
+
+select results_eq(
+  $$
+    delete from public.income_entries
+    where user_id = '20000000-0000-0000-0000-000000000002'
+    returning 1
+  $$,
+  $$select 1 where false$$,
+  'a user cannot delete another user income entry'
+);
+
+select results_eq(
+  $$
+    update public.expenses
+    set amount_cents = 1
+    where user_id = '20000000-0000-0000-0000-000000000002'
+    returning 1
+  $$,
+  $$select 1 where false$$,
+  'a user cannot update another user expense'
+);
+
+select results_eq(
+  $$
+    delete from public.expenses
+    where user_id = '20000000-0000-0000-0000-000000000002'
+    returning 1
+  $$,
+  $$select 1 where false$$,
+  'a user cannot delete another user expense'
 );
 
 select throws_ok(

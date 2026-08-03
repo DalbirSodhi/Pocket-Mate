@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { Banknote, Check } from 'lucide-react-native';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,10 +14,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../../../components/AppButton';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
+import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
-import { createIncomeEntry } from '../services/financeService';
+import {
+  createIncomeEntry,
+  getIncomeDetail,
+  updateIncomeEntry,
+} from '../services/financeService';
 import {
   getLocalDateString,
   parseAmountToCents,
@@ -24,15 +30,50 @@ import {
 } from '../utils/financeValidation.cjs';
 import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
 
-export function AddIncomeScreen({ navigation }) {
+function formatAmount(amountCents) {
+  return (Number(amountCents || 0) / 100).toFixed(2);
+}
+
+export function AddIncomeScreen({ navigation, route }) {
   const { user } = useAuthSession();
+  const incomeId = route.params?.incomeId;
+  const isEditing = Boolean(incomeId);
   const [amount, setAmount] = useState('');
   const [source, setSource] = useState('');
   const [date, setDate] = useState(getLocalDateString());
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState({});
   const [requestError, setRequestError] = useState('');
+  const [isLoading, setIsLoading] = useState(isEditing);
   const [isSaving, setIsSaving] = useState(false);
+
+  const loadIncome = useCallback(async () => {
+    if (!incomeId) {
+      return;
+    }
+
+    setRequestError('');
+
+    try {
+      const income = await getIncomeDetail({ userId: user.id, incomeId });
+      setAmount(formatAmount(income.amount_cents));
+      setSource(income.source || '');
+      setDate(income.received_on);
+      setNote(income.note || '');
+    } catch (error) {
+      setRequestError(
+        getFinanceErrorMessage(error, 'Unable to load this income entry.'),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [incomeId, user.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadIncome();
+    }, [loadIncome]),
+  );
 
   async function handleSave() {
     const nextErrors = validateEntry({ amount, date });
@@ -46,13 +87,19 @@ export function AddIncomeScreen({ navigation }) {
     setIsSaving(true);
 
     try {
-      await createIncomeEntry({
+      const entry = {
         userId: user.id,
         amountCents: parseAmountToCents(amount),
         source,
         receivedOn: date,
         note,
-      });
+      };
+
+      if (isEditing) {
+        await updateIncomeEntry({ ...entry, incomeId });
+      } else {
+        await createIncomeEntry(entry);
+      }
       navigation.goBack();
     } catch (error) {
       setRequestError(
@@ -61,6 +108,10 @@ export function AddIncomeScreen({ navigation }) {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (isLoading) {
+    return <LoadingScreen message="Loading income entry..." />;
   }
 
   return (
@@ -76,8 +127,8 @@ export function AddIncomeScreen({ navigation }) {
           <View style={styles.content}>
             <ScreenHeader
               onBack={navigation.goBack}
-              subtitle="Record money received"
-              title="Add income"
+              subtitle={isEditing ? 'Correct money received' : 'Record money received'}
+              title={isEditing ? 'Edit income' : 'Add income'}
             />
 
             <View style={styles.intro}>
@@ -86,10 +137,14 @@ export function AddIncomeScreen({ navigation }) {
               </View>
               <View style={styles.introCopy}>
                 <Text style={styles.introTitle}>
-                  Increase this month&apos;s available money
+                  {isEditing
+                    ? 'Keep your monthly totals accurate'
+                    : 'Increase this month\'s available money'}
                 </Text>
                 <Text style={styles.introBody}>
-                  Add salary, freelance work, refunds, or any other income.
+                  {isEditing
+                    ? 'Changes update your activity, balance, and monthly plan.'
+                    : 'Add salary, freelance work, refunds, or any other income.'}
                 </Text>
               </View>
             </View>
@@ -136,7 +191,7 @@ export function AddIncomeScreen({ navigation }) {
             <AppButton
               icon={Check}
               isLoading={isSaving}
-              label="Save income"
+              label={isEditing ? 'Save changes' : 'Save income'}
               onPress={handleSave}
             />
           </View>
