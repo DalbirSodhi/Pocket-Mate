@@ -5,6 +5,7 @@ and Supabase. It tracks monthly income and spending, fixed commitments, credit
 card bills, installment plans, budgets, savings goals, and safe-to-spend
 guidance. Its monthly activity ledger supports search, correction, and category
 insights while keeping unpaid commitments separate from completed spending.
+Monthly reports can be exported as local CSV files on mobile or web.
 
 ## Repository
 

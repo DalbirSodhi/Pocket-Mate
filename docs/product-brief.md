@@ -51,6 +51,7 @@ The first complete version should include:
 - Editable bill payment plans with user-selected payment dates.
 - Searchable monthly activity with correction and deletion controls.
 - Monthly category insights that reconcile completed bill payments.
+- Monthly reports and portable CSV transaction exports.
 
 ## Non-Goals For First Version
 
@@ -75,3 +76,7 @@ Every core screen should answer at least one of these questions:
 Finance totals must follow one cash-movement rule: unpaid bills are commitments,
 while completed bill payments and recorded expenses are spending. Dashboard,
 Activity, and Insights must reconcile to that same rule.
+
+Users own their finance records. Reports must be generated from owner-scoped
+queries, remain on the user's device, and export standard CSV without sending
+data through an additional analytics or file-storage service.

@@ -34,6 +34,7 @@ import {
 } from '../features/finance';
 import { MonthlyInsightsScreen } from '../features/insights';
 import { ProfileGate, SettingsScreen } from '../features/profile';
+import { MonthlyReportScreen } from '../features/reports';
 import {
   BillPaymentPlanScreen,
   BudgetCapsScreen,
@@ -170,6 +171,7 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={ExpenseDetailScreen} name="ExpenseDetail" />
       <Stack.Screen component={IncomeDetailScreen} name="IncomeDetail" />
       <Stack.Screen component={MonthlyInsightsScreen} name="MonthlyInsights" />
+      <Stack.Screen component={MonthlyReportScreen} name="MonthlyReport" />
       <Stack.Screen component={BillPaymentPlanScreen} name="BillPaymentPlan" />
       <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />
       <Stack.Screen component={BudgetCapsScreen} name="BudgetCaps" />
