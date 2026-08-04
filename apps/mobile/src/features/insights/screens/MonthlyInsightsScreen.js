@@ -2,6 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   ChevronLeft,
   ChevronRight,
+  FileDown,
   ReceiptText,
 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
@@ -100,6 +101,21 @@ export function MonthlyInsightsScreen({ navigation, route }) {
       >
         <View style={styles.content}>
           <ScreenHeader
+            action={
+              <Pressable
+                accessibilityLabel="Open monthly report"
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('MonthlyReport', {
+                    currencyCode,
+                    monthKey,
+                  })
+                }
+                style={styles.headerAction}
+              >
+                <FileDown color={colors.ink} size={20} />
+              </Pressable>
+            }
             onBack={navigation.goBack}
             subtitle="Where your money went"
             title="Monthly insights"
@@ -247,6 +263,16 @@ const styles = StyleSheet.create({
     maxWidth: 720,
     alignSelf: 'center',
     gap: spacing.xl,
+  },
+  headerAction: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   monthPicker: {
     minHeight: 48,

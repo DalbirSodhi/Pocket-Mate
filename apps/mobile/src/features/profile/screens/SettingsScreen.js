@@ -1,9 +1,15 @@
-import { LogOut, Save } from 'lucide-react-native';
+import {
+  ChevronRight,
+  FileSpreadsheet,
+  LogOut,
+  Save,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,7 +21,7 @@ import { AppButton } from '../../../components/AppButton';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
-import { colors, spacing, typography } from '../../../theme/tokens';
+import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { signOut } from '../../auth';
 import { ProfileChoiceGroup } from '../components/ProfileChoiceGroup';
 import { currencyOptions } from '../profileOptions';
@@ -139,6 +145,29 @@ export function SettingsScreen({
               </Text>
             </View>
 
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Your data</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  navigation.navigate('MonthlyReport', { currencyCode })
+                }
+                style={({ pressed }) => [
+                  styles.dataRow,
+                  pressed && styles.dataRowPressed,
+                ]}
+              >
+                <View style={styles.dataIcon}>
+                  <FileSpreadsheet color={colors.ink} size={20} />
+                </View>
+                <View style={styles.dataCopy}>
+                  <Text style={styles.dataTitle}>Monthly reports</Text>
+                  <Text style={styles.dataBody}>Review and export CSV files</Text>
+                </View>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
+            </View>
+
             <AppButton
               disabled={!displayName}
               icon={Save}
@@ -188,6 +217,38 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   sectionBody: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  dataRow: {
+    minHeight: 72,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  dataRowPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  dataIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: radius.md,
+    backgroundColor: colors.iconSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dataCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  dataTitle: {
+    ...typography.label,
+    color: colors.ink,
+  },
+  dataBody: {
     ...typography.caption,
     color: colors.inkMuted,
   },

@@ -86,6 +86,22 @@ flowchart TD
     E --> F["Open Activity with month and category applied"]
 ```
 
+## Monthly Report And Export Flow
+
+```mermaid
+flowchart TD
+    A["Open Reports from Settings or Insights"] --> B["Choose calendar month"]
+    B --> C["Review income, spent, net, and category totals"]
+    C --> D{"Export CSV?"}
+    D -->|Web| E["Download CSV in browser"]
+    D -->|iOS or Android| F["Open system share sheet"]
+    D -->|No| G["Return to app"]
+```
+
+The report uses the same cash-movement ledger as Activity and Insights. CSV
+files include income, expenses, and completed bill payments, use signed decimal
+amounts, and are created locally without uploading another copy.
+
 ## Bill Payment Plan Flow
 
 ```mermaid

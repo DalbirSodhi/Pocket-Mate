@@ -64,9 +64,16 @@
 - [x] Monthly category breakdown with budget-cap status.
 - [x] Dashboard drill-down to filtered activity and full insights.
 
+## Phase 7: Data Portability And Reports
+
+- [x] Monthly report with reconciled income, spending, and net totals.
+- [x] Monthly category breakdown and transaction count.
+- [x] CSV export through native sharing and web download.
+- [x] Spreadsheet-formula protection for user-entered CSV fields.
+- [x] Settings and Insights navigation to reports.
+
 ## Later Ideas
 
-- CSV export.
 - Optional cloud backup.
 - Optional bank sync.
 - Meal planning.
