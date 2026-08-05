@@ -33,7 +33,11 @@ import {
   TransactionsScreen,
 } from '../features/finance';
 import { MonthlyInsightsScreen } from '../features/insights';
-import { ProfileGate, SettingsScreen } from '../features/profile';
+import {
+  DeleteAccountScreen,
+  ProfileGate,
+  SettingsScreen,
+} from '../features/profile';
 import { MonthlyReportScreen } from '../features/reports';
 import {
   BillPaymentPlanScreen,
@@ -172,6 +176,7 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={IncomeDetailScreen} name="IncomeDetail" />
       <Stack.Screen component={MonthlyInsightsScreen} name="MonthlyInsights" />
       <Stack.Screen component={MonthlyReportScreen} name="MonthlyReport" />
+      <Stack.Screen component={DeleteAccountScreen} name="DeleteAccount" />
       <Stack.Screen component={BillPaymentPlanScreen} name="BillPaymentPlan" />
       <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />
       <Stack.Screen component={BudgetCapsScreen} name="BudgetCaps" />

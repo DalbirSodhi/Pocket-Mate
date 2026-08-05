@@ -102,6 +102,24 @@ The report uses the same cash-movement ledger as Activity and Insights. CSV
 files include income, expenses, and completed bill payments, use signed decimal
 amounts, and are created locally without uploading another copy.
 
+## Account Deletion Flow
+
+```mermaid
+flowchart TD
+    A["Open Delete account from Settings"] --> B["Review permanent data removal"]
+    B --> C["Type DELETE exactly"]
+    C --> D{"Confirm final warning?"}
+    D -->|No| E["Keep account and data"]
+    D -->|Yes| F["Delete authenticated Auth user"]
+    F --> G["Delete all owned finance data"]
+    G --> H["Clear local session"]
+    H --> I["Return to sign in"]
+```
+
+The deletion request never contains a target user ID. The database derives the
+account from the active authenticated session, and the complete deletion occurs
+in one transaction.
+
 ## Bill Payment Plan Flow
 
 ```mermaid

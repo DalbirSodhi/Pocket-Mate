@@ -112,6 +112,11 @@ dashboard summary and category-cap service results. The calculator does not
 write hypothetical purchases. Confirmation hands validated values to the normal
 expense-entry flow, keeping Supabase writes behind the finance service boundary.
 
+Account deletion also uses a protected Postgres function. It derives identity
+from the authenticated JWT, deletes finance rows in dependency order and the
+Auth user in one transaction, then the auth service clears the local mobile
+session. No service-role credential or target user ID is exposed to the client.
+
 Detailed table planning is maintained in [database-schema.md](./database-schema.md).
 
 ## Security Rules
@@ -123,6 +128,7 @@ Detailed table planning is maintained in [database-schema.md](./database-schema.
 - Validate user input before saving.
 - Keep finance calculations deterministic and testable.
 - Avoid bank account syncing in the first version.
+- Require explicit confirmation before irreversible account deletion.
 
 ## Replaceability Goals
 

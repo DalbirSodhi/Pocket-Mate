@@ -388,9 +388,20 @@ For inserts:
 
 ## Data Deletion
 
-User-owned records can be deleted by the owner.
+Individual user-owned records can be deleted by the owner where the product
+supports correction or removal.
 
-Later, account deletion should remove or anonymize all user-owned data.
+Full account deletion uses `public.delete_own_account()`. This
+`security definer` function:
+
+- accepts no user ID from the client
+- resolves the target only from `auth.uid()`
+- is executable by `authenticated`, not `anon`
+- deletes finance rows in dependency order inside the same transaction
+- deletes the matching `auth.users` row after owned data is removed
+
+The operation is transactional. Another user's Auth record and finance rows
+are never selected by the function.
 
 ## Migration Order
 
@@ -423,6 +434,7 @@ supabase/migrations/202607270001_add_recurring_expenses_and_card_bills.sql
 supabase/migrations/202607270002_complete_monthly_plan.sql
 supabase/migrations/202607290001_add_bill_payment_plans.sql
 supabase/migrations/202607310001_make_bill_payment_plans_dynamic.sql
+supabase/migrations/202608040001_add_account_deletion.sql
 ```
 
 ## Open Decisions

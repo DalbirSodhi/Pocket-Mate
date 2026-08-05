@@ -24,6 +24,7 @@ apps/mobile/src/features/auth/services/authService.js
 signUpWithEmail({ email, password, displayName })
 signInWithEmail({ email, password })
 signOut()
+deleteOwnAccount()
 requestPasswordReset(email)
 updatePassword(password)
 createSessionFromUrl(url)
@@ -88,6 +89,16 @@ The provider:
 - listens for sign-in, sign-out, and token refresh events
 - unsubscribes when it is unmounted
 - exposes loading and initialization error states
+
+## Account Deletion
+
+`deleteOwnAccount()` calls the authenticated `delete_own_account` database
+function and then clears the local session. The function accepts no user ID;
+the database derives ownership from `auth.uid()` and removes all related
+finance data transactionally.
+
+The UI must require the exact `DELETE` confirmation phrase and a separate final
+destructive prompt. Users should be directed to export reports before deletion.
 
 Navigation should wait until `isLoading` is false before deciding whether to
 show authenticated or unauthenticated screens.

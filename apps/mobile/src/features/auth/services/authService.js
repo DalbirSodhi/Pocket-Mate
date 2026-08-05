@@ -83,6 +83,20 @@ export async function signOut() {
   }
 }
 
+export async function deleteOwnAccount() {
+  const response = await supabase.rpc('delete_own_account');
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  const signOutResponse = await supabase.auth.signOut({ scope: 'local' });
+
+  if (signOutResponse.error) {
+    throw signOutResponse.error;
+  }
+}
+
 export async function requestPasswordReset(email) {
   const normalizedEmail = normalizeEmail(email);
 
