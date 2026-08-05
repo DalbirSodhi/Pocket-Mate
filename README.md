@@ -46,6 +46,7 @@ Database security tests run in CI against an isolated local Supabase stack.
 - [Product brief](docs/product-brief.md)
 - [System design](docs/system-design.md)
 - [Database schema](docs/database-schema.md)
+- [Privacy and data lifecycle](docs/privacy-and-data.md)
 - [CI/CD](docs/ci-cd.md)
 - [Deployment](docs/deployment.md)
 - [Roadmap](docs/roadmap.md)

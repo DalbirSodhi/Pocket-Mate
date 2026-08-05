@@ -72,6 +72,14 @@
 - [x] Spreadsheet-formula protection for user-entered CSV fields.
 - [x] Settings and Insights navigation to reports.
 
+## Phase 8: Privacy And Account Lifecycle
+
+- [x] In-app self-service account deletion.
+- [x] Authenticated-only deletion contract with no client-provided user ID.
+- [x] Transactional cleanup for every user-owned finance table.
+- [x] Typed confirmation and final destructive confirmation.
+- [x] Privacy and data-lifecycle documentation.
+
 ## Later Ideas
 
 - Optional cloud backup.

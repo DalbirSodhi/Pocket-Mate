@@ -127,6 +127,8 @@ iPhone later requires a new build or a re-signed build containing that device.
    Connect app ID to the production submit profile.
 7. Complete privacy, support, screenshots, age-rating, and data-safety details
    in the store consoles before review.
+8. Verify report export and in-app account deletion against the production
+   Supabase project before submission.
 
 The production profile uses remote build-number management and auto-increments
 store build versions. The public app version remains an intentional source

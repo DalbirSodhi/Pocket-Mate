@@ -2,6 +2,7 @@ export { AuthProvider } from './context/AuthContext';
 export { useAuthSession } from './hooks/useAuthSession';
 export {
   createSessionFromUrl,
+  deleteOwnAccount,
   getCurrentSession,
   getCurrentUser,
   requestPasswordReset,

@@ -3,6 +3,7 @@ import {
   FileSpreadsheet,
   LogOut,
   Save,
+  UserRoundX,
 } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -168,6 +169,31 @@ export function SettingsScreen({
               </Pressable>
             </View>
 
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Account</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('DeleteAccount')}
+                style={({ pressed }) => [
+                  styles.dataRow,
+                  pressed && styles.dataRowPressed,
+                ]}
+              >
+                <View style={[styles.dataIcon, styles.dangerIcon]}>
+                  <UserRoundX color={colors.danger} size={20} />
+                </View>
+                <View style={styles.dataCopy}>
+                  <Text style={[styles.dataTitle, styles.dangerText]}>
+                    Delete account
+                  </Text>
+                  <Text style={styles.dataBody}>
+                    Permanently remove your profile and finance data
+                  </Text>
+                </View>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
+            </View>
+
             <AppButton
               disabled={!displayName}
               icon={Save}
@@ -240,6 +266,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  dangerIcon: {
+    backgroundColor: colors.dangerSoft,
+  },
   dataCopy: {
     flex: 1,
     minWidth: 0,
@@ -247,6 +276,9 @@ const styles = StyleSheet.create({
   dataTitle: {
     ...typography.label,
     color: colors.ink,
+  },
+  dangerText: {
+    color: colors.danger,
   },
   dataBody: {
     ...typography.caption,
