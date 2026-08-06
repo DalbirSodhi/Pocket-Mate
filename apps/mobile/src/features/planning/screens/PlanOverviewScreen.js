@@ -273,6 +273,15 @@ export function PlanOverviewScreen({ navigation, profile }) {
                 value="Try it"
               />
               <PlanRow
+                detail="Bills, payment chunks, paydays, and income"
+                icon={CalendarClock}
+                onPress={() =>
+                  navigation.navigate('Calendar', { profile, currencyCode })
+                }
+                title="Planning calendar"
+                value="Open"
+              />
+              <PlanRow
                 detail={`${summary?.activeSavingsGoals || 0} active goals`}
                 icon={Target}
                 onPress={() =>

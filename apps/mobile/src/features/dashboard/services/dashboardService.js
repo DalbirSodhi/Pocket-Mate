@@ -3,6 +3,7 @@ import { buildCategoryInsights } from '../../insights/utils/monthlyInsights.cjs'
 import { getAccountOverview } from '../../accounts/services/accountService';
 import { getMonthlyBudget } from '../../planning/services/budgetService';
 import { buildCategorizedAdjustments } from '../../finance/utils/transactionMath.cjs';
+import { getUserPreferences } from '../../preferences/services/preferencesService';
 import {
   calculateActualBalance,
   calculateSafeToSpend,
@@ -45,6 +46,7 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     accountOverview,
     refundResponse,
     splitResponse,
+    preferences,
   ] = await Promise.all([
     supabase
       .from('income_entries')
@@ -128,6 +130,7 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
       .eq('user_id', userId)
       .gte('expenses.spent_on', month.startDate)
       .lte('expenses.spent_on', month.endDate),
+    getUserPreferences(userId),
   ]);
 
   const income = unwrapResponse(incomeResponse);
@@ -397,6 +400,7 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
       ...expense,
       category: categoryById.get(expense.category_id) || null,
     })),
+    preferences,
   };
 }
 

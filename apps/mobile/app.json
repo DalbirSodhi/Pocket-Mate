@@ -30,7 +30,14 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
-      "expo-dev-client"
+      "expo-dev-client",
+      [
+        "expo-notifications",
+        {
+          "color": "#C56F42",
+          "defaultChannel": "pocket-mate-reminders"
+        }
+      ]
     ],
     "extra": {
       "eas": {

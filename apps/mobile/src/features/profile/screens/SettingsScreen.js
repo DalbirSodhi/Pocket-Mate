@@ -1,5 +1,6 @@
 import {
   ChevronRight,
+  BellRing,
   FileSpreadsheet,
   Landmark,
   WandSparkles,
@@ -181,6 +182,23 @@ export function SettingsScreen({
                 <View style={styles.dataCopy}>
                   <Text style={styles.dataTitle}>Rules, tags, and review</Text>
                   <Text style={styles.dataBody}>Keep categorization consistent</Text>
+                </View>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('Preferences', { profile })}
+                style={({ pressed }) => [
+                  styles.dataRow,
+                  pressed && styles.dataRowPressed,
+                ]}
+              >
+                <View style={styles.dataIcon}>
+                  <BellRing color={colors.ink} size={20} />
+                </View>
+                <View style={styles.dataCopy}>
+                  <Text style={styles.dataTitle}>Reminders and display</Text>
+                  <Text style={styles.dataBody}>Local alerts, privacy, and density</Text>
                 </View>
                 <ChevronRight color={colors.inkMuted} size={18} />
               </Pressable>

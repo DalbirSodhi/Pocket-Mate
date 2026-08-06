@@ -42,9 +42,11 @@ import {
   SettingsScreen,
 } from '../features/profile';
 import { MonthlyReportScreen } from '../features/reports';
+import { PreferencesScreen } from '../features/preferences';
 import {
   BillPaymentPlanScreen,
   BudgetCapsScreen,
+  CalendarScreen,
   PlanOverviewScreen,
   PurchaseImpactScreen,
   SavingsGoalsScreen,
@@ -182,6 +184,8 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={MonthlyReportScreen} name="MonthlyReport" />
       <Stack.Screen component={AccountsScreen} name="Accounts" />
       <Stack.Screen component={AutomationScreen} name="Automation" />
+      <Stack.Screen component={CalendarScreen} name="Calendar" />
+      <Stack.Screen component={PreferencesScreen} name="Preferences" />
       <Stack.Screen component={DeleteAccountScreen} name="DeleteAccount" />
       <Stack.Screen component={BillPaymentPlanScreen} name="BillPaymentPlan" />
       <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />

@@ -32,6 +32,9 @@ values
   ('50000000-0000-0000-0000-000000000005', 'Delete User'),
   ('60000000-0000-0000-0000-000000000006', 'Keep User');
 
+insert into public.user_preferences (user_id, reminders_enabled)
+values ('50000000-0000-0000-0000-000000000005', true);
+
 insert into public.expense_categories (id, user_id, name)
 values (
   '51000000-0000-0000-0000-000000000005',
@@ -303,6 +306,7 @@ select is(
       + (select count(*) from public.expense_tags where user_id = '50000000-0000-0000-0000-000000000005')
       + (select count(*) from public.categorization_rules where user_id = '50000000-0000-0000-0000-000000000005')
       + (select count(*) from public.review_items where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.user_preferences where user_id = '50000000-0000-0000-0000-000000000005')
   ),
   0::bigint,
   'all finance data owned by the deleted user is removed'

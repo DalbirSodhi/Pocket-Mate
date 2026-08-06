@@ -10,10 +10,16 @@ planning experience:
 - Income, expenses, category splits, refunds, tags, and monthly budgets.
 - Savings goals, recurring expenses, cards, statements, and payment plans.
 - User-authored categorization rules and their review queue.
+- Reminder and dashboard display preferences.
 
 Pocket-Mate does not currently connect to bank accounts, collect card numbers,
 or store card security codes. Saved cards contain only a user-provided nickname
 and optional last four digits.
+
+Bill, recurring-charge, and payday reminders are scheduled locally by the
+operating system. Pocket-Mate does not request or store a remote push token for
+this feature. Each device rebuilds its own reminder schedule from user-owned
+finance records and preferences.
 
 ## Access Controls
 

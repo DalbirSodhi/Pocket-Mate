@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(28);
+select plan(29);
 
 select has_table(
   'public',
@@ -32,6 +32,7 @@ from unnest(array[
   ,'expense_tags'
   ,'categorization_rules'
   ,'review_items'
+  ,'user_preferences'
 ]) as table_name;
 
 select is(
@@ -63,10 +64,11 @@ select is(
         ,'expense_tags'
         ,'categorization_rules'
         ,'review_items'
+        ,'user_preferences'
       ])
       and pg_class.relrowsecurity
   ),
-  22::bigint,
+  23::bigint,
   'RLS is enabled on every user-owned table'
 );
 
@@ -96,6 +98,7 @@ select ok(
       ,'expense_tags'
       ,'categorization_rules'
       ,'review_items'
+      ,'user_preferences'
     ]) as table_name
     where has_table_privilege(
       'anon',
@@ -134,6 +137,7 @@ select ok(
       ,'expense_tags'
       ,'categorization_rules'
       ,'review_items'
+      ,'user_preferences'
     ]) as table_name
   ),
   'authenticated users can manage RLS-protected finance rows'

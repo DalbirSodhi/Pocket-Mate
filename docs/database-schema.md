@@ -338,6 +338,30 @@ created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
 ```
 
+### user_preferences
+
+Stores one private preference record per authenticated user. Reminder settings
+are shared across devices, while each device creates its own local schedules.
+
+```text
+user_id uuid primary key references auth.users(id)
+reminders_enabled boolean not null default false
+remind_card_bills boolean not null default true
+remind_recurring_bills boolean not null default true
+remind_paydays boolean not null default false
+reminder_hour integer not null default 9
+lead_days integer[] not null default array[1, 3]
+dashboard_density text not null default 'comfortable'
+hide_amounts boolean not null default false
+high_contrast boolean not null default false
+created_at timestamptz not null default now()
+updated_at timestamptz not null default now()
+```
+
+`lead_days` accepts due day, 1, 3, 7, or 14 days before an event. Dashboard
+density accepts `comfortable` or `compact`. Row Level Security isolates the
+record by `auth.uid()`.
+
 ## Later Tables
 
 These should wait until core finance is stable:
@@ -346,7 +370,6 @@ These should wait until core finance is stable:
 planned_purchases
 no_spend_days
 monthly_snapshots
-notification_preferences
 audit_events
 ```
 
@@ -367,6 +390,7 @@ erDiagram
     auth_users ||--o{ savings_goals : owns
     auth_users ||--o{ budget_periods : owns
     auth_users ||--o{ tags : owns
+    auth_users ||--o| user_preferences : configures
     expense_categories ||--o{ expenses : classifies
     expense_categories ||--o{ recurring_expenses : classifies
     credit_cards ||--o{ credit_card_bills : receives
@@ -530,6 +554,7 @@ supabase/migrations/202607310001_make_bill_payment_plans_dynamic.sql
 supabase/migrations/202608040001_add_account_deletion.sql
 supabase/migrations/202608050001_add_financial_accounts.sql
 supabase/migrations/202608050002_add_transaction_planning.sql
+supabase/migrations/202608060001_add_calendar_preferences.sql
 ```
 
 ## Open Decisions

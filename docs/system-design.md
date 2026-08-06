@@ -111,6 +111,7 @@ tags
 expense_tags
 categorization_rules
 review_items
+user_preferences
 ```
 
 Bill-plan writes use authenticated Postgres functions so statement updates,
@@ -141,6 +142,13 @@ Categorization remains explainable and user-controlled. Rules use allowlisted
 fields and operators with stable priority ordering. They never execute arbitrary
 code, and uncertain rules create owned review items rather than silently
 changing financial history.
+
+The planning calendar is a read model built by a deterministic utility from
+income, recurring expenses, card statements, payment installments, and the
+profile pay-cycle anchor. When installments cover a source bill, cash-flow
+totals count the installments and retain the source only as calendar context.
+An Expo notification adapter schedules reminders locally and cancels only
+identifiers owned by Pocket-Mate. No push provider or device token is required.
 
 Account deletion also uses a protected Postgres function. It derives identity
 from the authenticated JWT, deletes finance rows in dependency order and the

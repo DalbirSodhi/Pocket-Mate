@@ -100,6 +100,26 @@ below refunds already received.
 5. Rules configured for review appear in a queue where the user approves or
    ignores the item.
 
+## Planning Calendar And Reminder Flow
+
+1. Open **Plan > Planning calendar** to review income, recurring charges, card
+   statements, payment chunks, and expected paydays by date.
+2. Move between calendar months without changing finance data.
+3. Select an income entry to review it, or select a bill or payment chunk to
+   open its payment plan.
+4. Open **Settings > Reminders and display** to enable local reminders, choose
+   event types, lead days, and a reminder hour.
+5. Pocket-Mate replaces only its own scheduled notifications on that device
+   when settings or source bills change.
+
+The calendar keeps the original obligation visible when a payment plan exists,
+but expected monthly outflow counts the scheduled chunks instead of counting
+both the full bill and its chunks. Reminders use on-device scheduling and do not
+register a remote push token.
+
+Display preferences can mask dashboard amounts, show fewer dashboard rows, and
+increase secondary-text contrast. They never change stored finance values.
+
 ## Monthly Insights Flow
 
 ```mermaid
