@@ -248,6 +248,54 @@ test('calculates event counts, amounts, and paid versus unpaid outflows', () => 
   });
 });
 
+test('does not double-count source bills that are covered by payment installments', () => {
+  const totals = calculateCalendarEventTotals([
+    {
+      type: EVENT_TYPES.CREDIT_CARD_BILL,
+      sourceId: 'bill-1',
+      creditCardBillId: 'bill-1',
+      amountCents: 90000,
+      direction: 'outflow',
+      isPaid: false,
+    },
+    {
+      type: EVENT_TYPES.BILL_INSTALLMENT,
+      creditCardBillId: 'bill-1',
+      amountCents: 30000,
+      direction: 'outflow',
+      isPaid: false,
+    },
+  ]);
+
+  assert.equal(totals.outflowCents, 30000);
+  assert.equal(totals.unpaidOutflowCents, 30000);
+  assert.equal(totals.byType.credit_card_bill.amountCents, 90000);
+  assert.equal(totals.byType.bill_installment.amountCents, 30000);
+});
+
+test('removes a planned source obligation from cash outflow before its first chunk', () => {
+  const calendar = buildPlanningCalendar({
+    month: '2026-08',
+    creditCardBills: [
+      {
+        id: 'bill-2',
+        amount_cents: 120000,
+        due_on: '2026-08-15',
+      },
+    ],
+    billPaymentPlans: [
+      {
+        credit_card_bill_id: 'bill-2',
+        period_start: '2026-07-01',
+      },
+    ],
+  });
+
+  assert.equal(calendar.events[0].coveredByPaymentPlan, true);
+  assert.equal(calendar.totals.outflowCents, 0);
+  assert.equal(calendar.totals.byType.credit_card_bill.amountCents, 120000);
+});
+
 test('buildPlanningCalendar returns events with matching totals', () => {
   const calendar = buildPlanningCalendar({
     month: '2026-08',

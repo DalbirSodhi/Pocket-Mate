@@ -3,6 +3,7 @@ import {
   getLocalDateString,
   isValidDateString,
 } from '../../../utils/date.cjs';
+import { syncUserReminderSchedule } from '../../preferences/services/reminderCoordinator';
 
 const supportedCurrencies = ['CAD', 'USD', 'GBP', 'EUR', 'AUD'];
 const supportedPayCycles = [
@@ -85,5 +86,7 @@ export async function saveProfile({
     )
     .single();
 
-  return unwrapResponse(response);
+  const profile = unwrapResponse(response);
+  await syncUserReminderSchedule(userId);
+  return profile;
 }

@@ -88,7 +88,7 @@
 - [x] Partial and full refunds that update account and spending totals.
 - [x] Calendar-month budget snapshots with optional signed rollovers.
 - [x] Tags, deterministic category rules, and an explicit review queue.
-- [ ] Recurring calendar, local reminders, accessibility, and appearance controls.
+- [x] Recurring calendar, local reminders, accessibility, and appearance controls.
 - [ ] CSV import with duplicate review and reversible staging.
 - [ ] Cash-flow trends and debt payoff scenarios.
 - [ ] Household collaboration with explicit roles and audit history.

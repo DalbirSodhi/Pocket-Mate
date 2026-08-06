@@ -81,6 +81,7 @@ function buildEvent({
   isPaid = false,
   status,
   sourceIndex,
+  metadata = {},
 }) {
   return {
     id,
@@ -92,6 +93,7 @@ function buildEvent({
     direction,
     isPaid: Boolean(isPaid),
     status,
+    ...metadata,
     _sourceIndex: sourceIndex,
   };
 }
@@ -206,6 +208,36 @@ function compareEvents(left, right) {
   );
 }
 
+function getPlannedSourceKeys(events) {
+  const keys = new Set();
+
+  events.forEach((event) => {
+    if (event.type !== EVENT_TYPES.BILL_INSTALLMENT) return;
+    if (event.creditCardBillId) keys.add(`card:${event.creditCardBillId}`);
+    if (event.recurringExpenseId) {
+      keys.add(`recurring:${event.recurringExpenseId}:${event.periodStart || ''}`);
+    }
+  });
+
+  return keys;
+}
+
+function isSupersededOutflow(event, plannedSourceKeys) {
+  if (event.coveredByPaymentPlan) return true;
+
+  if (event.type === EVENT_TYPES.CREDIT_CARD_BILL) {
+    return plannedSourceKeys.has(`card:${event.creditCardBillId || event.sourceId}`);
+  }
+
+  if (event.type === EVENT_TYPES.RECURRING_EXPENSE) {
+    return plannedSourceKeys.has(
+      `recurring:${event.recurringExpenseId || event.sourceId}:${event.periodStart || ''}`,
+    );
+  }
+
+  return false;
+}
+
 function calculateCalendarEventTotals(events = []) {
   const byType = Object.fromEntries(
     Object.values(EVENT_TYPES).map((type) => [type, { count: 0, amountCents: 0 }]),
@@ -214,6 +246,7 @@ function calculateCalendarEventTotals(events = []) {
   let outflowCents = 0;
   let paidOutflowCents = 0;
   let unpaidOutflowCents = 0;
+  const plannedSourceKeys = getPlannedSourceKeys(events);
 
   events.forEach((event) => {
     if (!byType[event.type]) {
@@ -225,7 +258,10 @@ function calculateCalendarEventTotals(events = []) {
 
     if (event.direction === 'inflow') {
       incomeCents += normalizeCents(event.amountCents);
-    } else if (event.direction === 'outflow') {
+    } else if (
+      event.direction === 'outflow' &&
+      !isSupersededOutflow(event, plannedSourceKeys)
+    ) {
       outflowCents += normalizeCents(event.amountCents);
 
       if (event.isPaid) {
@@ -250,6 +286,7 @@ function generateCalendarEvents({
   month,
   recurringExpenses = [],
   creditCardBills = [],
+  billPaymentPlans = [],
   billInstallments = [],
   incomeEntries = [],
   profile = {},
@@ -257,6 +294,19 @@ function generateCalendarEvents({
   const range = getMonthRange(month);
   const events = [];
   let sourceIndex = 0;
+  const plannedCardBillIds = new Set(
+    billPaymentPlans
+      .map((plan) => read(plan, 'credit_card_bill_id', 'creditCardBillId'))
+      .filter(Boolean),
+  );
+  const plannedRecurringKeys = new Set(
+    billPaymentPlans
+      .filter((plan) => read(plan, 'recurring_expense_id', 'recurringExpenseId'))
+      .map(
+        (plan) =>
+          `${read(plan, 'recurring_expense_id', 'recurringExpenseId')}:${read(plan, 'period_start', 'periodStart') || ''}`,
+      ),
+  );
 
   recurringExpenses.forEach((expense) => {
     const sourceId = read(expense, 'id', 'id');
@@ -274,6 +324,14 @@ function generateCalendarEvents({
           isPaid: false,
           status: 'scheduled',
           sourceIndex,
+          metadata: {
+            recurringExpenseId: sourceId,
+            periodStart: range.startDate,
+            dueOn: date,
+            coveredByPaymentPlan: plannedRecurringKeys.has(
+              `${sourceId}:${range.startDate}`,
+            ),
+          },
         }),
       );
       sourceIndex += 1;
@@ -307,6 +365,11 @@ function generateCalendarEvents({
         isPaid: Boolean(paidOn),
         status: paidOn ? 'paid' : 'due',
         sourceIndex,
+        metadata: {
+          creditCardBillId: sourceId,
+          dueOn: date,
+          coveredByPaymentPlan: plannedCardBillIds.has(sourceId),
+        },
       }),
     );
     sourceIndex += 1;
@@ -338,6 +401,13 @@ function generateCalendarEvents({
         isPaid: Boolean(paidOn),
         status: paidOn ? 'paid' : 'scheduled',
         sourceIndex,
+        metadata: {
+          paymentPlanId: read(installment, 'payment_plan_id', 'paymentPlanId'),
+          creditCardBillId: read(plan, 'credit_card_bill_id', 'creditCardBillId'),
+          recurringExpenseId: read(plan, 'recurring_expense_id', 'recurringExpenseId'),
+          periodStart: read(plan, 'period_start', 'periodStart'),
+          dueOn: read(plan, 'due_on', 'dueOn') || date,
+        },
       }),
     );
     sourceIndex += 1;
@@ -364,6 +434,7 @@ function generateCalendarEvents({
         isPaid: true,
         status: 'received',
         sourceIndex,
+        metadata: { incomeId: sourceId },
       }),
     );
     sourceIndex += 1;

@@ -126,6 +126,13 @@ export function DashboardScreen({ navigation, profile }) {
   const expenseCents = summary?.expenseCents || 0;
   const totalOutflowCents = summary?.totalOutflowCents || 0;
   const daysUntilReset = summary?.daysUntilReset || 1;
+  const preferences = summary?.preferences || {};
+  const isCompact = preferences.dashboard_density === 'compact';
+  const highContrast = preferences.high_contrast === true;
+  const money = (amountCents) =>
+    preferences.hide_amounts
+      ? '••••'
+      : formatCurrency(amountCents, currencyCode);
   const spendingProgress =
     incomeCents > 0 ? Math.min(totalOutflowCents / incomeCents, 1) : 0;
   const planHealth = summary?.planHealth || {
@@ -180,21 +187,23 @@ export function DashboardScreen({ navigation, profile }) {
             </View>
 
             <View style={styles.heroCopy}>
-              <Text style={styles.dateLabel}>{formatDashboardDate()}</Text>
+              <Text style={[styles.dateLabel, highContrast && styles.panelTextHigh]}>
+                {formatDashboardDate()}
+              </Text>
               <Text style={styles.balanceLabel}>Safe to spend today</Text>
               <Text
                 adjustsFontSizeToFit
                 numberOfLines={1}
                 style={styles.balanceValue}
               >
-                {formatCurrency(safeToSpendCents, currencyCode)}
+                {money(safeToSpendCents)}
               </Text>
               <View style={styles.balanceMeta}>
-                <Text style={styles.availableText}>
-                  {formatCurrency(availableCents, currencyCode)} available
+                <Text style={[styles.availableText, highContrast && styles.panelTextHigh]}>
+                  {money(availableCents)} available
                 </Text>
                 <View style={styles.metaDot} />
-                <Text style={styles.remainingText}>
+                <Text style={[styles.remainingText, highContrast && styles.panelTextHigh]}>
                   {daysUntilReset} {daysUntilReset === 1 ? 'day' : 'days'} left
                   this month
                 </Text>
@@ -203,7 +212,9 @@ export function DashboardScreen({ navigation, profile }) {
 
             <View style={styles.forecast}>
               <View style={styles.forecastHeading}>
-                <Text style={styles.forecastLabel}>Monthly forecast</Text>
+                <Text style={[styles.forecastLabel, highContrast && styles.panelTextHigh]}>
+                  Monthly forecast
+                </Text>
                 <Text style={styles.forecastValue}>
                   {Math.round(spendingProgress * 100)}% planned
                 </Text>
@@ -216,7 +227,7 @@ export function DashboardScreen({ navigation, profile }) {
                   ]}
                 />
               </View>
-              <Text style={styles.resetDate}>
+              <Text style={[styles.resetDate, highContrast && styles.panelTextHigh]}>
                 Resets {formatShortDate(summary?.nextMonthStartDate)}
               </Text>
             </View>
@@ -245,7 +256,7 @@ export function DashboardScreen({ navigation, profile }) {
                   <Text style={styles.summaryLabel}>Income</Text>
                 </View>
                 <Text style={styles.summaryValue}>
-                  {formatCurrency(incomeCents, currencyCode)}
+                  {money(incomeCents)}
                 </Text>
               </Pressable>
               <View style={styles.summaryDivider} />
@@ -267,7 +278,7 @@ export function DashboardScreen({ navigation, profile }) {
                   <Text style={styles.summaryLabel}>Spent</Text>
                 </View>
                 <Text style={styles.summaryValue}>
-                  {formatCurrency(expenseCents, currencyCode)}
+                  {money(expenseCents)}
                 </Text>
               </Pressable>
             </View>
@@ -293,7 +304,7 @@ export function DashboardScreen({ navigation, profile }) {
 
               {summary?.categoryInsights?.length ? (
                 <View style={styles.breakdownList}>
-                  {summary.categoryInsights.slice(0, 3).map((row) => (
+                  {summary.categoryInsights.slice(0, isCompact ? 2 : 3).map((row) => (
                     <Pressable
                       accessibilityRole="button"
                       key={row.categoryId}
@@ -328,7 +339,7 @@ export function DashboardScreen({ navigation, profile }) {
                             {row.name}
                           </Text>
                           <Text style={styles.breakdownAmount}>
-                            {formatCurrency(row.amountCents, currencyCode)}
+                            {money(row.amountCents)}
                           </Text>
                         </View>
                         <View style={styles.breakdownTrack}>
@@ -426,7 +437,7 @@ export function DashboardScreen({ navigation, profile }) {
 
               {summary?.upcomingBills?.length ? (
                 <View style={styles.billList}>
-                  {summary.upcomingBills.map((bill, index) => {
+                  {summary.upcomingBills.slice(0, isCompact ? 2 : 4).map((bill, index, visibleBills) => {
                     const isCard = bill.type === 'card';
                     const isCardSetup = bill.type === 'card_setup';
                     const Icon = isCard || isCardSetup ? CreditCard : ReceiptText;
@@ -441,7 +452,7 @@ export function DashboardScreen({ navigation, profile }) {
                           : `Due ${formatShortDate(bill.dueOn)}`;
                     const amountLabel = isCardSetup
                       ? 'Add bill'
-                      : formatCurrency(bill.amountCents, currencyCode);
+                      : money(bill.amountCents);
                     const handlePress = () => {
                       if (isCardSetup) {
                         navigation.navigate('CardBill', {
@@ -489,7 +500,7 @@ export function DashboardScreen({ navigation, profile }) {
                           </Text>
                           <ChevronRight color={colors.inkMuted} size={16} />
                         </Pressable>
-                        {index < summary.upcomingBills.length - 1 ? (
+                        {index < visibleBills.length - 1 ? (
                           <View style={styles.billDivider} />
                         ) : null}
                       </View>
@@ -567,6 +578,9 @@ const styles = StyleSheet.create({
   dateLabel: {
     ...typography.caption,
     color: colors.panelMuted,
+  },
+  panelTextHigh: {
+    color: colors.white,
   },
   balanceLabel: {
     ...typography.label,

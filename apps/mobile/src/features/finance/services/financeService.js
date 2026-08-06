@@ -1,5 +1,6 @@
 import { supabase } from '../../../infrastructure/supabase/client';
 import { getNextMonthlyDateString } from '../utils/financeValidation.cjs';
+import { syncUserReminderSchedule } from '../../preferences/services/reminderCoordinator';
 
 export const DEFAULT_EXPENSE_CATEGORIES = [
   { name: 'Housing', color: '#101C2C', icon: 'house' },
@@ -293,6 +294,7 @@ export async function convertExpenseToRecurring({ userId, expense }) {
     throw response.error;
   }
 
+  await syncUserReminderSchedule(userId);
   return response.data;
 }
 
@@ -323,6 +325,7 @@ export async function createRecurringExpense({
     throw response.error;
   }
 
+  await syncUserReminderSchedule(userId);
   return response.data;
 }
 
@@ -363,6 +366,7 @@ export async function setRecurringExpenseActive({
     throw response.error;
   }
 
+  await syncUserReminderSchedule(userId);
   return response.data;
 }
 
@@ -456,6 +460,7 @@ export async function createCreditCardBill({
     throw response.error;
   }
 
+  await syncUserReminderSchedule(userId);
   return response.data;
 }
 
@@ -496,6 +501,7 @@ export async function setCreditCardBillPaid({
     throw response.error;
   }
 
+  await syncUserReminderSchedule(userId);
   return { id: billId, userId };
 }
 

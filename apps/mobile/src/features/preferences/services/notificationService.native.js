@@ -164,8 +164,18 @@ function remindersAreEnabled(preferences) {
   );
 }
 
-function eventReminderIsEnabled(event) {
+function eventReminderIsEnabled(event, preferences) {
+  const typeEnabled =
+    event?.type === 'credit_card_bill'
+      ? preferences?.remind_card_bills !== false
+      : event?.type === 'recurring_expense'
+        ? preferences?.remind_recurring_bills !== false
+        : event?.type === 'payday'
+          ? preferences?.remind_paydays === true
+          : true;
+
   return !(
+    !typeEnabled ||
     event?.reminderEnabled === false ||
     event?.reminder_enabled === false ||
     event?.notificationsEnabled === false
@@ -252,7 +262,7 @@ export async function syncPocketMateReminders({ events = [], preferences = {} } 
       const leadDaysValues = getLeadDays(event, preferences);
       const reminderTime = getReminderTime(event, preferences);
 
-      if (!eventReminderIsEnabled(event)) {
+      if (!eventReminderIsEnabled(event, preferences)) {
         result.skippedCount += leadDaysValues.length;
         continue;
       }

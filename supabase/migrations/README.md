@@ -24,9 +24,13 @@ Current migrations:
 202608040001_add_account_deletion.sql
 202608050001_add_financial_accounts.sql
 202608050002_add_transaction_planning.sql
+202608060001_add_calendar_preferences.sql
 ```
 
 The transaction-planning migration adds month-specific budgets and rollovers,
 expense splits and refunds, tags, deterministic categorization rules, and a
 review queue. Split, refund, and expense-edit writes use protected functions so
 ownership and cent-level reconciliation are enforced in one transaction.
+
+The calendar-preferences migration adds RLS-protected local-reminder and
+dashboard-display settings and includes them in transactional account deletion.
