@@ -18,7 +18,8 @@ insert into public.expense_categories (id, user_id, name) values
   ('b1000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'Private');
 insert into public.financial_accounts (id, user_id, name, account_type) values
   ('b2000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'Loan one', 'loan'),
-  ('b2000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'Loan two', 'loan');
+  ('b2000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 'Loan two', 'loan'),
+  ('b2000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000002', 'Loan three', 'loan');
 insert into public.debt_settings (account_id, user_id, apr_basis_points, minimum_payment_cents) values
   ('b2000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 1299, 5000),
   ('b2000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000002', 1999, 6000);
@@ -50,7 +51,7 @@ select is((select count(*) from public.expenses where merchant = 'Imported lunch
 select lives_ok($$select public.rollback_transaction_import('b3000000-0000-0000-0000-000000000001')$$, 'posted import can be rolled back');
 select is((select count(*) from public.expenses where merchant = 'Imported lunch'), 0::bigint, 'rollback removes the imported ledger entry');
 select throws_ok(
-  $$insert into public.debt_settings (account_id, user_id) values ('b2000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001')$$,
+  $$insert into public.debt_settings (account_id, user_id) values ('b2000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000001')$$,
   '23503', null, 'debt settings cannot reference another user account'
 );
 
