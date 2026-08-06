@@ -7,8 +7,9 @@ planning experience:
 
 - Supabase Auth identity and email.
 - Profile name, currency, and pay-cycle preferences.
-- Income, expenses, categories, and budget caps.
+- Income, expenses, category splits, refunds, tags, and monthly budgets.
 - Savings goals, recurring expenses, cards, statements, and payment plans.
+- User-authored categorization rules and their review queue.
 
 Pocket-Mate does not currently connect to bank accounts, collect card numbers,
 or store card security codes. Saved cards contain only a user-provided nickname

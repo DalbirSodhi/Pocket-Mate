@@ -39,20 +39,116 @@ values (
   'Delete Category'
 );
 
+insert into public.financial_accounts (
+  id, user_id, name, account_type, opening_balance_cents
+)
+values (
+  '56000000-0000-0000-0000-000000000005',
+  '50000000-0000-0000-0000-000000000005',
+  'Delete checking',
+  'checking',
+  100000
+);
+
 insert into public.income_entries (user_id, amount_cents, received_on)
 values ('50000000-0000-0000-0000-000000000005', 100000, current_date);
 
 insert into public.expenses (
+  id,
   user_id,
   category_id,
   amount_cents,
   spent_on
 )
 values (
+  '57000000-0000-0000-0000-000000000005',
   '50000000-0000-0000-0000-000000000005',
   '51000000-0000-0000-0000-000000000005',
   2500,
   current_date
+);
+
+insert into public.expense_splits (
+  user_id, expense_id, category_id, amount_cents, sort_order
+)
+values (
+  '50000000-0000-0000-0000-000000000005',
+  '57000000-0000-0000-0000-000000000005',
+  '51000000-0000-0000-0000-000000000005',
+  2500,
+  0
+);
+
+insert into public.expense_refunds (
+  user_id, expense_id, account_id, amount_cents, refunded_on
+)
+values (
+  '50000000-0000-0000-0000-000000000005',
+  '57000000-0000-0000-0000-000000000005',
+  '56000000-0000-0000-0000-000000000005',
+  500,
+  current_date
+);
+
+insert into public.tags (id, user_id, name)
+values (
+  '58000000-0000-0000-0000-000000000005',
+  '50000000-0000-0000-0000-000000000005',
+  'Delete tag'
+);
+
+insert into public.expense_tags (user_id, expense_id, tag_id)
+values (
+  '50000000-0000-0000-0000-000000000005',
+  '57000000-0000-0000-0000-000000000005',
+  '58000000-0000-0000-0000-000000000005'
+);
+
+insert into public.categorization_rules (
+  user_id, name, match_field, operator, match_value, category_id
+)
+values (
+  '50000000-0000-0000-0000-000000000005',
+  'Delete rule',
+  'merchant',
+  'contains',
+  'delete',
+  '51000000-0000-0000-0000-000000000005'
+);
+
+insert into public.review_items (user_id, expense_id, reason)
+values (
+  '50000000-0000-0000-0000-000000000005',
+  '57000000-0000-0000-0000-000000000005',
+  'Delete review'
+);
+
+insert into public.budget_templates (
+  user_id, category_id, default_amount_cents, rollover_mode
+)
+values (
+  '50000000-0000-0000-0000-000000000005',
+  '51000000-0000-0000-0000-000000000005',
+  50000,
+  'positive_only'
+);
+
+insert into public.budget_periods (id, user_id, month_start)
+values (
+  '59000000-0000-0000-0000-000000000005',
+  '50000000-0000-0000-0000-000000000005',
+  date_trunc('month', current_date)::date
+);
+
+insert into public.budget_allocations (
+  user_id, budget_period_id, category_id, planned_amount_cents, rollover_mode
+)
+values (
+  '50000000-0000-0000-0000-000000000005',
+  '59000000-0000-0000-0000-000000000005',
+  '51000000-0000-0000-0000-000000000005',
+  50000,
+  'positive_only'
 );
 
 insert into public.budget_caps (user_id, category_id, amount_cents)
@@ -198,6 +294,15 @@ select is(
       + (select count(*) from public.bill_payment_installments where user_id = '50000000-0000-0000-0000-000000000005')
       + (select count(*) from public.financial_accounts where user_id = '50000000-0000-0000-0000-000000000005')
       + (select count(*) from public.account_transfers where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.expense_splits where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.expense_refunds where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.budget_templates where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.budget_periods where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.budget_allocations where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.tags where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.expense_tags where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.categorization_rules where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.review_items where user_id = '50000000-0000-0000-0000-000000000005')
   ),
   0::bigint,
   'all finance data owned by the deleted user is removed'

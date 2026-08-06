@@ -80,6 +80,20 @@
 - [x] Typed confirmation and final destructive confirmation.
 - [x] Privacy and data-lifecycle documentation.
 
+## Phase 9: Accounts And Transaction Planning
+
+- [x] Manual asset and liability accounts with transfer-safe balances.
+- [x] Statement versus purchase-tracked credit-card reconciliation.
+- [x] Expense category splits with exact cent reconciliation.
+- [x] Partial and full refunds that update account and spending totals.
+- [x] Calendar-month budget snapshots with optional signed rollovers.
+- [x] Tags, deterministic category rules, and an explicit review queue.
+- [ ] Recurring calendar, local reminders, accessibility, and appearance controls.
+- [ ] CSV import with duplicate review and reversible staging.
+- [ ] Cash-flow trends and debt payoff scenarios.
+- [ ] Household collaboration with explicit roles and audit history.
+- [ ] Optional provider-backed bank sync, receipt OCR, investments, and credit data.
+
 ## Later Ideas
 
 - Optional cloud backup.

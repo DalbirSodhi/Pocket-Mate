@@ -1,5 +1,5 @@
 import { Check, Tags } from 'lucide-react-native';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -32,6 +32,11 @@ import {
   validateEntry,
 } from '../utils/financeValidation.cjs';
 import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
+import { applyRules, findBestRule } from '../utils/ruleMatching.cjs';
+import {
+  createReviewItem,
+  getCategorizationRules,
+} from '../services/transactionWorkflowService';
 
 function formatPrefillAmount(amountCents) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) {
@@ -50,6 +55,7 @@ export function OneTimeExpenseScreen({ navigation, route }) {
   const [categories, setCategories] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [accountId, setAccountId] = useState('');
+  const [rules, setRules] = useState([]);
   const [categoryId, setCategoryId] = useState('');
   const [amount, setAmount] = useState(() =>
     formatPrefillAmount(prefill?.amountCents),
@@ -67,14 +73,16 @@ export function OneTimeExpenseScreen({ navigation, route }) {
     setRequestError('');
 
     try {
-      const [nextCategories, nextAccounts, expense] = await Promise.all([
+      const [nextCategories, nextAccounts, nextRules, expense] = await Promise.all([
         ensureExpenseCategories(user.id),
         getAccounts(user.id),
+        getCategorizationRules(user.id),
         isEditing && !hasLoadedExpense.current
           ? getExpenseDetail({ userId: user.id, expenseId })
           : Promise.resolve(null),
       ]);
       setCategories(nextCategories);
+      setRules(nextRules);
       setAccounts(
         nextAccounts.filter(
           (account) =>
@@ -141,10 +149,13 @@ export function OneTimeExpenseScreen({ navigation, route }) {
     setIsSaving(true);
 
     try {
+      const ruleResult = isEditing
+        ? { categoryId }
+        : applyRules({ merchant, note, categoryId }, rules);
       const entry = {
         userId: user.id,
         accountId,
-        categoryId,
+        categoryId: ruleResult.categoryId || categoryId,
         amountCents: parseAmountToCents(amount),
         spentOn: date,
         merchant,
@@ -155,7 +166,14 @@ export function OneTimeExpenseScreen({ navigation, route }) {
         await updateExpenseEntry({ ...entry, expenseId });
         navigation.goBack();
       } else {
-        await createExpenseEntry(entry);
+        const savedExpense = await createExpenseEntry(entry);
+        if (ruleResult.reviewAction === 'needs_review') {
+          await createReviewItem({
+            userId: user.id,
+            expenseId: savedExpense.id,
+            reason: 'Matched a rule that requires confirmation.',
+          });
+        }
         navigation.popToTop();
       }
     } catch (error) {
@@ -166,6 +184,11 @@ export function OneTimeExpenseScreen({ navigation, route }) {
       setIsSaving(false);
     }
   }
+
+  const matchedRule = useMemo(
+    () => (isEditing ? null : findBestRule({ merchant, note }, rules)),
+    [isEditing, merchant, note, rules],
+  );
 
   if (isEditing && isLoadingCategories) {
     return <LoadingScreen message="Loading expense..." />;
@@ -189,6 +212,10 @@ export function OneTimeExpenseScreen({ navigation, route }) {
             />
 
             <InlineNotice message={requestError} variant="error" />
+            <InlineNotice
+              message={matchedRule ? `Rule “${matchedRule.name}” will set ${matchedRule.expense_categories?.name || 'the saved category'}.` : ''}
+              variant="info"
+            />
 
             <View style={styles.form}>
               <FormField

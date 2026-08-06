@@ -230,7 +230,6 @@ export async function getExpenseDetail({ userId, expenseId }) {
 }
 
 export async function updateExpenseEntry({
-  userId,
   expenseId,
   accountId,
   categoryId,
@@ -239,26 +238,21 @@ export async function updateExpenseEntry({
   merchant,
   note,
 }) {
-  const response = await supabase
-    .from('expenses')
-    .update({
-      account_id: accountId || null,
-      category_id: categoryId,
-      amount_cents: amountCents,
-      spent_on: spentOn,
-      merchant: merchant.trim() || null,
-      note: note.trim() || null,
-    })
-    .eq('user_id', userId)
-    .eq('id', expenseId)
-    .select('id')
-    .single();
+  const response = await supabase.rpc('update_expense_entry', {
+    p_expense_id: expenseId,
+    p_account_id: accountId || null,
+    p_category_id: categoryId,
+    p_amount_cents: amountCents,
+    p_spent_on: spentOn,
+    p_merchant: merchant.trim() || null,
+    p_note: note.trim() || null,
+  });
 
   if (response.error) {
     throw response.error;
   }
 
-  return response.data;
+  return { id: expenseId };
 }
 
 export async function deleteExpenseEntry({ userId, expenseId }) {
@@ -550,6 +544,13 @@ export async function getTransactions(
     .order('transferred_on', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(limit);
+  let refundQuery = supabase
+    .from('expense_refunds')
+    .select('id, expense_id, account_id, amount_cents, refunded_on, note, created_at, expenses(merchant, category_id)')
+    .eq('user_id', userId)
+    .order('refunded_on', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   if (startDate) {
     incomeQuery = incomeQuery.gte('received_on', startDate);
@@ -557,6 +558,7 @@ export async function getTransactions(
     installmentQuery = installmentQuery.gte('paid_on', startDate);
     paidCardBillQuery = paidCardBillQuery.gte('paid_on', startDate);
     transferQuery = transferQuery.gte('transferred_on', startDate);
+    refundQuery = refundQuery.gte('refunded_on', startDate);
   }
 
   if (endDate) {
@@ -565,6 +567,7 @@ export async function getTransactions(
     installmentQuery = installmentQuery.lte('paid_on', endDate);
     paidCardBillQuery = paidCardBillQuery.lte('paid_on', endDate);
     transferQuery = transferQuery.lte('transferred_on', endDate);
+    refundQuery = refundQuery.lte('refunded_on', endDate);
   }
 
   const [
@@ -577,6 +580,7 @@ export async function getTransactions(
     planResponse,
     transferResponse,
     accountResponse,
+    refundResponse,
   ] = await Promise.all([
     incomeQuery,
     expenseQuery,
@@ -594,6 +598,7 @@ export async function getTransactions(
       .from('financial_accounts')
       .select('id, name')
       .eq('user_id', userId),
+    refundQuery,
   ]);
   const accountById = new Map(
     unwrap(accountResponse).map((account) => [account.id, account]),
@@ -688,8 +693,26 @@ export async function getTransactions(
     fromAccountId: transfer.from_account_id,
     toAccountId: transfer.to_account_id,
   }));
+  const refunds = unwrap(refundResponse).map((refund) => {
+    const category = categoryById.get(refund.expenses?.category_id);
+    return {
+      id: refund.id,
+      type: 'refund',
+      amountCents: refund.amount_cents,
+      date: refund.refunded_on,
+      createdAt: refund.created_at,
+      title: refund.expenses?.merchant || 'Expense refund',
+      subtitle: `${category?.name || 'Expense'} refund`,
+      note: refund.note,
+      categoryId: refund.expenses?.category_id || null,
+      expenseId: refund.expense_id,
+      accountId: refund.account_id,
+      accountName: accountById.get(refund.account_id)?.name || null,
+      color: category?.color,
+    };
+  });
 
-  return [...income, ...expenses, ...installments, ...directCardPayments, ...transfers]
+  return [...income, ...expenses, ...installments, ...directCardPayments, ...transfers, ...refunds]
     .sort(
       (left, right) =>
         right.date.localeCompare(left.date) ||

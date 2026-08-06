@@ -46,6 +46,7 @@ const FILTERS = [
   { id: 'expense', label: 'Expenses' },
   { id: 'bill_payment', label: 'Bills' },
   { id: 'transfer', label: 'Transfers' },
+  { id: 'refund', label: 'Refunds' },
   { id: 'income', label: 'Income' },
 ];
 
@@ -131,6 +132,14 @@ export function TransactionsScreen({
   function openTransaction(transaction) {
     if (transaction.type === 'transfer') {
       navigation.navigate('Accounts', { currencyCode });
+      return;
+    }
+
+    if (transaction.type === 'refund') {
+      navigation.navigate('ExpenseDetail', {
+        expenseId: transaction.expenseId,
+        currencyCode,
+      });
       return;
     }
 
@@ -341,10 +350,11 @@ export function TransactionsScreen({
             <View style={styles.list}>
               {visibleTransactions.map((transaction, index) => {
                 const isIncome = transaction.type === 'income';
+                const isRefund = transaction.type === 'refund';
                 const isBillPayment = transaction.type === 'bill_payment';
                 const isTransfer =
                   transaction.type === 'transfer' || transaction.isTransfer;
-                const Icon = isIncome
+                const Icon = isIncome || isRefund
                   ? ArrowDownLeft
                   : isTransfer
                     ? ArrowRightLeft
@@ -378,10 +388,10 @@ export function TransactionsScreen({
                         numberOfLines={1}
                         style={[
                           styles.amount,
-                          { color: isTransfer ? colors.ink : isIncome ? colors.success : colors.danger },
+                          { color: isTransfer ? colors.ink : isIncome || isRefund ? colors.success : colors.danger },
                         ]}
                       >
-                        {isTransfer ? '' : isIncome ? '+' : '-'}
+                        {isTransfer ? '' : isIncome || isRefund ? '+' : '-'}
                         {formatCurrency(transaction.amountCents, currencyCode)}
                       </Text>
                       <ChevronRight color={colors.inkMuted} size={17} />

@@ -45,6 +45,7 @@ function toCents(value) {
 
 function buildCategoryInsights({
   expenses = [],
+  refunds = [],
   categories = [],
   budgetCaps = [],
   billPaymentCents = 0,
@@ -62,6 +63,17 @@ function buildCategoryInsights({
     totalsByCategoryId.set(
       categoryId,
       (totalsByCategoryId.get(categoryId) || 0) + toCents(expense.amount_cents),
+    );
+  }
+
+  for (const refund of refunds) {
+    const categoryId = refund.category_id || 'uncategorized';
+    totalsByCategoryId.set(
+      categoryId,
+      Math.max(
+        (totalsByCategoryId.get(categoryId) || 0) - toCents(refund.amount_cents),
+        0,
+      ),
     );
   }
 
@@ -148,21 +160,32 @@ function filterTransactions(
 }
 
 function summarizeTransactions(transactions) {
-  return transactions.reduce(
+  const summary = transactions.reduce(
     (summary, transaction) => {
       const amountCents = toCents(transaction.amountCents);
 
       if (transaction.type === 'income') {
         summary.incomeCents += amountCents;
+      } else if (transaction.type === 'refund') {
+        summary.refundCents += amountCents;
       } else if (transaction.type !== 'transfer' && !transaction.isTransfer) {
-        summary.spentCents += amountCents;
+        summary.grossSpentCents += amountCents;
       }
-
-      summary.netCents = summary.incomeCents - summary.spentCents;
       return summary;
     },
-    { incomeCents: 0, spentCents: 0, netCents: 0 },
+    { incomeCents: 0, grossSpentCents: 0, refundCents: 0 },
   );
+
+  const spentCents = Math.max(
+    summary.grossSpentCents - summary.refundCents,
+    0,
+  );
+
+  return {
+    incomeCents: summary.incomeCents,
+    spentCents,
+    netCents: summary.incomeCents - spentCents,
+  };
 }
 
 module.exports = {

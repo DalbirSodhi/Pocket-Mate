@@ -4,6 +4,7 @@ const test = require('node:test');
 const {
   assertPositiveCents,
   assertSplitsMatchParent,
+  buildCategorizedAdjustments,
   getRemainingRefundableCents,
   summarizeTransactions,
 } = require('./transactionMath.cjs');
@@ -30,10 +31,52 @@ test('split amounts must exactly reconcile with the parent amount', () => {
     () => assertSplitsMatchParent(10000, [2500, 7499]),
     /must equal parent amount/,
   );
-  assert.throws(() => assertSplitsMatchParent(10000, []), /at least one split/);
+  assert.throws(() => assertSplitsMatchParent(10000, []), /at least two splits/);
+  assert.throws(() => assertSplitsMatchParent(10000, [10000]), /at least two splits/);
   assert.throws(
-    () => assertSplitsMatchParent(10000, [{ amountCents: 0 }]),
+    () => assertSplitsMatchParent(10000, [{ amountCents: 0 }, { amountCents: 10000 }]),
     /positive safe integer/,
+  );
+});
+
+test('splits replace parent categories and preserve expense dates', () => {
+  const result = buildCategorizedAdjustments({
+    expenses: [{ id: 'expense', category_id: 'other', amount_cents: 10001, spent_on: '2026-08-03' }],
+    splits: [
+      { expense_id: 'expense', category_id: 'food', amount_cents: 5001 },
+      { expense_id: 'expense', category_id: 'travel', amount_cents: 5000 },
+    ],
+  });
+
+  assert.deepEqual(
+    result.categorizedExpenses.map(({ id, category_id, amount_cents, spent_on }) => ({ id, category_id, amount_cents, spent_on })),
+    [
+      { id: 'expense', category_id: 'food', amount_cents: 5001, spent_on: '2026-08-03' },
+      { id: 'expense', category_id: 'travel', amount_cents: 5000, spent_on: '2026-08-03' },
+    ],
+  );
+});
+
+test('refunds are allocated across splits without losing cents', () => {
+  const result = buildCategorizedAdjustments({
+    expenses: [{ id: 'expense', category_id: 'other', amount_cents: 10000 }],
+    splits: [
+      { expense_id: 'expense', category_id: 'food', amount_cents: 7000 },
+      { expense_id: 'expense', category_id: 'travel', amount_cents: 3000 },
+    ],
+    refunds: [{ id: 'refund', expense_id: 'expense', amount_cents: 3333 }],
+  });
+
+  assert.deepEqual(
+    result.categorizedRefunds.map(({ category_id, amount_cents }) => ({ category_id, amount_cents })),
+    [
+      { category_id: 'food', amount_cents: 2333 },
+      { category_id: 'travel', amount_cents: 1000 },
+    ],
+  );
+  assert.equal(
+    result.categorizedRefunds.reduce((total, refund) => total + refund.amount_cents, 0),
+    3333,
   );
 });
 

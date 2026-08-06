@@ -1,12 +1,14 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { Landmark, Plus, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Landmark, Save, Trash2 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
   Alert,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
@@ -21,19 +23,25 @@ import { useAuthSession } from '../../auth';
 import { formatCurrency } from '../../dashboard/utils/formatCurrency';
 import { ensureExpenseCategories } from '../../finance/services/financeService';
 import { parseAmountToCents } from '../../finance/utils/financeValidation.cjs';
-import {
-  createBudgetCap,
-  deleteBudgetCap,
-  getBudgetCaps,
-} from '../services/planningService';
+import { getMonthKey, getMonthRangeForKey, shiftMonthKey } from '../../insights/utils/monthlyInsights.cjs';
+import { getMonthlyBudget, removeMonthlyBudget, saveMonthlyBudget } from '../services/budgetService';
+
+const ROLLOVER_OPTIONS = [
+  { id: 'none', label: 'No rollover' },
+  { id: 'positive_only', label: 'Carry extra' },
+  { id: 'full', label: 'Carry extra or overspend' },
+];
 
 export function BudgetCapsScreen({ navigation, route }) {
   const { user } = useAuthSession();
   const currencyCode = route.params?.currencyCode || 'CAD';
   const [caps, setCaps] = useState([]);
+  const [monthKey, setMonthKey] = useState(getMonthKey());
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState('');
   const [amount, setAmount] = useState('');
+  const [rolloverMode, setRolloverMode] = useState('none');
+  const [applyToFuture, setApplyToFuture] = useState(true);
   const [errors, setErrors] = useState({});
   const [requestError, setRequestError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -45,7 +53,7 @@ export function BudgetCapsScreen({ navigation, route }) {
 
     try {
       const [nextCaps, nextCategories] = await Promise.all([
-        getBudgetCaps(user.id),
+        getMonthlyBudget({ userId: user.id, monthKey }),
         ensureExpenseCategories(user.id),
       ]);
       setCaps(nextCaps);
@@ -60,7 +68,7 @@ export function BudgetCapsScreen({ navigation, route }) {
     } finally {
       setIsRefreshing(false);
     }
-  }, [user.id]);
+  }, [monthKey, user.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,40 +97,55 @@ export function BudgetCapsScreen({ navigation, route }) {
     setIsSaving(true);
 
     try {
-      await createBudgetCap({ userId: user.id, categoryId, amountCents });
+      await saveMonthlyBudget({
+        monthStart: getMonthRangeForKey(monthKey).startDate,
+        categoryId,
+        amountCents,
+        rolloverMode,
+        applyToFuture,
+      });
       setAmount('');
       await loadData();
     } catch (error) {
       setRequestError(
         error?.code === '23505'
-          ? 'This category already has a monthly cap.'
-          : error.message || 'Unable to create this budget cap.',
+          ? 'This category already has a monthly budget.'
+          : error.message || 'Unable to save this monthly budget.',
       );
     } finally {
       setIsSaving(false);
     }
   }
 
-  function confirmDelete(cap) {
-    Alert.alert(
-      'Remove budget cap?',
-      `${cap.category?.name || 'This category'} will no longer have a monthly limit.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteBudgetCap({ userId: user.id, capId: cap.id });
-              setCaps((current) => current.filter((item) => item.id !== cap.id));
-            } catch (error) {
-              setRequestError(error.message || 'Unable to remove this cap.');
-            }
-          },
-        },
-      ],
-    );
+  async function removeBudget(cap) {
+    setRequestError('');
+    try {
+      await removeMonthlyBudget({
+        monthStart: getMonthRangeForKey(monthKey).startDate,
+        categoryId: cap.category_id,
+        removeFuture: true,
+      });
+      await loadData();
+    } catch (error) {
+      setRequestError(error.message || 'Unable to remove this monthly budget.');
+    }
+  }
+
+  function confirmRemove(cap) {
+    const categoryName = cap.category?.name || 'This category';
+    const message = `${categoryName} will be removed from this month and will not be copied into future months.`;
+
+    if (Platform.OS === 'web') {
+      if (typeof window === 'undefined' || window.confirm(message)) {
+        removeBudget(cap);
+      }
+      return;
+    }
+
+    Alert.alert('Remove monthly budget?', message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removeBudget(cap) },
+    ]);
   }
 
   return (
@@ -142,14 +165,24 @@ export function BudgetCapsScreen({ navigation, route }) {
         <View style={styles.content}>
           <ScreenHeader
             onBack={navigation.goBack}
-            subtitle="Set limits for flexible spending"
-            title="Budget caps"
+            subtitle="Plan each month and choose what rolls forward"
+            title="Monthly budget"
           />
 
           <InlineNotice message={requestError} variant="error" />
 
+          <View style={styles.monthNavigation}>
+            <Pressable accessibilityLabel="Previous month" accessibilityRole="button" onPress={() => setMonthKey((current) => shiftMonthKey(current, -1))} style={styles.monthButton}>
+              <ChevronLeft color={colors.ink} size={20} />
+            </Pressable>
+            <Text style={styles.monthLabel}>{getMonthRangeForKey(monthKey).label}</Text>
+            <Pressable accessibilityLabel="Next month" accessibilityRole="button" onPress={() => setMonthKey((current) => shiftMonthKey(current, 1))} style={styles.monthButton}>
+              <ChevronRight color={colors.ink} size={20} />
+            </Pressable>
+          </View>
+
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>New monthly cap</Text>
+            <Text style={styles.sectionTitle}>Set category amount</Text>
             <View style={styles.categoryGrid}>
               {categories.map((category) => {
                 const isSelected = category.id === categoryId;
@@ -195,19 +228,39 @@ export function BudgetCapsScreen({ navigation, route }) {
               placeholder="0.00"
               value={amount}
             />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Rollover</Text>
+              <View style={styles.rolloverGrid}>
+                {ROLLOVER_OPTIONS.map((option) => {
+                  const selected = rolloverMode === option.id;
+                  return (
+                    <Pressable accessibilityRole="button" accessibilityState={{ selected }} key={option.id} onPress={() => setRolloverMode(option.id)} style={[styles.rolloverOption, selected && styles.rolloverOptionSelected]}>
+                      <Text style={[styles.rolloverLabel, selected && styles.rolloverLabelSelected]}>{option.label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={styles.futureRow}>
+              <View style={styles.futureCopy}>
+                <Text style={styles.fieldLabel}>Use for future months</Text>
+                <Text style={styles.futureBody}>Turn off to change only this month.</Text>
+              </View>
+              <Switch value={applyToFuture} onValueChange={setApplyToFuture} trackColor={{ false: colors.border, true: colors.primary }} thumbColor={colors.white} />
+            </View>
             <AppButton
-              icon={Plus}
+              icon={Save}
               isLoading={isSaving}
-              label="Create budget cap"
+              label="Save monthly budget"
               onPress={handleCreate}
             />
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current month</Text>
+            <Text style={styles.sectionTitle}>{getMonthRangeForKey(monthKey).label}</Text>
             <View style={styles.list}>
               {caps.map((cap, index) => {
-                const overCap = cap.spentCents > cap.amount_cents;
+                const overCap = cap.remainingCents < 0;
 
                 return (
                   <View key={cap.id}>
@@ -222,15 +275,12 @@ export function BudgetCapsScreen({ navigation, route }) {
                             {cap.category?.name || 'Category'}
                           </Text>
                         </View>
-                        <Pressable
-                          accessibilityLabel={`Remove ${cap.category?.name || 'category'} cap`}
-                          accessibilityRole="button"
-                          hitSlop={8}
-                          onPress={() => confirmDelete(cap)}
-                          style={styles.deleteButton}
-                        >
-                          <Trash2 color={colors.danger} size={18} />
-                        </Pressable>
+                        <View style={styles.capActions}>
+                          <Text style={styles.rolloverValue}>{cap.rolloverMode === 'none' ? 'No rollover' : `${formatCurrency(cap.rolloverInCents, currencyCode)} carried in`}</Text>
+                          <Pressable accessibilityLabel={`Remove ${cap.category?.name || 'category'} budget`} accessibilityRole="button" onPress={() => confirmRemove(cap)} style={styles.deleteButton}>
+                            <Trash2 color={colors.danger} size={18} />
+                          </Pressable>
+                        </View>
                       </View>
                       <View style={styles.progressTrack}>
                         <View
@@ -241,7 +291,7 @@ export function BudgetCapsScreen({ navigation, route }) {
                                 ? colors.danger
                                 : colors.gold,
                               width: `${Math.round(
-                                Math.min(cap.usageRatio, 1) * 100,
+                                Math.min(cap.spentAmountCents / Math.max(cap.availableCents, 1), 1) * 100,
                               )}%`,
                             },
                           ]}
@@ -254,10 +304,10 @@ export function BudgetCapsScreen({ navigation, route }) {
                             overCap && styles.capSpentOver,
                           ]}
                         >
-                          {formatCurrency(cap.spentCents, currencyCode)} spent
+                          {formatCurrency(cap.spentAmountCents, currencyCode)} spent
                         </Text>
                         <Text style={styles.capLimit}>
-                          {formatCurrency(cap.amount_cents, currencyCode)} cap
+                          {formatCurrency(cap.availableCents, currencyCode)} available
                         </Text>
                       </View>
                     </View>
@@ -268,7 +318,7 @@ export function BudgetCapsScreen({ navigation, route }) {
                 );
               })}
               {caps.length === 0 ? (
-                <Text style={styles.emptyLabel}>No budget caps yet.</Text>
+                <Text style={styles.emptyLabel}>No category budgets for this month yet.</Text>
               ) : null}
             </View>
           </View>
@@ -293,6 +343,36 @@ const styles = StyleSheet.create({
   },
   section: { gap: spacing.lg },
   sectionTitle: { ...typography.section, color: colors.ink },
+  monthNavigation: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  monthButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  monthLabel: { ...typography.section, color: colors.ink },
+  fieldGroup: { gap: spacing.sm },
+  fieldLabel: { ...typography.label, color: colors.ink },
+  rolloverGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  rolloverOption: {
+    minHeight: 44,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rolloverOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  rolloverLabel: { ...typography.caption, color: colors.inkMuted },
+  rolloverLabelSelected: { color: colors.primary, fontWeight: '700' },
+  futureRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  futureCopy: { flex: 1, gap: spacing.xs },
+  futureBody: { ...typography.caption, color: colors.inkMuted },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -338,6 +418,8 @@ const styles = StyleSheet.create({
   },
   capTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   capTitle: { ...typography.label, color: colors.ink },
+  rolloverValue: { ...typography.caption, color: colors.inkMuted, textAlign: 'right' },
+  capActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   deleteButton: {
     width: 32,
     height: 32,

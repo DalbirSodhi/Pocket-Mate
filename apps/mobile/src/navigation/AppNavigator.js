@@ -23,10 +23,12 @@ import { DashboardScreen } from '../features/dashboard';
 import {
   AddExpenseScreen,
   AddIncomeScreen,
+  AutomationScreen,
   CardBillScreen,
   CategoriesScreen,
   CreditCardsScreen,
   ExpenseDetailScreen,
+  ExpenseAdjustmentsScreen,
   FixedExpensesScreen,
   IncomeDetailScreen,
   OneTimeExpenseScreen,
@@ -174,10 +176,12 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={FixedExpensesScreen} name="FixedExpenses" />
       <Stack.Screen component={CreditCardsScreen} name="CreditCards" />
       <Stack.Screen component={ExpenseDetailScreen} name="ExpenseDetail" />
+      <Stack.Screen component={ExpenseAdjustmentsScreen} name="ExpenseAdjustments" />
       <Stack.Screen component={IncomeDetailScreen} name="IncomeDetail" />
       <Stack.Screen component={MonthlyInsightsScreen} name="MonthlyInsights" />
       <Stack.Screen component={MonthlyReportScreen} name="MonthlyReport" />
       <Stack.Screen component={AccountsScreen} name="Accounts" />
+      <Stack.Screen component={AutomationScreen} name="Automation" />
       <Stack.Screen component={DeleteAccountScreen} name="DeleteAccount" />
       <Stack.Screen component={BillPaymentPlanScreen} name="BillPaymentPlan" />
       <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />

@@ -1,6 +1,6 @@
 import { supabase } from '../../../infrastructure/supabase/client';
-import { getMonthRange, sumCents } from '../../dashboard/utils/dashboardMath.cjs';
-import { getExpenseCategories } from '../../finance/services/financeService';
+import { getMonthKey } from '../../insights/utils/monthlyInsights.cjs';
+import { getMonthlyBudget } from './budgetService';
 
 function unwrap(response) {
   if (response.error) {
@@ -92,40 +92,17 @@ export async function addSavingsGoalProgress({
 }
 
 export async function getBudgetCaps(userId, date = new Date()) {
-  const month = getMonthRange(date);
-  const [capsResponse, expensesResponse, categories] = await Promise.all([
-    supabase
-      .from('budget_caps')
-      .select('id, category_id, amount_cents, period')
-      .eq('user_id', userId)
-      .eq('period', 'monthly')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('expenses')
-      .select('category_id, amount_cents')
-      .eq('user_id', userId)
-      .gte('spent_on', month.startDate)
-      .lte('spent_on', month.endDate),
-    getExpenseCategories(userId),
-  ]);
-  const caps = unwrap(capsResponse);
-  const expenses = unwrap(expensesResponse);
-  const categoryById = new Map(categories.map((category) => [category.id, category]));
-
-  return caps.map((cap) => {
-    const spentCents = sumCents(
-      expenses.filter((expense) => expense.category_id === cap.category_id),
-      'amount_cents',
-    );
-
-    return {
-      ...cap,
-      spentCents,
-      remainingCents: Math.max(cap.amount_cents - spentCents, 0),
-      usageRatio: cap.amount_cents > 0 ? spentCents / cap.amount_cents : 0,
-      category: categoryById.get(cap.category_id) || null,
-    };
-  });
+  const budgets = await getMonthlyBudget({ userId, monthKey: getMonthKey(date) });
+  return budgets.map((budget) => ({
+    ...budget,
+    amount_cents: budget.availableCents,
+    spentCents: budget.spentAmountCents,
+    remainingCents: Math.max(budget.remainingCents, 0),
+    usageRatio:
+      budget.availableCents > 0
+        ? budget.spentAmountCents / budget.availableCents
+        : 0,
+  }));
 }
 
 export async function createBudgetCap({ userId, categoryId, amountCents }) {

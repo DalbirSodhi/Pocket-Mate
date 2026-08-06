@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Pencil,
   ReceiptText,
+  Split,
   Trash2,
 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
@@ -187,6 +188,18 @@ export function ExpenseDetailScreen({ navigation, route }) {
                   variant="danger"
                 />
               </View>
+
+              <AppButton
+                icon={Split}
+                label="Split or record refund"
+                onPress={() =>
+                  navigation.navigate('ExpenseAdjustments', {
+                    expenseId,
+                    currencyCode,
+                  })
+                }
+                variant="secondary"
+              />
 
               {expense.recurringExpense ? (
                 <View style={styles.monthlyState}>

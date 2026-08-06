@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(19);
+select plan(28);
 
 select has_table(
   'public',
@@ -23,6 +23,15 @@ from unnest(array[
   'bill_payment_installments'
   ,'financial_accounts'
   ,'account_transfers'
+  ,'expense_splits'
+  ,'expense_refunds'
+  ,'budget_templates'
+  ,'budget_periods'
+  ,'budget_allocations'
+  ,'tags'
+  ,'expense_tags'
+  ,'categorization_rules'
+  ,'review_items'
 ]) as table_name;
 
 select is(
@@ -45,10 +54,19 @@ select is(
         'bill_payment_installments'
         ,'financial_accounts'
         ,'account_transfers'
+        ,'expense_splits'
+        ,'expense_refunds'
+        ,'budget_templates'
+        ,'budget_periods'
+        ,'budget_allocations'
+        ,'tags'
+        ,'expense_tags'
+        ,'categorization_rules'
+        ,'review_items'
       ])
       and pg_class.relrowsecurity
   ),
-  13::bigint,
+  22::bigint,
   'RLS is enabled on every user-owned table'
 );
 
@@ -69,6 +87,15 @@ select ok(
       'bill_payment_installments'
       ,'financial_accounts'
       ,'account_transfers'
+      ,'expense_splits'
+      ,'expense_refunds'
+      ,'budget_templates'
+      ,'budget_periods'
+      ,'budget_allocations'
+      ,'tags'
+      ,'expense_tags'
+      ,'categorization_rules'
+      ,'review_items'
     ]) as table_name
     where has_table_privilege(
       'anon',
@@ -100,6 +127,13 @@ select ok(
       'credit_card_bills'
       ,'financial_accounts'
       ,'account_transfers'
+      ,'budget_templates'
+      ,'budget_periods'
+      ,'budget_allocations'
+      ,'tags'
+      ,'expense_tags'
+      ,'categorization_rules'
+      ,'review_items'
     ]) as table_name
   ),
   'authenticated users can manage RLS-protected finance rows'
@@ -122,6 +156,8 @@ select ok(
     from unnest(array[
       'bill_payment_plans',
       'bill_payment_installments'
+      ,'expense_splits'
+      ,'expense_refunds'
     ]) as table_name
   ),
   'bill-plan tables are read-only outside protected functions'
@@ -137,8 +173,38 @@ select ok(
     'anon',
     'public.set_bill_payment_installment_paid(uuid,boolean)',
     'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.save_expense_splits(uuid,jsonb)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.create_expense_refund(uuid,integer,date,uuid,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.update_expense_entry(uuid,uuid,uuid,integer,date,text,text)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.ensure_budget_period(date)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.save_budget_allocation(date,uuid,integer,text,boolean)',
+    'EXECUTE'
+  )
+  and not has_function_privilege(
+    'anon',
+    'public.remove_budget_allocation(date,uuid,boolean)',
+    'EXECUTE'
   ),
-  'anonymous users cannot execute bill-plan functions'
+  'anonymous users cannot execute protected finance functions'
 );
 
 select ok(
@@ -151,8 +217,38 @@ select ok(
     'authenticated',
     'public.set_bill_payment_installment_paid(uuid,boolean)',
     'EXECUTE'
+  )
+  and has_function_privilege(
+    'authenticated',
+    'public.save_expense_splits(uuid,jsonb)',
+    'EXECUTE'
+  )
+  and has_function_privilege(
+    'authenticated',
+    'public.create_expense_refund(uuid,integer,date,uuid,text)',
+    'EXECUTE'
+  )
+  and has_function_privilege(
+    'authenticated',
+    'public.update_expense_entry(uuid,uuid,uuid,integer,date,text,text)',
+    'EXECUTE'
+  )
+  and has_function_privilege(
+    'authenticated',
+    'public.ensure_budget_period(date)',
+    'EXECUTE'
+  )
+  and has_function_privilege(
+    'authenticated',
+    'public.save_budget_allocation(date,uuid,integer,text,boolean)',
+    'EXECUTE'
+  )
+  and has_function_privilege(
+    'authenticated',
+    'public.remove_budget_allocation(date,uuid,boolean)',
+    'EXECUTE'
   ),
-  'authenticated users can execute protected bill-plan functions'
+  'authenticated users can execute protected finance functions'
 );
 
 select * from finish();

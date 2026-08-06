@@ -20,6 +20,7 @@ function getTransactionTypeLabel(type) {
   if (type === 'income') return 'Income';
   if (type === 'bill_payment') return 'Bill payment';
   if (type === 'transfer') return 'Transfer';
+  if (type === 'refund') return 'Refund';
   return 'Expense';
 }
 
@@ -32,6 +33,10 @@ function getTransactionCategory(transaction) {
     return 'Bill payments';
   }
 
+  if (transaction.type === 'refund') {
+    return transaction.subtitle || 'Refund';
+  }
+
   return '';
 }
 
@@ -39,6 +44,7 @@ function formatSignedAmount(transaction) {
   const amount = Math.abs(Number(transaction.amountCents || 0)) / 100;
   const sign =
     transaction.type === 'income' ||
+    transaction.type === 'refund' ||
     transaction.type === 'transfer' ||
     transaction.isTransfer
       ? ''

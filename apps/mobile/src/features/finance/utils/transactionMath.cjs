@@ -45,8 +45,8 @@ function assertSplitsMatchParent(parentAmountCents, splits) {
     'parentAmountCents',
   );
 
-  if (!Array.isArray(splits) || splits.length === 0) {
-    throw new RangeError('splits must contain at least one split.');
+  if (!Array.isArray(splits) || splits.length < 2) {
+    throw new RangeError('splits must contain at least two splits.');
   }
 
   const splitTotal = splits.reduce(
@@ -66,6 +66,100 @@ function assertSplitsMatchParent(parentAmountCents, splits) {
   }
 
   return splitTotal;
+}
+
+function buildCategorizedAdjustments({ expenses = [], splits = [], refunds = [] }) {
+  const expenseById = new Map(expenses.map((expense) => [expense.id, expense]));
+  const splitsByExpenseId = new Map();
+
+  for (const split of splits) {
+    const expenseId = split.expense_id ?? split.expenseId;
+    const rows = splitsByExpenseId.get(expenseId) || [];
+    rows.push(split);
+    splitsByExpenseId.set(expenseId, rows);
+  }
+
+  const categorizedExpenses = expenses.flatMap((expense) => {
+    const expenseSplits = splitsByExpenseId.get(expense.id);
+    if (!expenseSplits?.length) return [expense];
+
+    return expenseSplits.map((split) => ({
+      ...expense,
+      ...split,
+      id: expense.id,
+      expense_id: expense.id,
+      spent_on: expense.spent_on,
+    }));
+  });
+
+  const categorizedRefunds = refunds.flatMap((refund) => {
+    const expenseId = refund.expense_id ?? refund.expenseId;
+    const expense = expenseById.get(expenseId);
+    const expenseSplits = splitsByExpenseId.get(expenseId);
+
+    if (!expenseSplits?.length) {
+      return [{
+        ...refund,
+        category_id: refund.category_id ?? expense?.category_id ?? null,
+      }];
+    }
+
+    const refundCents = assertPositiveCents(
+      Number(refund.amount_cents ?? refund.amountCents),
+      'refund.amountCents',
+    );
+    const splitTotal = expenseSplits.reduce(
+      (total, split, index) =>
+        addSafeCents(
+          total,
+          assertPositiveCents(
+            Number(split.amount_cents ?? split.amountCents),
+            `splits[${index}].amountCents`,
+          ),
+          'split total',
+        ),
+      0,
+    );
+    const allocated = expenseSplits.map((split, index) => {
+      const splitCents = Number(split.amount_cents ?? split.amountCents);
+      const exactNumerator = BigInt(refundCents) * BigInt(splitCents);
+      const splitTotalBigInt = BigInt(splitTotal);
+      const amountCents = Number(exactNumerator / splitTotalBigInt);
+
+      return {
+        index,
+        remainder: exactNumerator % splitTotalBigInt,
+        amountCents,
+      };
+    });
+    let remainingCents = refundCents - allocated.reduce(
+      (total, allocation) => total + allocation.amountCents,
+      0,
+    );
+
+    for (const allocation of [...allocated].sort(
+      (left, right) =>
+        left.remainder === right.remainder
+          ? left.index - right.index
+          : left.remainder > right.remainder
+            ? -1
+            : 1,
+    )) {
+      if (remainingCents === 0) break;
+      allocated[allocation.index].amountCents += 1;
+      remainingCents -= 1;
+    }
+
+    return allocated
+      .filter((allocation) => allocation.amountCents > 0)
+      .map((allocation) => ({
+        ...refund,
+        category_id: expenseSplits[allocation.index].category_id,
+        amount_cents: allocation.amountCents,
+      }));
+  });
+
+  return { categorizedExpenses, categorizedRefunds };
 }
 
 function getRemainingRefundableCents(
@@ -203,6 +297,7 @@ function summarizeTransactions(transactions) {
 module.exports = {
   assertPositiveCents,
   assertSplitsMatchParent,
+  buildCategorizedAdjustments,
   getRemainingRefundableCents,
   summarizeTransactions,
 };

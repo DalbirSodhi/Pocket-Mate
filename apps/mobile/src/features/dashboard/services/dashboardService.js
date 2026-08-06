@@ -1,6 +1,8 @@
 import { supabase } from '../../../infrastructure/supabase/client';
 import { buildCategoryInsights } from '../../insights/utils/monthlyInsights.cjs';
 import { getAccountOverview } from '../../accounts/services/accountService';
+import { getMonthlyBudget } from '../../planning/services/budgetService';
+import { buildCategorizedAdjustments } from '../../finance/utils/transactionMath.cjs';
 import {
   calculateActualBalance,
   calculateSafeToSpend,
@@ -41,6 +43,8 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     paidInstallmentResponse,
     paidCardBillResponse,
     accountOverview,
+    refundResponse,
+    splitResponse,
   ] = await Promise.all([
     supabase
       .from('income_entries')
@@ -50,7 +54,7 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
       .lte('received_on', month.endDate),
     supabase
       .from('expenses')
-      .select('amount_cents, category_id')
+      .select('id, amount_cents, category_id')
       .eq('user_id', userId)
       .gte('spent_on', month.startDate)
       .lte('spent_on', month.endDate),
@@ -72,10 +76,7 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
       )
       .eq('user_id', userId)
       .eq('is_active', true),
-    supabase
-      .from('budget_caps')
-      .select('id, category_id, amount_cents')
-      .eq('user_id', userId),
+    getMonthlyBudget({ userId, monthKey: month.startDate.slice(0, 7) }),
     supabase
       .from('recurring_expenses')
       .select('id, name, amount_cents, charge_day')
@@ -115,6 +116,18 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
       .gte('paid_on', month.startDate)
       .lte('paid_on', month.endDate),
     getAccountOverview(userId),
+    supabase
+      .from('expense_refunds')
+      .select('expense_id, amount_cents, refunded_on, expenses(id, category_id, amount_cents, spent_on, expense_splits(expense_id, category_id, amount_cents))')
+      .eq('user_id', userId)
+      .gte('refunded_on', month.startDate)
+      .lte('refunded_on', month.endDate),
+    supabase
+      .from('expense_splits')
+      .select('expense_id, category_id, amount_cents, expenses!inner(spent_on)')
+      .eq('user_id', userId)
+      .gte('expenses.spent_on', month.startDate)
+      .lte('expenses.spent_on', month.endDate),
   ]);
 
   const income = unwrapResponse(incomeResponse);
@@ -122,7 +135,11 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
   const recentExpenses = unwrapResponse(recentExpenseResponse);
   const categories = unwrapResponse(categoryResponse);
   const savingsGoals = unwrapResponse(savingsResponse);
-  const budgets = unwrapResponse(budgetResponse);
+  const budgets = budgetResponse.map((budget) => ({
+    id: budget.id,
+    category_id: budget.category_id,
+    amount_cents: budget.availableCents,
+  }));
   const recurringExpenses = unwrapResponse(recurringResponse).filter(
     (expense) =>
       isMonthlyChargeInRange({
@@ -136,6 +153,24 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
   const paymentPlans = unwrapResponse(paymentPlanResponse);
   const paidInstallments = unwrapResponse(paidInstallmentResponse);
   const paidCardBills = unwrapResponse(paidCardBillResponse);
+  const refunds = unwrapResponse(refundResponse);
+  const expenseById = new Map(expenses.map((expense) => [expense.id, expense]));
+  const splits = unwrapResponse(splitResponse);
+  for (const refund of refunds) {
+    if (refund.expenses && !expenseById.has(refund.expense_id)) {
+      expenseById.set(refund.expense_id, refund.expenses);
+    }
+    for (const split of refund.expenses?.expense_splits || []) {
+      if (!splits.some((row) => row.expense_id === split.expense_id && row.category_id === split.category_id)) {
+        splits.push(split);
+      }
+    }
+  }
+  const { categorizedExpenses, categorizedRefunds } = buildCategorizedAdjustments({
+    expenses: [...expenseById.values()],
+    splits,
+    refunds,
+  });
   const categoryById = new Map(categories.map((category) => [category.id, category]));
   const cardById = new Map(creditCards.map((card) => [card.id, card]));
   const cardPlanByBillId = new Map(
@@ -162,7 +197,11 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
       : bill.due_on <= month.endDate;
   });
   const incomeCents = sumCents(income, 'amount_cents');
-  const ordinaryExpenseCents = sumCents(expenses, 'amount_cents');
+  const refundCents = sumCents(refunds, 'amount_cents');
+  const ordinaryExpenseCents = Math.max(
+    sumCents(expenses, 'amount_cents') - refundCents,
+    0,
+  );
   const paidBillInstallmentCents = sumCents(
     paidInstallments.filter((installment) => {
       const plan = installment.bill_payment_plans;
@@ -189,11 +228,15 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     paidBillInstallmentCents + directPaidCardBillCents;
   const expenseCents = ordinaryExpenseCents + paidBillCents;
   const categoryInsights = buildCategoryInsights({
-    expenses,
+    expenses: categorizedExpenses,
+    refunds: categorizedRefunds,
     categories,
     budgetCaps: budgets,
     billPaymentCents: paidBillCents,
   });
+  const categorySpentById = new Map(
+    categoryInsights.rows.map((row) => [row.categoryId, row.amountCents]),
+  );
   const fixedExpenseCents = recurringExpenses.reduce((total, expense) => {
     const paymentPlan = recurringPlanBySource.get(
       `${expense.id}-${month.startDate}`,
@@ -216,23 +259,11 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     0,
   );
   const budgetSpentCents = budgets.reduce(
-    (total, budget) =>
-      total +
-      sumCents(
-        expenses.filter(
-          (expense) => expense.category_id === budget.category_id,
-        ),
-        'amount_cents',
-      ),
+    (total, budget) => total + (categorySpentById.get(budget.category_id) || 0),
     0,
   );
   const overBudgetCaps = budgets.filter((budget) => {
-    const spentCents = sumCents(
-      expenses.filter(
-        (expense) => expense.category_id === budget.category_id,
-      ),
-      'amount_cents',
-    );
+    const spentCents = categorySpentById.get(budget.category_id) || 0;
     return spentCents > budget.amount_cents;
   }).length;
   const planTotals = calculatePlanTotals({
@@ -332,6 +363,7 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     incomeCents,
     expenseCents,
     ordinaryExpenseCents,
+    refundCents,
     paidBillInstallmentCents,
     directPaidCardBillCents,
     paidBillCents,

@@ -10,12 +10,14 @@ function calculateAccountBalances({
   accounts = [],
   incomeEntries = [],
   expenses = [],
+  refunds = [],
   transfers = [],
   creditCards = [],
   unpaidCardBills = [],
 }) {
   const incomeByAccount = sumByAccount(incomeEntries, 'account_id');
   const expenseByAccount = sumByAccount(expenses, 'account_id');
+  const refundByAccount = sumByAccount(refunds, 'account_id');
   const incomingByAccount = sumByAccount(transfers, 'to_account_id');
   const outgoingByAccount = sumByAccount(transfers, 'from_account_id');
   const cardByAccount = new Map(
@@ -34,6 +36,7 @@ function calculateAccountBalances({
     const opening = normalizeCents(account.opening_balance_cents);
     const income = incomeByAccount.get(account.id) || 0;
     const spending = expenseByAccount.get(account.id) || 0;
+    const refundsReceived = refundByAccount.get(account.id) || 0;
     const incoming = incomingByAccount.get(account.id) || 0;
     const outgoing = outgoingByAccount.get(account.id) || 0;
     let balanceCents;
@@ -44,11 +47,15 @@ function calculateAccountBalances({
         card?.tracking_mode === 'transactions'
           ? spending
           : billsByCard.get(card?.id) || 0;
-      balanceCents = Math.max(opening + charges + outgoing - incoming, 0);
+      const cardRefunds = card?.tracking_mode === 'transactions' ? refundsReceived : 0;
+      balanceCents = Math.max(
+        opening + charges - cardRefunds + outgoing - incoming,
+        0,
+      );
     } else if (LIABILITY_TYPES.has(account.account_type)) {
       balanceCents = Math.max(opening + outgoing - incoming, 0);
     } else {
-      balanceCents = opening + income + incoming - spending - outgoing;
+      balanceCents = opening + income + refundsReceived + incoming - spending - outgoing;
     }
 
     return {

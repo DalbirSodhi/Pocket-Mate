@@ -289,6 +289,38 @@ monthly
 custom
 ```
 
+`budget_caps` remains the legacy category-limit source for existing clients.
+New monthly planning uses the period tables below.
+
+### budget_templates, budget_periods, and budget_allocations
+
+Templates hold defaults for future months. A period represents one calendar
+month, and its allocations snapshot each category's planned amount and rollover
+mode. Supported rollover modes are `none`, `positive_only`, and `full`.
+
+The app calculates the complete allocation chain in month order. Changing an
+earlier month therefore recomputes every later month's carried surplus or
+overspend instead of trusting a stale cached total.
+
+### expense_splits and expense_refunds
+
+An expense can be split across two to eight unique categories. Split amounts
+must reconcile exactly to the parent expense. Refunds are separate positive
+records tied to the original expense and an optional destination account;
+cumulative refunds cannot exceed the original amount.
+
+Both tables are read-only to normal table writes. Protected Postgres functions
+lock the parent expense, validate ownership and cents, and then write the rows.
+When a split expense is refunded, category reporting allocates every refund
+cent proportionally across its split categories.
+
+### tags, expense_tags, categorization_rules, and review_items
+
+Tags add user-defined context without changing accounting categories.
+Categorization rules match normalized merchant or note text using allowlisted
+operators and deterministic priority ordering. Rules can apply immediately or
+place the new expense in the review queue for explicit approval.
+
 ### savings_goals
 
 Stores protected savings goals.
@@ -333,6 +365,8 @@ erDiagram
     auth_users ||--o{ bill_payment_installments : owns
     auth_users ||--o{ budget_caps : owns
     auth_users ||--o{ savings_goals : owns
+    auth_users ||--o{ budget_periods : owns
+    auth_users ||--o{ tags : owns
     expense_categories ||--o{ expenses : classifies
     expense_categories ||--o{ recurring_expenses : classifies
     credit_cards ||--o{ credit_card_bills : receives
@@ -340,6 +374,10 @@ erDiagram
     recurring_expenses ||--o{ bill_payment_plans : schedules
     bill_payment_plans ||--|{ bill_payment_installments : contains
     expense_categories ||--o{ budget_caps : limits
+    expenses ||--o{ expense_splits : divides
+    expenses ||--o{ expense_refunds : offsets
+    budget_periods ||--o{ budget_allocations : contains
+    tags ||--o{ expense_tags : labels
 ```
 
 `auth_users` represents Supabase `auth.users`.
@@ -398,6 +436,12 @@ credit_cards(user_id, is_active)
 credit_card_bills(user_id, due_on)
 bill_payment_plans(user_id, status)
 bill_payment_installments(payment_plan_id, planned_on)
+expense_splits(expense_id, sort_order)
+expense_refunds(user_id, refunded_on)
+budget_periods(user_id, month_start)
+budget_allocations(user_id, category_id)
+categorization_rules(user_id, is_active, priority)
+review_items(user_id, status, created_at)
 ```
 
 ## Row Level Security Plan
@@ -484,11 +528,13 @@ supabase/migrations/202607270002_complete_monthly_plan.sql
 supabase/migrations/202607290001_add_bill_payment_plans.sql
 supabase/migrations/202607310001_make_bill_payment_plans_dynamic.sql
 supabase/migrations/202608040001_add_account_deletion.sql
+supabase/migrations/202608050001_add_financial_accounts.sql
+supabase/migrations/202608050002_add_transaction_planning.sql
 ```
 
 ## Open Decisions
 
 - whether default categories are copied per user or stored globally
 - whether savings should be a category, a goal, or both
-- whether pay cycles should be stored as profile settings or as separate pay periods
+- whether pay-cycle planning should later coexist with calendar-month budget periods
 - whether deleted categories should be blocked if expenses exist
