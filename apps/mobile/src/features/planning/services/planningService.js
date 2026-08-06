@@ -235,10 +235,12 @@ export async function saveBillPaymentPlan({
 export async function setBillPaymentInstallmentPaid({
   installmentId,
   isPaid,
+  paymentAccountId,
 }) {
-  const response = await supabase.rpc('set_bill_payment_installment_paid', {
+  const response = await supabase.rpc('set_bill_payment_installment_paid_from_account', {
     p_installment_id: installmentId,
     p_is_paid: isPaid,
+    p_from_account_id: paymentAccountId || null,
   });
 
   if (response.error) {

@@ -47,6 +47,21 @@ test('transaction CSV preserves signed amounts and reconciled types', () => {
         subtitle: 'Payment completed',
         amountCents: 10000,
       },
+      {
+        date: '2026-08-05',
+        type: 'transfer',
+        title: 'Checking to savings',
+        subtitle: 'Transfer',
+        amountCents: 5000,
+      },
+      {
+        date: '2026-08-06',
+        type: 'bill_payment',
+        title: 'Mastercard payment',
+        subtitle: 'Card payment transfer',
+        amountCents: 7500,
+        isTransfer: true,
+      },
     ],
   });
 
@@ -57,6 +72,8 @@ test('transaction CSV preserves signed amounts and reconciled types', () => {
       '2026-08-02,Income,Salary,,Payday,1000.50,CAD',
       '2026-08-03,Expense,\'=Unsafe merchant,Food,"Lunch, team",-25.50,CAD',
       '2026-08-04,Bill payment,Visa payment,Bill payments,,-100.00,CAD',
+      '2026-08-05,Transfer,Checking to savings,,,50.00,CAD',
+      '2026-08-06,Card payment transfer,Mastercard payment,Bill payments,,75.00,CAD',
     ].join('\r\n'),
   );
 });

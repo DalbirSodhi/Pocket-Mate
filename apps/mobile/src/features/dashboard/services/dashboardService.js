@@ -1,5 +1,6 @@
 import { supabase } from '../../../infrastructure/supabase/client';
 import { buildCategoryInsights } from '../../insights/utils/monthlyInsights.cjs';
+import { getAccountOverview } from '../../accounts/services/accountService';
 import {
   calculateActualBalance,
   calculateSafeToSpend,
@@ -39,6 +40,7 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     paymentPlanResponse,
     paidInstallmentResponse,
     paidCardBillResponse,
+    accountOverview,
   ] = await Promise.all([
     supabase
       .from('income_entries')
@@ -89,7 +91,7 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
       .order('due_on', { ascending: true }),
     supabase
       .from('credit_cards')
-      .select('id, nickname, last_four')
+      .select('id, nickname, last_four, tracking_mode')
       .eq('user_id', userId)
       .eq('is_active', true),
     supabase
@@ -102,16 +104,17 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
       .limit(100),
     supabase
       .from('bill_payment_installments')
-      .select('amount_cents')
+      .select('amount_cents, bill_payment_plans(credit_card_bill_id, recurring_expense_id, credit_card_bills(credit_card_id))')
       .eq('user_id', userId)
       .gte('paid_on', month.startDate)
       .lte('paid_on', month.endDate),
     supabase
       .from('credit_card_bills')
-      .select('id, amount_cents')
+      .select('id, credit_card_id, amount_cents')
       .eq('user_id', userId)
       .gte('paid_on', month.startDate)
       .lte('paid_on', month.endDate),
+    getAccountOverview(userId),
   ]);
 
   const income = unwrapResponse(incomeResponse);
@@ -161,7 +164,12 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
   const incomeCents = sumCents(income, 'amount_cents');
   const ordinaryExpenseCents = sumCents(expenses, 'amount_cents');
   const paidBillInstallmentCents = sumCents(
-    paidInstallments,
+    paidInstallments.filter((installment) => {
+      const plan = installment.bill_payment_plans;
+      if (plan?.recurring_expense_id) return true;
+      const cardId = plan?.credit_card_bills?.credit_card_id;
+      return cardById.get(cardId)?.tracking_mode !== 'transactions';
+    }),
     'amount_cents',
   );
   const plannedCardBillIds = new Set(
@@ -170,7 +178,11 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
       .map((plan) => plan.credit_card_bill_id),
   );
   const directPaidCardBillCents = sumCents(
-    paidCardBills.filter((bill) => !plannedCardBillIds.has(bill.id)),
+    paidCardBills.filter(
+      (bill) =>
+        !plannedCardBillIds.has(bill.id) &&
+        cardById.get(bill.credit_card_id)?.tracking_mode !== 'transactions',
+    ),
     'amount_cents',
   );
   const paidBillCents =
@@ -244,6 +256,11 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     incomeCents,
     expenseCents,
   });
+  const hasLiquidAccounts = accountOverview.accounts.some(
+    (account) =>
+      account.is_active &&
+      ['checking', 'savings', 'cash'].includes(account.account_type),
+  );
   const cardsWithUnpaidBills = new Set(
     unpaidCardBills.map((bill) => bill.credit_card_id),
   );
@@ -323,7 +340,12 @@ export async function getDashboardSummary(userId, _profile, date = new Date()) {
     monthlySavingsCents,
     committedCents: planTotals.committedCents,
     totalOutflowCents: planTotals.totalOutflowCents,
-    availableCents: actualAvailableCents,
+    availableCents: hasLiquidAccounts
+      ? accountOverview.liquidCents
+      : actualAvailableCents,
+    accountAssetCents: accountOverview.assetCents,
+    accountLiabilityCents: accountOverview.liabilityCents,
+    netWorthCents: accountOverview.netWorthCents,
     spendableCents: planTotals.availableCents,
     shortfallCents: planTotals.shortfallCents,
     savingsCurrentCents: sumCents(savingsGoals, 'current_amount_cents'),

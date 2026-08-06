@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import {
   RefreshControl,
   ScrollView,
+  Pressable,
   StyleSheet,
   Switch,
   Text,
@@ -17,6 +18,7 @@ import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
+import { AccountPicker, getAccounts } from '../../accounts';
 import { formatCurrency } from '../../dashboard/utils/formatCurrency';
 import {
   createCreditCard,
@@ -24,6 +26,7 @@ import {
   getCreditCards,
   setCreditCardActive,
   setCreditCardBillPaid,
+  setCreditCardTrackingMode,
 } from '../services/financeService';
 import { getLocalDateString } from '../utils/financeValidation.cjs';
 import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
@@ -33,6 +36,8 @@ export function CreditCardsScreen({ navigation, route }) {
   const currencyCode = route.params?.currencyCode || 'CAD';
   const [cards, setCards] = useState([]);
   const [bills, setBills] = useState([]);
+  const [paymentAccounts, setPaymentAccounts] = useState([]);
+  const [paymentAccountId, setPaymentAccountId] = useState('');
   const [nickname, setNickname] = useState('');
   const [issuer, setIssuer] = useState('');
   const [lastFour, setLastFour] = useState('');
@@ -47,12 +52,24 @@ export function CreditCardsScreen({ navigation, route }) {
     setRequestError('');
 
     try {
-      const [nextCards, nextBills] = await Promise.all([
+      const [nextCards, nextBills, nextAccounts] = await Promise.all([
         getCreditCards(user.id),
         getCreditCardBills(user.id),
+        getAccounts(user.id),
       ]);
       setCards(nextCards);
       setBills(nextBills);
+      const nextPaymentAccounts = nextAccounts.filter(
+        (account) =>
+          account.is_active &&
+          ['checking', 'savings', 'cash'].includes(account.account_type),
+      );
+      setPaymentAccounts(nextPaymentAccounts);
+      setPaymentAccountId((current) =>
+        nextPaymentAccounts.some((account) => account.id === current)
+          ? current
+          : nextPaymentAccounts[0]?.id || '',
+      );
     } catch (error) {
       setRequestError(
         getFinanceErrorMessage(error, 'Unable to load credit card details.'),
@@ -135,6 +152,27 @@ export function CreditCardsScreen({ navigation, route }) {
     }
   }
 
+  async function handleTrackingMode(card, trackingMode) {
+    if (card.tracking_mode === trackingMode) return;
+    setUpdatingId(card.id);
+    setRequestError('');
+
+    try {
+      await setCreditCardTrackingMode({
+        userId: user.id,
+        creditCardId: card.id,
+        trackingMode,
+      });
+      setCards((current) => current.map((item) =>
+        item.id === card.id ? { ...item, tracking_mode: trackingMode } : item,
+      ));
+    } catch (error) {
+      setRequestError(getFinanceErrorMessage(error, 'Unable to change card tracking.'));
+    } finally {
+      setUpdatingId('');
+    }
+  }
+
   async function handleBillToggle(bill) {
     setUpdatingId(bill.id);
     const paidOn = bill.paid_on ? null : getLocalDateString();
@@ -144,6 +182,7 @@ export function CreditCardsScreen({ navigation, route }) {
         userId: user.id,
         billId: bill.id,
         paidOn,
+        paymentAccountId: paidOn ? paymentAccountId : null,
       });
       setBills((current) =>
         current.map((item) =>
@@ -246,6 +285,29 @@ export function CreditCardsScreen({ navigation, route }) {
                       value={card.is_active}
                     />
                   </View>
+                  <View style={styles.trackingRow}>
+                    <Text style={styles.trackingLabel}>Count spending from</Text>
+                    <View style={styles.segmented}>
+                      {[
+                        { id: 'statement', label: 'Statements' },
+                        { id: 'transactions', label: 'Purchases' },
+                      ].map((option) => {
+                        const selected = card.tracking_mode === option.id;
+                        return (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityState={{ selected }}
+                            disabled={updatingId === card.id}
+                            key={option.id}
+                            onPress={() => handleTrackingMode(card, option.id)}
+                            style={[styles.segment, selected && styles.segmentSelected]}
+                          >
+                            <Text style={[styles.segmentLabel, selected && styles.segmentLabelSelected]}>{option.label}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
                   {index < cards.length - 1 ? <View style={styles.divider} /> : null}
                 </View>
               ))}
@@ -257,6 +319,21 @@ export function CreditCardsScreen({ navigation, route }) {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Card bills</Text>
+            {paymentAccounts.length ? (
+              <AccountPicker
+                accounts={paymentAccounts}
+                allowUnassigned={false}
+                currencyCode={currencyCode}
+                label="Pay card bills from"
+                onSelect={setPaymentAccountId}
+                selectedId={paymentAccountId}
+              />
+            ) : (
+              <InlineNotice
+                message="Add a checking, savings, or cash account to reconcile card payments with your available balance."
+                variant="info"
+              />
+            )}
             <View style={styles.list}>
               {bills.map((bill, index) => (
                 <View key={bill.id}>
@@ -370,6 +447,41 @@ const styles = StyleSheet.create({
   rowBody: {
     ...typography.caption,
     color: colors.inkMuted,
+  },
+  trackingRow: {
+    paddingBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  trackingLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  segmented: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+  },
+  segment: {
+    minHeight: 38,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted,
+  },
+  segmentSelected: {
+    backgroundColor: colors.primary,
+  },
+  segmentLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  segmentLabelSelected: {
+    color: colors.white,
   },
   billValue: {
     alignItems: 'flex-end',

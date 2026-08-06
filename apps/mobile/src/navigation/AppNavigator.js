@@ -18,6 +18,7 @@ import {
   WelcomeScreen,
 } from '../features/auth/screens';
 import { useAuthSession } from '../features/auth';
+import { AccountsScreen } from '../features/accounts';
 import { DashboardScreen } from '../features/dashboard';
 import {
   AddExpenseScreen,
@@ -176,6 +177,7 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={IncomeDetailScreen} name="IncomeDetail" />
       <Stack.Screen component={MonthlyInsightsScreen} name="MonthlyInsights" />
       <Stack.Screen component={MonthlyReportScreen} name="MonthlyReport" />
+      <Stack.Screen component={AccountsScreen} name="Accounts" />
       <Stack.Screen component={DeleteAccountScreen} name="DeleteAccount" />
       <Stack.Screen component={BillPaymentPlanScreen} name="BillPaymentPlan" />
       <Stack.Screen component={SavingsGoalsScreen} name="SavingsGoals" />

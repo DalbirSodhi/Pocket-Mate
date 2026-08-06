@@ -2,6 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  ArrowRightLeft,
   BarChart3,
   ChevronLeft,
   ChevronRight,
@@ -44,6 +45,7 @@ const FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'expense', label: 'Expenses' },
   { id: 'bill_payment', label: 'Bills' },
+  { id: 'transfer', label: 'Transfers' },
   { id: 'income', label: 'Income' },
 ];
 
@@ -127,6 +129,11 @@ export function TransactionsScreen({
   }
 
   function openTransaction(transaction) {
+    if (transaction.type === 'transfer') {
+      navigation.navigate('Accounts', { currencyCode });
+      return;
+    }
+
     if (transaction.type === 'income') {
       navigation.navigate('IncomeDetail', {
         incomeId: transaction.id,
@@ -335,8 +342,12 @@ export function TransactionsScreen({
               {visibleTransactions.map((transaction, index) => {
                 const isIncome = transaction.type === 'income';
                 const isBillPayment = transaction.type === 'bill_payment';
+                const isTransfer =
+                  transaction.type === 'transfer' || transaction.isTransfer;
                 const Icon = isIncome
                   ? ArrowDownLeft
+                  : isTransfer
+                    ? ArrowRightLeft
                   : isBillPayment
                     ? CreditCard
                     : ArrowUpRight;
@@ -367,10 +378,10 @@ export function TransactionsScreen({
                         numberOfLines={1}
                         style={[
                           styles.amount,
-                          { color: isIncome ? colors.success : colors.danger },
+                          { color: isTransfer ? colors.ink : isIncome ? colors.success : colors.danger },
                         ]}
                       >
-                        {isIncome ? '+' : '-'}
+                        {isTransfer ? '' : isIncome ? '+' : '-'}
                         {formatCurrency(transaction.amountCents, currencyCode)}
                       </Text>
                       <ChevronRight color={colors.inkMuted} size={17} />

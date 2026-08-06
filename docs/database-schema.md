@@ -154,6 +154,55 @@ nickname text not null
 issuer text
 last_four text
 is_active boolean not null default true
+financial_account_id uuid not null references financial_accounts(id)
+tracking_mode text not null default 'statement'
+created_at timestamptz not null default now()
+updated_at timestamptz not null default now()
+```
+
+`tracking_mode` is either `statement` or `transactions`. Statement mode counts
+aggregate statement payments as spending. Transaction mode counts individual
+purchases as spending and treats card payments as transfers so they are not
+counted twice.
+
+### financial_accounts
+
+Stores user-managed assets and liabilities. A positive balance means money
+available for asset accounts and money owed for liability accounts.
+
+```text
+id uuid primary key
+user_id uuid not null references auth.users(id)
+name text not null
+account_type text not null
+opening_balance_cents integer not null default 0
+currency_code text not null default 'CAD'
+institution_name text
+last_four text
+is_active boolean not null default true
+created_at timestamptz not null default now()
+updated_at timestamptz not null default now()
+```
+
+Supported types are checking, savings, cash, credit card, loan, investment, and
+other. Credit-card accounts are created automatically from saved card metadata;
+full account or card numbers are never stored.
+
+### account_transfers
+
+Moves money between two owned accounts without changing income, spending, or a
+category budget. Optional source links reconcile statements and installments.
+
+```text
+id uuid primary key
+user_id uuid not null references auth.users(id)
+from_account_id uuid not null references financial_accounts(id)
+to_account_id uuid not null references financial_accounts(id)
+amount_cents integer not null
+transferred_on date not null
+note text
+credit_card_bill_id uuid
+bill_payment_installment_id uuid
 created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
 ```

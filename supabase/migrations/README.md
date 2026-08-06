@@ -19,4 +19,8 @@ Current migrations:
 202607270001_add_recurring_expenses_and_card_bills.sql
 202607270002_complete_monthly_plan.sql
 202607270003_add_pay_cycle_anchor.sql
+202607290001_add_bill_payment_plans.sql
+202607310001_make_bill_payment_plans_dynamic.sql
+202608040001_add_account_deletion.sql
+202608050001_add_financial_accounts.sql
 ```

@@ -18,6 +18,7 @@ import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
+import { AccountPicker, getAccounts } from '../../accounts';
 import {
   createIncomeEntry,
   getIncomeDetail,
@@ -39,6 +40,8 @@ export function AddIncomeScreen({ navigation, route }) {
   const incomeId = route.params?.incomeId;
   const isEditing = Boolean(incomeId);
   const [amount, setAmount] = useState('');
+  const [accounts, setAccounts] = useState([]);
+  const [accountId, setAccountId] = useState('');
   const [source, setSource] = useState('');
   const [date, setDate] = useState(getLocalDateString());
   const [note, setNote] = useState('');
@@ -48,18 +51,23 @@ export function AddIncomeScreen({ navigation, route }) {
   const [isSaving, setIsSaving] = useState(false);
 
   const loadIncome = useCallback(async () => {
-    if (!incomeId) {
-      return;
-    }
-
     setRequestError('');
 
     try {
-      const income = await getIncomeDetail({ userId: user.id, incomeId });
-      setAmount(formatAmount(income.amount_cents));
-      setSource(income.source || '');
-      setDate(income.received_on);
-      setNote(income.note || '');
+      const [nextAccounts, income] = await Promise.all([
+        getAccounts(user.id),
+        incomeId
+          ? getIncomeDetail({ userId: user.id, incomeId })
+          : Promise.resolve(null),
+      ]);
+      setAccounts(nextAccounts.filter((account) => account.is_active && account.isAsset));
+      if (income) {
+        setAmount(formatAmount(income.amount_cents));
+        setSource(income.source || '');
+        setDate(income.received_on);
+        setNote(income.note || '');
+        setAccountId(income.account_id || '');
+      }
     } catch (error) {
       setRequestError(
         getFinanceErrorMessage(error, 'Unable to load this income entry.'),
@@ -89,6 +97,7 @@ export function AddIncomeScreen({ navigation, route }) {
     try {
       const entry = {
         userId: user.id,
+        accountId,
         amountCents: parseAmountToCents(amount),
         source,
         receivedOn: date,
@@ -152,6 +161,15 @@ export function AddIncomeScreen({ navigation, route }) {
             <InlineNotice message={requestError} variant="error" />
 
             <View style={styles.form}>
+              {accounts.length ? (
+                <AccountPicker
+                  accounts={accounts}
+                  currencyCode="CAD"
+                  label="Deposit to"
+                  onSelect={setAccountId}
+                  selectedId={accountId}
+                />
+              ) : null}
               <FormField
                 error={errors.amount}
                 keyboardType="decimal-pad"

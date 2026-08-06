@@ -19,6 +19,7 @@ import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
+import { AccountPicker, getAccounts } from '../../accounts';
 import {
   createExpenseEntry,
   ensureExpenseCategories,
@@ -47,6 +48,8 @@ export function OneTimeExpenseScreen({ navigation, route }) {
   const isEditing = Boolean(expenseId);
   const hasLoadedExpense = useRef(false);
   const [categories, setCategories] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [accountId, setAccountId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [amount, setAmount] = useState(() =>
     formatPrefillAmount(prefill?.amountCents),
@@ -64,13 +67,22 @@ export function OneTimeExpenseScreen({ navigation, route }) {
     setRequestError('');
 
     try {
-      const [nextCategories, expense] = await Promise.all([
+      const [nextCategories, nextAccounts, expense] = await Promise.all([
         ensureExpenseCategories(user.id),
+        getAccounts(user.id),
         isEditing && !hasLoadedExpense.current
           ? getExpenseDetail({ userId: user.id, expenseId })
           : Promise.resolve(null),
       ]);
       setCategories(nextCategories);
+      setAccounts(
+        nextAccounts.filter(
+          (account) =>
+            account.is_active &&
+            (account.account_type !== 'credit_card' ||
+              account.trackingMode === 'transactions'),
+        ),
+      );
 
       if (expense) {
         setAmount(formatPrefillAmount(expense.amount_cents));
@@ -78,6 +90,7 @@ export function OneTimeExpenseScreen({ navigation, route }) {
         setDate(expense.spent_on);
         setNote(expense.note || '');
         setCategoryId(expense.category_id || '');
+        setAccountId(expense.account_id || '');
         hasLoadedExpense.current = true;
         return;
       }
@@ -130,6 +143,7 @@ export function OneTimeExpenseScreen({ navigation, route }) {
     try {
       const entry = {
         userId: user.id,
+        accountId,
         categoryId,
         amountCents: parseAmountToCents(amount),
         spentOn: date,
@@ -248,6 +262,14 @@ export function OneTimeExpenseScreen({ navigation, route }) {
                 placeholder="Grocery store, landlord, coffee shop"
                 value={merchant}
               />
+              {accounts.length ? (
+                <AccountPicker
+                  accounts={accounts}
+                  label="Paid from"
+                  onSelect={setAccountId}
+                  selectedId={accountId}
+                />
+              ) : null}
               <FormField
                 autoCapitalize="none"
                 error={errors.date}

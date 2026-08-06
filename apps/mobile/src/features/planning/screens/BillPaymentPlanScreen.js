@@ -28,6 +28,7 @@ import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
+import { AccountPicker, getAccounts } from '../../accounts';
 import { formatCurrency } from '../../dashboard/utils/formatCurrency';
 import { parseAmountToCents } from '../../finance/utils/financeValidation.cjs';
 import {
@@ -110,6 +111,8 @@ export function BillPaymentPlanScreen({ navigation, route }) {
     [dueOn],
   );
   const [plan, setPlan] = useState(null);
+  const [paymentAccounts, setPaymentAccounts] = useState([]);
+  const [paymentAccountId, setPaymentAccountId] = useState('');
   const [totalAmount, setTotalAmount] = useState(() =>
     formatCentsForInput(amountCents),
   );
@@ -134,13 +137,27 @@ export function BillPaymentPlanScreen({ navigation, route }) {
     setRequestError('');
 
     try {
-      const nextPlan = await getBillPaymentPlan({
-        userId: user.id,
-        creditCardBillId,
-        recurringExpenseId,
-        periodStart,
-      });
+      const [nextPlan, nextAccounts] = await Promise.all([
+        getBillPaymentPlan({
+          userId: user.id,
+          creditCardBillId,
+          recurringExpenseId,
+          periodStart,
+        }),
+        creditCardBillId ? getAccounts(user.id) : Promise.resolve([]),
+      ]);
       setPlan(nextPlan);
+      const activePaymentAccounts = nextAccounts.filter(
+        (account) =>
+          account.is_active &&
+          ['checking', 'savings', 'cash'].includes(account.account_type),
+      );
+      setPaymentAccounts(activePaymentAccounts);
+      setPaymentAccountId((current) =>
+        activePaymentAccounts.some((account) => account.id === current)
+          ? current
+          : activePaymentAccounts[0]?.id || '',
+      );
 
       if (nextPlan) {
         setTotalAmount(formatCentsForInput(nextPlan.total_amount_cents));
@@ -367,6 +384,8 @@ export function BillPaymentPlanScreen({ navigation, route }) {
       await setBillPaymentInstallmentPaid({
         installmentId: installment.id,
         isPaid: !installment.paid_on,
+        paymentAccountId:
+          creditCardBillId && !installment.paid_on ? paymentAccountId : null,
       });
       await loadPlan();
     } catch (error) {
@@ -648,6 +667,23 @@ export function BillPaymentPlanScreen({ navigation, route }) {
                 </View>
 
                 <View style={styles.section}>
+                  {creditCardBillId ? (
+                    paymentAccounts.length ? (
+                      <AccountPicker
+                        accounts={paymentAccounts}
+                        allowUnassigned={false}
+                        currencyCode={currencyCode}
+                        label="Payments leave"
+                        onSelect={setPaymentAccountId}
+                        selectedId={paymentAccountId}
+                      />
+                    ) : (
+                      <InlineNotice
+                        message="Add a checking, savings, or cash account to update your available balance when a payment is completed."
+                        variant="info"
+                      />
+                    )
+                  ) : null}
                   <View style={styles.sectionHeading}>
                     <View>
                       <Text style={styles.sectionTitle}>Payment schedule</Text>

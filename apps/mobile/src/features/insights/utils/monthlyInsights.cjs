@@ -154,7 +154,7 @@ function summarizeTransactions(transactions) {
 
       if (transaction.type === 'income') {
         summary.incomeCents += amountCents;
-      } else {
+      } else if (transaction.type !== 'transfer' && !transaction.isTransfer) {
         summary.spentCents += amountCents;
       }
 
