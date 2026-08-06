@@ -35,7 +35,8 @@ import {
   RecurringExpenseScreen,
   TransactionsScreen,
 } from '../features/finance';
-import { MonthlyInsightsScreen } from '../features/insights';
+import { CashFlowTrendsScreen, MonthlyInsightsScreen } from '../features/insights';
+import { ImportTransactionsScreen } from '../features/imports';
 import {
   DeleteAccountScreen,
   ProfileGate,
@@ -47,6 +48,7 @@ import {
   BillPaymentPlanScreen,
   BudgetCapsScreen,
   CalendarScreen,
+  DebtPayoffScreen,
   PlanOverviewScreen,
   PurchaseImpactScreen,
   SavingsGoalsScreen,
@@ -181,10 +183,13 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={ExpenseAdjustmentsScreen} name="ExpenseAdjustments" />
       <Stack.Screen component={IncomeDetailScreen} name="IncomeDetail" />
       <Stack.Screen component={MonthlyInsightsScreen} name="MonthlyInsights" />
+      <Stack.Screen component={CashFlowTrendsScreen} name="CashFlowTrends" />
+      <Stack.Screen component={ImportTransactionsScreen} name="ImportTransactions" />
       <Stack.Screen component={MonthlyReportScreen} name="MonthlyReport" />
       <Stack.Screen component={AccountsScreen} name="Accounts" />
       <Stack.Screen component={AutomationScreen} name="Automation" />
       <Stack.Screen component={CalendarScreen} name="Calendar" />
+      <Stack.Screen component={DebtPayoffScreen} name="DebtPayoff" />
       <Stack.Screen component={PreferencesScreen} name="Preferences" />
       <Stack.Screen component={DeleteAccountScreen} name="DeleteAccount" />
       <Stack.Screen component={BillPaymentPlanScreen} name="BillPaymentPlan" />

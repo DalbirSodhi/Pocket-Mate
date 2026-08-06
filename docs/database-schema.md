@@ -362,6 +362,21 @@ updated_at timestamptz not null default now()
 density accepts `comfortable` or `compact`. Row Level Security isolates the
 record by `auth.uid()`.
 
+### transaction_import_batches and transaction_import_rows
+
+An import batch stores file metadata, counts, and staged/posted/rolled-back
+state. Rows store normalized income or expense values, a deterministic
+fingerprint, validation state, and the ledger identifier created on posting.
+Composite ownership foreign keys prevent rows from referencing another user's
+batch, category, or account. Protected functions post and roll back each batch
+inside one transaction.
+
+### debt_settings
+
+Stores APR basis points and minimum monthly payments for owned loan or
+credit-card financial accounts. Payoff schedules remain deterministic client
+projections and are not persisted.
+
 ## Later Tables
 
 These should wait until core finance is stable:
@@ -391,6 +406,9 @@ erDiagram
     auth_users ||--o{ budget_periods : owns
     auth_users ||--o{ tags : owns
     auth_users ||--o| user_preferences : configures
+    auth_users ||--o{ transaction_import_batches : stages
+    transaction_import_batches ||--o{ transaction_import_rows : contains
+    auth_users ||--o{ debt_settings : configures
     expense_categories ||--o{ expenses : classifies
     expense_categories ||--o{ recurring_expenses : classifies
     credit_cards ||--o{ credit_card_bills : receives
@@ -555,6 +573,7 @@ supabase/migrations/202608040001_add_account_deletion.sql
 supabase/migrations/202608050001_add_financial_accounts.sql
 supabase/migrations/202608050002_add_transaction_planning.sql
 supabase/migrations/202608060001_add_calendar_preferences.sql
+supabase/migrations/202608060002_add_imports_and_debt_settings.sql
 ```
 
 ## Open Decisions

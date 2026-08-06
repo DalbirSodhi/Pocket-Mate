@@ -53,6 +53,37 @@ values (
   100000
 );
 
+insert into public.debt_settings (account_id, user_id, apr_basis_points, minimum_payment_cents)
+values (
+  '56000000-0000-0000-0000-000000000005',
+  '50000000-0000-0000-0000-000000000005',
+  1299,
+  5000
+);
+
+insert into public.transaction_import_batches (id, user_id, file_name, row_count)
+values (
+  '5a000000-0000-0000-0000-000000000005',
+  '50000000-0000-0000-0000-000000000005',
+  'delete.csv',
+  1
+);
+
+insert into public.transaction_import_rows (
+  batch_id, user_id, row_number, transaction_type, amount_cents,
+  occurred_on, description, fingerprint
+)
+values (
+  '5a000000-0000-0000-0000-000000000005',
+  '50000000-0000-0000-0000-000000000005',
+  1,
+  'income',
+  1000,
+  current_date,
+  'Delete import',
+  'delete-fingerprint'
+);
+
 insert into public.income_entries (user_id, amount_cents, received_on)
 values ('50000000-0000-0000-0000-000000000005', 100000, current_date);
 
@@ -307,6 +338,9 @@ select is(
       + (select count(*) from public.categorization_rules where user_id = '50000000-0000-0000-0000-000000000005')
       + (select count(*) from public.review_items where user_id = '50000000-0000-0000-0000-000000000005')
       + (select count(*) from public.user_preferences where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.transaction_import_batches where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.transaction_import_rows where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.debt_settings where user_id = '50000000-0000-0000-0000-000000000005')
   ),
   0::bigint,
   'all finance data owned by the deleted user is removed'
