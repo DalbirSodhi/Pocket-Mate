@@ -320,12 +320,19 @@ export function PlanOverviewScreen({ navigation, profile }) {
               <PlanRow
                 detail={`${summary?.overBudgetCaps || 0} over limit`}
                 icon={Landmark}
-                isLast
                 onPress={() =>
                   navigation.navigate('BudgetCaps', { currencyCode })
                 }
                 title="Budget caps"
                 value={`${summary?.activeBudgetCaps || 0} active`}
+              />
+              <PlanRow
+                detail="Compare highest-interest and smallest-balance strategies"
+                icon={Gauge}
+                isLast
+                onPress={() => navigation.navigate('DebtPayoff', { currencyCode })}
+                title="Debt payoff"
+                value="Plan"
               />
             </View>
           </View>

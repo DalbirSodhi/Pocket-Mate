@@ -11,6 +11,7 @@ planning experience:
 - Savings goals, recurring expenses, cards, statements, and payment plans.
 - User-authored categorization rules and their review queue.
 - Reminder and dashboard display preferences.
+- CSV import batches, normalized staging rows, and optional debt payoff settings.
 
 Pocket-Mate does not currently connect to bank accounts, collect card numbers,
 or store card security codes. Saved cards contain only a user-provided nickname
@@ -20,6 +21,12 @@ Bill, recurring-charge, and payday reminders are scheduled locally by the
 operating system. Pocket-Mate does not request or store a remote push token for
 this feature. Each device rebuilds its own reminder schedule from user-owned
 finance records and preferences.
+
+CSV files are read locally. Pocket-Mate sends only normalized staging rows to
+the user's RLS-protected Supabase tables; the original file is not uploaded.
+Posted batches retain duplicate fingerprints and result identifiers so users
+can reverse an import. Rolling back deletes the ledger entries created by that
+batch and preserves the batch as auditable history.
 
 ## Access Controls
 

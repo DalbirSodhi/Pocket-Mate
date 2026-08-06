@@ -112,6 +112,9 @@ expense_tags
 categorization_rules
 review_items
 user_preferences
+transaction_import_batches
+transaction_import_rows
+debt_settings
 ```
 
 Bill-plan writes use authenticated Postgres functions so statement updates,
@@ -149,6 +152,13 @@ profile pay-cycle anchor. When installments cover a source bill, cash-flow
 totals count the installments and retain the source only as calendar context.
 An Expo notification adapter schedules reminders locally and cancels only
 identifiers owned by Pocket-Mate. No push provider or device token is required.
+
+CSV import uses Papa Parse and a deterministic normalization engine before any
+write. Accepted rows enter an owned staging batch; protected Postgres functions
+post or roll back ledger entries transactionally and recheck fingerprints at
+commit time. Cash-flow trends reuse the reconciled Activity ledger. Debt payoff
+scenarios use saved APR/minimum-payment settings and a deterministic cent-based
+avalanche or snowball simulation.
 
 Account deletion also uses a protected Postgres function. It derives identity
 from the authenticated JWT, deletes finance rows in dependency order and the

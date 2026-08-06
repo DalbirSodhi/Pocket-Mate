@@ -147,6 +147,27 @@ The report uses the same cash-movement ledger as Activity and Insights. CSV
 files include income, expenses, and completed bill payments, use signed decimal
 amounts, and are created locally without uploading another copy.
 
+## Import And Financial Trends Flow
+
+1. Open **Settings > Import transactions** and choose a CSV file.
+2. Pocket-Mate normalizes common bank headers, validates every row, and marks
+   duplicates from the file or earlier posted imports.
+3. Choose the expense category, review accepted and rejected rows, then post the
+   accepted rows as one transactional batch.
+4. Use Import history to undo a posted batch and remove only entries created by
+   that batch.
+5. Open **Settings > Cash-flow trends** to compare six months of reconciled
+   income, spending after refunds, monthly net, and savings rate.
+
+## Debt Payoff Flow
+
+1. Add loan or credit-card balances under Accounts.
+2. Open **Plan > Debt payoff** and enter APR and minimum payment for each debt.
+3. Choose avalanche (highest APR first) or snowball (smallest balance first),
+   then set an extra monthly payment.
+4. Review the debt-free date, total projected interest, payment budget, and any
+   non-amortizing warning. The scenario never creates payments automatically.
+
 ## Account Deletion Flow
 
 ```mermaid

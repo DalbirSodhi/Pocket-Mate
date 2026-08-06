@@ -25,6 +25,7 @@ Current migrations:
 202608050001_add_financial_accounts.sql
 202608050002_add_transaction_planning.sql
 202608060001_add_calendar_preferences.sql
+202608060002_add_imports_and_debt_settings.sql
 ```
 
 The transaction-planning migration adds month-specific budgets and rollovers,
@@ -34,3 +35,6 @@ ownership and cent-level reconciliation are enforced in one transaction.
 
 The calendar-preferences migration adds RLS-protected local-reminder and
 dashboard-display settings and includes them in transactional account deletion.
+
+The import/debt migration adds reversible RLS-protected CSV staging, protected
+post/rollback functions, duplicate indexes, and per-account debt assumptions.

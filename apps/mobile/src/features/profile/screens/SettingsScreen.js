@@ -2,6 +2,8 @@ import {
   ChevronRight,
   BellRing,
   FileSpreadsheet,
+  FileUp,
+  TrendingUp,
   Landmark,
   WandSparkles,
   LogOut,
@@ -199,6 +201,29 @@ export function SettingsScreen({
                 <View style={styles.dataCopy}>
                   <Text style={styles.dataTitle}>Reminders and display</Text>
                   <Text style={styles.dataBody}>Local alerts, privacy, and density</Text>
+                </View>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('ImportTransactions', { currencyCode })}
+                style={({ pressed }) => [styles.dataRow, pressed && styles.dataRowPressed]}
+              >
+                <View style={styles.dataIcon}><FileUp color={colors.ink} size={20} /></View>
+                <View style={styles.dataCopy}><Text style={styles.dataTitle}>Import transactions</Text><Text style={styles.dataBody}>Review a bank CSV and undo imported batches</Text></View>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('CashFlowTrends', { currencyCode })}
+                style={({ pressed }) => [styles.dataRow, pressed && styles.dataRowPressed]}
+              >
+                <View style={styles.dataIcon}>
+                  <TrendingUp color={colors.ink} size={20} />
+                </View>
+                <View style={styles.dataCopy}>
+                  <Text style={styles.dataTitle}>Cash-flow trends</Text>
+                  <Text style={styles.dataBody}>Compare income, spending, and monthly net</Text>
                 </View>
                 <ChevronRight color={colors.inkMuted} size={18} />
               </Pressable>
