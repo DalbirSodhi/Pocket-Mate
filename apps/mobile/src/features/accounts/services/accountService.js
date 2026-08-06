@@ -17,6 +17,7 @@ export async function getAccounts(userId) {
     transferResponse,
     cardResponse,
     billResponse,
+    refundResponse,
   ] = await Promise.all([
     supabase
       .from('financial_accounts')
@@ -29,6 +30,7 @@ export async function getAccounts(userId) {
     supabase.from('account_transfers').select('from_account_id, to_account_id, amount_cents').eq('user_id', userId),
     supabase.from('credit_cards').select('id, financial_account_id, tracking_mode').eq('user_id', userId),
     supabase.from('credit_card_bills').select('credit_card_id, amount_cents').eq('user_id', userId).is('paid_on', null),
+    supabase.from('expense_refunds').select('account_id, amount_cents').eq('user_id', userId).not('account_id', 'is', null),
   ]);
 
   return calculateAccountBalances({
@@ -38,6 +40,7 @@ export async function getAccounts(userId) {
     transfers: unwrap(transferResponse),
     creditCards: unwrap(cardResponse),
     unpaidCardBills: unwrap(billResponse),
+    refunds: unwrap(refundResponse),
   });
 }
 

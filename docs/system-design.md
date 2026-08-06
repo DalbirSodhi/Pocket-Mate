@@ -102,6 +102,15 @@ bill_payment_plans
 bill_payment_installments
 financial_accounts
 account_transfers
+expense_splits
+expense_refunds
+budget_templates
+budget_periods
+budget_allocations
+tags
+expense_tags
+categorization_rules
+review_items
 ```
 
 Bill-plan writes use authenticated Postgres functions so statement updates,
@@ -120,6 +129,18 @@ Purchase-impact checks are client-side, deterministic projections over the
 dashboard summary and category-cap service results. The calculator does not
 write hypothetical purchases. Confirmation hands validated values to the normal
 expense-entry flow, keeping Supabase writes behind the finance service boundary.
+
+Transaction adjustments and monthly budgets use the same deterministic finance
+utilities in Dashboard, Plan, Insights, Activity, and reports. Protected
+functions serialize split, refund, and expense-edit operations against the
+parent expense. Month budgets are snapshots generated from future templates;
+rollover values are recomputed from ordered period history so prior-month edits
+cannot leave later months stale.
+
+Categorization remains explainable and user-controlled. Rules use allowlisted
+fields and operators with stable priority ordering. They never execute arbitrary
+code, and uncertain rules create owned review items rather than silently
+changing financial history.
 
 Account deletion also uses a protected Postgres function. It derives identity
 from the authenticated JWT, deletes finance rows in dependency order and the

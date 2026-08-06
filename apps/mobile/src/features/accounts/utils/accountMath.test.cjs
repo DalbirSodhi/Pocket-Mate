@@ -32,10 +32,11 @@ test('transactional card charges increase debt and payments reduce it', () => {
     accounts: [{ id: 'card-account', account_type: 'credit_card', opening_balance_cents: 10000 }],
     creditCards: [{ id: 'card', financial_account_id: 'card-account', tracking_mode: 'transactions' }],
     expenses: [{ account_id: 'card-account', amount_cents: 4000 }],
+    refunds: [{ account_id: 'card-account', amount_cents: 1000 }],
     transfers: [{ from_account_id: 'checking', to_account_id: 'card-account', amount_cents: 6000 }],
   });
 
-  assert.equal(card.balanceCents, 8000);
+  assert.equal(card.balanceCents, 7000);
 });
 
 test('statement card debt uses unpaid statements instead of purchase rows', () => {

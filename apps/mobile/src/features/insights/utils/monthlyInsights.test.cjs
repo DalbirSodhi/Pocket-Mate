@@ -90,7 +90,8 @@ test('transaction summary calculates income, spent, and net', () => {
       { type: 'bill_payment', amountCents: 10000 },
       { type: 'transfer', amountCents: 50000 },
       { type: 'bill_payment', amountCents: 25000, isTransfer: true },
+      { type: 'refund', amountCents: 5000 },
     ]),
-    { incomeCents: 100000, spentCents: 35000, netCents: 65000 },
+    { incomeCents: 100000, spentCents: 30000, netCents: 70000 },
   );
 });

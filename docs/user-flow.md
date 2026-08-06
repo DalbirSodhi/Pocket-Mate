@@ -75,6 +75,31 @@ Activity is a cash-movement ledger. It includes income, one-time expenses,
 completed bill-plan installments, and directly paid card statements. Unpaid
 statements remain in Upcoming bills and are not counted as spending until paid.
 
+From an expense detail, the user can split the original total across unique
+categories, attach tags, or record one or more refunds. Refunds reduce spending
+instead of inflating income, and a destination account receives the returned
+cash. Editing an expense amount clears a stale split and cannot reduce the total
+below refunds already received.
+
+## Monthly Budget And Rollover Flow
+
+1. Open **Plan > Monthly budget** and choose a calendar month.
+2. Set a category amount and choose no rollover, surplus-only rollover, or full
+   signed rollover.
+3. Choose whether the amount becomes the default for future months.
+4. Review spent, available, remaining, and carried-in amounts per category.
+5. Navigate to an earlier month to make a correction; every later rollover is
+   recalculated deterministically.
+
+## Rules, Tags, And Review Flow
+
+1. Open **Settings > Rules, tags, and review**.
+2. Create tags for contexts such as reimbursable, work, or travel.
+3. Create merchant or note rules with an explicit category and review action.
+4. A matching new expense is categorized consistently.
+5. Rules configured for review appear in a queue where the user approves or
+   ignores the item.
+
 ## Monthly Insights Flow
 
 ```mermaid

@@ -25,10 +25,12 @@ export {
 } from './services/financeService';
 export { AddExpenseScreen } from './screens/AddExpenseScreen';
 export { AddIncomeScreen } from './screens/AddIncomeScreen';
+export { AutomationScreen } from './screens/AutomationScreen';
 export { CardBillScreen } from './screens/CardBillScreen';
 export { CategoriesScreen } from './screens/CategoriesScreen';
 export { CreditCardsScreen } from './screens/CreditCardsScreen';
 export { ExpenseDetailScreen } from './screens/ExpenseDetailScreen';
+export { ExpenseAdjustmentsScreen } from './screens/ExpenseAdjustmentsScreen';
 export { FixedExpensesScreen } from './screens/FixedExpensesScreen';
 export { IncomeDetailScreen } from './screens/IncomeDetailScreen';
 export { OneTimeExpenseScreen } from './screens/OneTimeExpenseScreen';
