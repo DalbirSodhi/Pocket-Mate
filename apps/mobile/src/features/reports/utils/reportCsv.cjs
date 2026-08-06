@@ -19,6 +19,7 @@ function escapeCsvCell(value, { protect = true } = {}) {
 function getTransactionTypeLabel(type) {
   if (type === 'income') return 'Income';
   if (type === 'bill_payment') return 'Bill payment';
+  if (type === 'transfer') return 'Transfer';
   return 'Expense';
 }
 
@@ -36,7 +37,12 @@ function getTransactionCategory(transaction) {
 
 function formatSignedAmount(transaction) {
   const amount = Math.abs(Number(transaction.amountCents || 0)) / 100;
-  const sign = transaction.type === 'income' ? '' : '-';
+  const sign =
+    transaction.type === 'income' ||
+    transaction.type === 'transfer' ||
+    transaction.isTransfer
+      ? ''
+      : '-';
 
   return `${sign}${amount.toFixed(2)}`;
 }
@@ -53,7 +59,9 @@ function buildTransactionCsv({ transactions = [], currencyCode = 'CAD' }) {
   ];
   const rows = transactions.map((transaction) => [
     transaction.date,
-    getTransactionTypeLabel(transaction.type),
+    transaction.isTransfer
+      ? 'Card payment transfer'
+      : getTransactionTypeLabel(transaction.type),
     transaction.title,
     getTransactionCategory(transaction),
     transaction.note || '',

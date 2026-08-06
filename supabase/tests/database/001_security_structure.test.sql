@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(19);
 
 select has_table(
   'public',
@@ -21,6 +21,8 @@ from unnest(array[
   'credit_card_bills',
   'bill_payment_plans',
   'bill_payment_installments'
+  ,'financial_accounts'
+  ,'account_transfers'
 ]) as table_name;
 
 select is(
@@ -41,10 +43,12 @@ select is(
         'credit_card_bills',
         'bill_payment_plans',
         'bill_payment_installments'
+        ,'financial_accounts'
+        ,'account_transfers'
       ])
       and pg_class.relrowsecurity
   ),
-  11::bigint,
+  13::bigint,
   'RLS is enabled on every user-owned table'
 );
 
@@ -63,6 +67,8 @@ select ok(
       'credit_card_bills',
       'bill_payment_plans',
       'bill_payment_installments'
+      ,'financial_accounts'
+      ,'account_transfers'
     ]) as table_name
     where has_table_privilege(
       'anon',
@@ -92,6 +98,8 @@ select ok(
       'recurring_expenses',
       'credit_cards',
       'credit_card_bills'
+      ,'financial_accounts'
+      ,'account_transfers'
     ]) as table_name
   ),
   'authenticated users can manage RLS-protected finance rows'

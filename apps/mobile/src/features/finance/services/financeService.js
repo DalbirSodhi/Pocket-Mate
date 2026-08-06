@@ -78,6 +78,7 @@ export async function createExpenseCategory({ userId, name }) {
 
 export async function createIncomeEntry({
   userId,
+  accountId,
   amountCents,
   source,
   receivedOn,
@@ -87,6 +88,7 @@ export async function createIncomeEntry({
     .from('income_entries')
     .insert({
       user_id: userId,
+      account_id: accountId || null,
       amount_cents: amountCents,
       source: source.trim() || null,
       received_on: receivedOn,
@@ -105,7 +107,7 @@ export async function createIncomeEntry({
 export async function getIncomeDetail({ userId, incomeId }) {
   const response = await supabase
     .from('income_entries')
-    .select('id, amount_cents, source, received_on, note')
+    .select('id, account_id, amount_cents, source, received_on, note')
     .eq('user_id', userId)
     .eq('id', incomeId)
     .single();
@@ -120,6 +122,7 @@ export async function getIncomeDetail({ userId, incomeId }) {
 export async function updateIncomeEntry({
   userId,
   incomeId,
+  accountId,
   amountCents,
   source,
   receivedOn,
@@ -128,6 +131,7 @@ export async function updateIncomeEntry({
   const response = await supabase
     .from('income_entries')
     .update({
+      account_id: accountId || null,
       amount_cents: amountCents,
       source: source.trim() || null,
       received_on: receivedOn,
@@ -163,6 +167,7 @@ export async function deleteIncomeEntry({ userId, incomeId }) {
 
 export async function createExpenseEntry({
   userId,
+  accountId,
   categoryId,
   amountCents,
   spentOn,
@@ -173,6 +178,7 @@ export async function createExpenseEntry({
     .from('expenses')
     .insert({
       user_id: userId,
+      account_id: accountId || null,
       category_id: categoryId,
       amount_cents: amountCents,
       spent_on: spentOn,
@@ -193,7 +199,7 @@ export async function getExpenseDetail({ userId, expenseId }) {
   const [expenseResponse, categories, recurringResponse] = await Promise.all([
     supabase
       .from('expenses')
-      .select('id, category_id, amount_cents, spent_on, merchant, note')
+      .select('id, account_id, category_id, amount_cents, spent_on, merchant, note')
       .eq('user_id', userId)
       .eq('id', expenseId)
       .single(),
@@ -226,6 +232,7 @@ export async function getExpenseDetail({ userId, expenseId }) {
 export async function updateExpenseEntry({
   userId,
   expenseId,
+  accountId,
   categoryId,
   amountCents,
   spentOn,
@@ -235,6 +242,7 @@ export async function updateExpenseEntry({
   const response = await supabase
     .from('expenses')
     .update({
+      account_id: accountId || null,
       category_id: categoryId,
       amount_cents: amountCents,
       spent_on: spentOn,
@@ -367,7 +375,7 @@ export async function setRecurringExpenseActive({
 export async function getCreditCards(userId) {
   const response = await supabase
     .from('credit_cards')
-    .select('id, nickname, issuer, last_four, is_active')
+    .select('id, nickname, issuer, last_four, is_active, financial_account_id, tracking_mode')
     .eq('user_id', userId)
     .order('is_active', { ascending: false })
     .order('nickname', { ascending: true });
@@ -384,7 +392,7 @@ export async function createCreditCard({ userId, nickname, issuer, lastFour }) {
       issuer: issuer.trim() || null,
       last_four: lastFour.trim() || null,
     })
-    .select('id, nickname, issuer, last_four, is_active')
+    .select('id, nickname, issuer, last_four, is_active, financial_account_id, tracking_mode')
     .single();
 
   if (response.error) {
@@ -407,6 +415,23 @@ export async function setCreditCardActive({ userId, creditCardId, isActive }) {
     throw response.error;
   }
 
+  return response.data;
+}
+
+export async function setCreditCardTrackingMode({
+  userId,
+  creditCardId,
+  trackingMode,
+}) {
+  const response = await supabase
+    .from('credit_cards')
+    .update({ tracking_mode: trackingMode })
+    .eq('user_id', userId)
+    .eq('id', creditCardId)
+    .select('id')
+    .single();
+
+  if (response.error) throw response.error;
   return response.data;
 }
 
@@ -465,20 +490,19 @@ export async function setCreditCardBillPaid({
   userId,
   billId,
   paidOn,
+  paymentAccountId,
 }) {
-  const response = await supabase
-    .from('credit_card_bills')
-    .update({ paid_on: paidOn || null })
-    .eq('user_id', userId)
-    .eq('id', billId)
-    .select('id')
-    .single();
+  const response = await supabase.rpc('set_credit_card_bill_paid_with_account', {
+    p_bill_id: billId,
+    p_paid_on: paidOn || null,
+    p_from_account_id: paymentAccountId || null,
+  });
 
   if (response.error) {
     throw response.error;
   }
 
-  return response.data;
+  return { id: billId, userId };
 }
 
 export async function getTransactions(
@@ -487,14 +511,14 @@ export async function getTransactions(
 ) {
   let incomeQuery = supabase
     .from('income_entries')
-    .select('id, amount_cents, source, received_on, note, created_at')
+    .select('id, account_id, amount_cents, source, received_on, note, created_at')
     .eq('user_id', userId)
     .order('received_on', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(limit);
   let expenseQuery = supabase
     .from('expenses')
-    .select('id, amount_cents, merchant, spent_on, note, category_id, created_at')
+    .select('id, account_id, amount_cents, merchant, spent_on, note, category_id, created_at')
     .eq('user_id', userId)
     .order('spent_on', { ascending: false })
     .order('created_at', { ascending: false })
@@ -502,7 +526,7 @@ export async function getTransactions(
   let installmentQuery = supabase
     .from('bill_payment_installments')
     .select(
-      'id, amount_cents, paid_on, created_at, bill_payment_plans(id, title, total_amount_cents, due_on, period_start, credit_card_bill_id, recurring_expense_id)',
+      'id, amount_cents, paid_on, created_at, bill_payment_plans(id, title, total_amount_cents, due_on, period_start, credit_card_bill_id, recurring_expense_id, credit_card_bills(credit_card_id))',
     )
     .eq('user_id', userId)
     .not('paid_on', 'is', null)
@@ -517,12 +541,22 @@ export async function getTransactions(
     .not('paid_on', 'is', null)
     .order('paid_on', { ascending: false })
     .limit(limit);
+  let transferQuery = supabase
+    .from('account_transfers')
+    .select('id, from_account_id, to_account_id, amount_cents, transferred_on, note, created_at, credit_card_bill_id, bill_payment_installment_id')
+    .eq('user_id', userId)
+    .is('credit_card_bill_id', null)
+    .is('bill_payment_installment_id', null)
+    .order('transferred_on', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   if (startDate) {
     incomeQuery = incomeQuery.gte('received_on', startDate);
     expenseQuery = expenseQuery.gte('spent_on', startDate);
     installmentQuery = installmentQuery.gte('paid_on', startDate);
     paidCardBillQuery = paidCardBillQuery.gte('paid_on', startDate);
+    transferQuery = transferQuery.gte('transferred_on', startDate);
   }
 
   if (endDate) {
@@ -530,6 +564,7 @@ export async function getTransactions(
     expenseQuery = expenseQuery.lte('spent_on', endDate);
     installmentQuery = installmentQuery.lte('paid_on', endDate);
     paidCardBillQuery = paidCardBillQuery.lte('paid_on', endDate);
+    transferQuery = transferQuery.lte('transferred_on', endDate);
   }
 
   const [
@@ -540,6 +575,8 @@ export async function getTransactions(
     paidCardBillResponse,
     cards,
     planResponse,
+    transferResponse,
+    accountResponse,
   ] = await Promise.all([
     incomeQuery,
     expenseQuery,
@@ -552,7 +589,15 @@ export async function getTransactions(
       .select('credit_card_bill_id')
       .eq('user_id', userId)
       .not('credit_card_bill_id', 'is', null),
+    transferQuery,
+    supabase
+      .from('financial_accounts')
+      .select('id, name')
+      .eq('user_id', userId),
   ]);
+  const accountById = new Map(
+    unwrap(accountResponse).map((account) => [account.id, account]),
+  );
 
   const income = unwrap(incomeResponse).map((entry) => ({
     id: entry.id,
@@ -564,8 +609,11 @@ export async function getTransactions(
     subtitle: entry.note || 'Money received',
     note: entry.note,
     categoryId: null,
+    accountId: entry.account_id,
+    accountName: accountById.get(entry.account_id)?.name || null,
   }));
   const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const cardById = new Map(cards.map((card) => [card.id, card]));
   const expenses = unwrap(expenseResponse).map((entry) => {
     const category = categoryById.get(entry.category_id);
 
@@ -580,10 +628,14 @@ export async function getTransactions(
       note: entry.note,
       categoryId: entry.category_id,
       color: category?.color,
+      accountId: entry.account_id,
+      accountName: accountById.get(entry.account_id)?.name || null,
     };
   });
   const installments = unwrap(installmentResponse).map((installment) => {
     const plan = installment.bill_payment_plans;
+    const cardId = plan?.credit_card_bills?.credit_card_id;
+    const isTransfer = cardById.get(cardId)?.tracking_mode === 'transactions';
 
     return {
       id: installment.id,
@@ -592,33 +644,52 @@ export async function getTransactions(
       date: installment.paid_on,
       createdAt: installment.created_at,
       title: plan?.title || 'Bill payment',
-      subtitle: 'Payment completed',
+      subtitle: isTransfer ? 'Card payment transfer' : 'Payment completed',
       note: null,
       categoryId: null,
       paymentPlan: plan || null,
+      isTransfer,
     };
   });
   const plannedCardBillIds = new Set(
     unwrap(planResponse).map((plan) => plan.credit_card_bill_id),
   );
-  const cardById = new Map(cards.map((card) => [card.id, card]));
   const directCardPayments = unwrap(paidCardBillResponse)
     .filter((bill) => !plannedCardBillIds.has(bill.id))
-    .map((bill) => ({
-      id: bill.id,
-      type: 'bill_payment',
-      amountCents: bill.amount_cents,
-      date: bill.paid_on,
-      createdAt: bill.created_at,
-      title: cardById.get(bill.credit_card_id)?.nickname || 'Credit card bill',
-      subtitle: 'Statement paid',
-      note: null,
-      categoryId: null,
-      paymentPlan: null,
-      cardBillId: bill.id,
-    }));
+    .map((bill) => {
+      const card = cardById.get(bill.credit_card_id);
+      const isTransfer = card?.tracking_mode === 'transactions';
 
-  return [...income, ...expenses, ...installments, ...directCardPayments]
+      return {
+        id: bill.id,
+        type: 'bill_payment',
+        amountCents: bill.amount_cents,
+        date: bill.paid_on,
+        createdAt: bill.created_at,
+        title: card?.nickname || 'Credit card bill',
+        subtitle: isTransfer ? 'Card payment transfer' : 'Statement paid',
+        note: null,
+        categoryId: null,
+        paymentPlan: null,
+        cardBillId: bill.id,
+        isTransfer,
+      };
+    });
+  const transfers = unwrap(transferResponse).map((transfer) => ({
+    id: transfer.id,
+    type: 'transfer',
+    amountCents: transfer.amount_cents,
+    date: transfer.transferred_on,
+    createdAt: transfer.created_at,
+    title: `${accountById.get(transfer.from_account_id)?.name || 'Account'} to ${accountById.get(transfer.to_account_id)?.name || 'Account'}`,
+    subtitle: 'Transfer',
+    note: transfer.note,
+    categoryId: null,
+    fromAccountId: transfer.from_account_id,
+    toAccountId: transfer.to_account_id,
+  }));
+
+  return [...income, ...expenses, ...installments, ...directCardPayments, ...transfers]
     .sort(
       (left, right) =>
         right.date.localeCompare(left.date) ||

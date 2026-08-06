@@ -163,6 +163,20 @@ user confirms and saves the prefilled expense. Results use the current calendar
 month and update from the same dashboard summary and budget-cap services as the
 Plan screen.
 
+## Accounts And Transfers
+
+1. The user opens **Settings > Accounts and transfers**.
+2. They add checking, savings, cash, investment, loan, or other accounts with a
+   current opening balance. Credit-card accounts are created from saved cards.
+3. New income can be assigned to a deposit account and expenses can be assigned
+   to the account used for payment.
+4. Moving money between accounts creates a transfer. Transfers affect balances
+   but never income, spending, net cash flow, or category budgets.
+5. Before marking a card statement or installment paid, the user chooses the
+   account funding it. The payment reduces available cash and card debt.
+6. Each card explicitly uses statement or purchase tracking. Statement tracking
+   remains the backward-compatible default.
+
 ## Main Navigation
 
 ```text

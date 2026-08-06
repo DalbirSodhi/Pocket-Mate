@@ -1,6 +1,7 @@
 import {
   ChevronRight,
   FileSpreadsheet,
+  Landmark,
   LogOut,
   Save,
   UserRoundX,
@@ -148,6 +149,23 @@ export function SettingsScreen({
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Your data</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('Accounts', { currencyCode })}
+                style={({ pressed }) => [
+                  styles.dataRow,
+                  pressed && styles.dataRowPressed,
+                ]}
+              >
+                <View style={styles.dataIcon}>
+                  <Landmark color={colors.ink} size={20} />
+                </View>
+                <View style={styles.dataCopy}>
+                  <Text style={styles.dataTitle}>Accounts and transfers</Text>
+                  <Text style={styles.dataBody}>Track actual balances and move money</Text>
+                </View>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
               <Pressable
                 accessibilityRole="button"
                 onPress={() =>

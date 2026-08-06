@@ -196,6 +196,8 @@ select is(
       + (select count(*) from public.credit_card_bills where user_id = '50000000-0000-0000-0000-000000000005')
       + (select count(*) from public.bill_payment_plans where user_id = '50000000-0000-0000-0000-000000000005')
       + (select count(*) from public.bill_payment_installments where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.financial_accounts where user_id = '50000000-0000-0000-0000-000000000005')
+      + (select count(*) from public.account_transfers where user_id = '50000000-0000-0000-0000-000000000005')
   ),
   0::bigint,
   'all finance data owned by the deleted user is removed'

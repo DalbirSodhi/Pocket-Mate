@@ -18,6 +18,7 @@ export {
   getTransactions,
   setCreditCardActive,
   setCreditCardBillPaid,
+  setCreditCardTrackingMode,
   setRecurringExpenseActive,
   updateExpenseEntry,
   updateIncomeEntry,

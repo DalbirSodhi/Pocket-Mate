@@ -100,12 +100,21 @@ credit_cards
 credit_card_bills
 bill_payment_plans
 bill_payment_installments
+financial_accounts
+account_transfers
 ```
 
 Bill-plan writes use authenticated Postgres functions so statement updates,
 future-schedule replacement, and completed-payment preservation happen in one
-transaction. Dashboard reads treat completed installments as actual cash
-outflow and only the unpaid balance as a commitment.
+transaction. Dashboard reads count completed statement installments as spending
+only for cards using statement tracking. Purchase-tracked card payments are
+transfers, which update cash and liability balances without becoming spending
+twice.
+
+Income and expenses may be assigned to accounts. Balances combine opening
+balances, assigned cash flow, and transfers. When liquid accounts exist, the
+dashboard uses their total for actual available money; monthly planning remains
+based on the calendar month's income, spending, and commitments.
 
 Purchase-impact checks are client-side, deterministic projections over the
 dashboard summary and category-cap service results. The calculator does not
