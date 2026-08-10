@@ -12,6 +12,7 @@ planning experience:
 - User-authored categorization rules and their review queue.
 - Reminder and dashboard display preferences.
 - CSV import batches, normalized staging rows, and optional debt payoff settings.
+- Household membership, invitation state, roles, and access-change audit events.
 
 Pocket-Mate does not currently connect to bank accounts, collect card numbers,
 or store card security codes. Saved cards contain only a user-provided nickname
@@ -34,6 +35,22 @@ The mobile app uses the public Supabase anonymous key. Every finance table uses
 Row Level Security, and authenticated requests can access only rows owned by
 `auth.uid()`. The service-role key is never included in the app.
 
+Household collaboration is a narrow exception implemented through protected
+database functions. An authenticated member can request a monthly aggregate
+containing member display names, roles, income totals, spending totals, and net
+totals. The function does not return itemized transactions, notes, categories,
+cards, account identifiers, or balances. Direct finance-table RLS remains
+owner-only.
+
+Household invitations use random, expiring, single-use codes. Only a hash is
+stored, and acceptance requires the authenticated account email to match the
+invited email. Owners alone can invite, change roles, or remove members. Every
+membership change is recorded in the household audit history.
+
+Pocket-Mate intentionally does not request bank credentials or provider access
+tokens. Bank synchronization is deferred until the product has mature consent,
+support, monitoring, and incident-response processes.
+
 ## Data Export
 
 Users can export monthly transaction reports as CSV from Settings or Monthly
@@ -50,6 +67,10 @@ The database function accepts no user identifier. It derives the target from
 the authenticated JWT with `auth.uid()`, removes owned finance data in
 dependency order, and deletes that Auth user in the same database transaction.
 Anonymous clients cannot execute the function.
+
+If the deleting user owns a household with other members, ownership transfers
+to an existing member before deletion. Otherwise the empty household is
+removed. Account deletion never deletes another member's private finance data.
 
 Deletion is immediate and cannot be undone. Users should export reports they
 want to retain before deleting their account.

@@ -52,6 +52,7 @@ The first complete version should include:
 - Searchable monthly activity with correction and deletion controls.
 - Monthly category insights that reconcile completed bill payments.
 - Monthly reports and portable CSV transaction exports.
+- Privacy-safe household monthly totals with explicit access roles and history.
 
 ## Non-Goals For First Version
 
@@ -61,7 +62,7 @@ The first complete version should include:
 - Meal planning.
 - Gym scheduling.
 - AI image analysis.
-- Multi-user household budgeting.
+- Shared editing of another member's itemized transactions.
 
 ## Product Principle
 
@@ -80,3 +81,9 @@ Activity, and Insights must reconcile to that same rule.
 Users own their finance records. Reports must be generated from owner-scoped
 queries, remain on the user's device, and export standard CSV without sending
 data through an additional analytics or file-storage service.
+
+Household collaboration shares only each member's monthly income, spending,
+and net totals. Transaction descriptions, notes, category details, cards, and
+account balances remain owner-only. Owners manage invitations and roles;
+editors and viewers can review the aggregate snapshot but cannot administer
+the household or change another person's finance records.

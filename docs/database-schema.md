@@ -574,7 +574,21 @@ supabase/migrations/202608050001_add_financial_accounts.sql
 supabase/migrations/202608050002_add_transaction_planning.sql
 supabase/migrations/202608060001_add_calendar_preferences.sql
 supabase/migrations/202608060002_add_imports_and_debt_settings.sql
+supabase/migrations/202608100001_add_household_collaboration.sql
 ```
+
+## Household Collaboration
+
+`households` and `household_members` establish one explicit role per member.
+`household_invitations` stores invited email, role, expiry, acceptance/revocation
+state, and only the hash of the invitation token. `household_audit_events`
+records membership and role mutations without copying finance data.
+
+Authenticated clients can read household metadata only when they are members.
+All mutations run through role-checked `security definer` functions. The monthly
+summary function returns member display names and aggregate income, spending,
+and net totals, but never itemized records. Existing finance-table policies stay
+scoped to `auth.uid()`.
 
 ## Open Decisions
 

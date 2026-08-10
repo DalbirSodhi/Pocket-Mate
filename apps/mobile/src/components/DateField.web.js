@@ -16,6 +16,7 @@ export function DateField({
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
       {createElement('input', {
+        'aria-label': label,
         'aria-invalid': Boolean(error),
         disabled,
         max: maximumDate,
@@ -39,7 +40,11 @@ export function DateField({
         type: 'date',
         value,
       })}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text accessibilityLiveRegion="polite" style={styles.error}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }

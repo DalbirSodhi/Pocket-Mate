@@ -72,6 +72,14 @@ jobs:
         working-directory: apps/mobile
         run: npm run release:check
 
+      - name: Run quality gate
+        working-directory: apps/mobile
+        run: |
+          npm run lint
+          npm test
+          npm run audit:production
+          npx expo-doctor
+
       - name: Trigger EAS build
         working-directory: apps/mobile
         run: eas build --platform ${{ inputs.platform }} --profile ${{ inputs.profile }} --non-interactive --no-wait

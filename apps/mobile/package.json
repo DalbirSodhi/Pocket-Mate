@@ -37,7 +37,7 @@
     "web": "expo start --web",
     "test": "node --test",
     "lint": "expo lint",
-    "audit:production": "npm audit --omit=dev --audit-level=high",
+    "audit:production": "node ./scripts/audit-production.cjs",
     "release:check": "node ./scripts/validate-release-config.cjs",
     "build:development:ios": "npx eas-cli@21.4.0 build --platform ios --profile development",
     "build:preview:ios": "npx eas-cli@21.4.0 build --platform ios --profile preview",

@@ -37,6 +37,7 @@ import {
 } from '../features/finance';
 import { CashFlowTrendsScreen, MonthlyInsightsScreen } from '../features/insights';
 import { ImportTransactionsScreen } from '../features/imports';
+import { HouseholdScreen } from '../features/household/screens/HouseholdScreen';
 import {
   DeleteAccountScreen,
   ProfileGate,
@@ -185,6 +186,7 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={MonthlyInsightsScreen} name="MonthlyInsights" />
       <Stack.Screen component={CashFlowTrendsScreen} name="CashFlowTrends" />
       <Stack.Screen component={ImportTransactionsScreen} name="ImportTransactions" />
+      <Stack.Screen component={HouseholdScreen} name="Household" />
       <Stack.Screen component={MonthlyReportScreen} name="MonthlyReport" />
       <Stack.Screen component={AccountsScreen} name="Accounts" />
       <Stack.Screen component={AutomationScreen} name="Automation" />

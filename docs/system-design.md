@@ -160,6 +160,13 @@ commit time. Cash-flow trends reuse the reconciled Activity ledger. Debt payoff
 scenarios use saved APR/minimum-payment settings and a deterministic cent-based
 avalanche or snowball simulation.
 
+Household collaboration keeps finance ownership unchanged. Membership,
+invitation, role, and audit tables use RLS, while protected functions authorize
+administrative actions and return aggregate monthly totals. The aggregate read
+model exposes member identity and totals only; it never broadens direct access
+to income, expense, card, transaction, or account rows. Invitation codes are
+random, expiring, single-use, and stored as hashes.
+
 Account deletion also uses a protected Postgres function. It derives identity
 from the authenticated JWT, deletes finance rows in dependency order and the
 Auth user in one transaction, then the auth service clears the local mobile
@@ -177,6 +184,8 @@ Detailed table planning is maintained in [database-schema.md](./database-schema.
 - Keep finance calculations deterministic and testable.
 - Avoid bank account syncing in the first version.
 - Require explicit confirmation before irreversible account deletion.
+- Keep household access changes behind role-checked database functions.
+- Share household aggregates without weakening owner-only finance-table RLS.
 
 ## Replaceability Goals
 
