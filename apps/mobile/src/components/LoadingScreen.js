@@ -9,7 +9,12 @@ export function LoadingScreen({ message = 'Loading your account...' }) {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <BrandMark />
-        <ActivityIndicator color={colors.primary} size="large" />
+        <ActivityIndicator
+          accessibilityLabel={message}
+          accessibilityRole="progressbar"
+          color={colors.primary}
+          size="large"
+        />
         <Text style={styles.message}>{message}</Text>
       </View>
     </SafeAreaView>

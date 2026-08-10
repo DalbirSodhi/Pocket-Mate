@@ -10,11 +10,15 @@ on:
       - Development
       - main
       - "feature/**"
+      - "fix/**"
       - "chore/**"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   database-checks:
@@ -131,3 +135,8 @@ jobs:
         if: steps.js_project.outputs.exists == 'true'
         working-directory: apps/mobile
         run: npx expo-doctor
+
+      - name: Compile Expo bundles
+        if: steps.js_project.outputs.exists == 'true'
+        working-directory: apps/mobile
+        run: npx expo export --platform all --output-dir /tmp/pocket-mate-ci-export --clear

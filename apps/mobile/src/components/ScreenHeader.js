@@ -18,7 +18,9 @@ export function ScreenHeader({ title, subtitle, onBack, action }) {
         </Pressable>
       ) : null}
       <View style={styles.copy}>
-        <Text style={styles.title}>{title}</Text>
+        <Text accessibilityRole="header" style={styles.title}>
+          {title}
+        </Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       <View style={styles.action}>{action || null}</View>

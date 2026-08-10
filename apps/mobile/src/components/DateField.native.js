@@ -54,6 +54,8 @@ export function DateField({
         >
           <CalendarDays color={colors.inkMuted} size={18} />
           <DateTimePicker
+            accessibilityHint={error || undefined}
+            accessibilityLabel={label}
             disabled={disabled}
             display="compact"
             maximumDate={disabled ? undefined : maximum || undefined}
@@ -65,7 +67,10 @@ export function DateField({
         </View>
       ) : (
         <Pressable
+          accessibilityHint={error || undefined}
+          accessibilityLabel={`${label}, ${value}`}
           accessibilityRole="button"
+          accessibilityState={{ disabled }}
           disabled={disabled}
           onPress={openAndroidPicker}
           style={[
@@ -78,7 +83,11 @@ export function DateField({
           <CalendarDays color={colors.inkMuted} size={18} />
         </Pressable>
       )}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text accessibilityLiveRegion="polite" style={styles.error}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }

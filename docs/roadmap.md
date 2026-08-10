@@ -91,8 +91,14 @@
 - [x] Recurring calendar, local reminders, accessibility, and appearance controls.
 - [x] CSV import with duplicate review and reversible staging.
 - [x] Cash-flow trends and debt payoff scenarios.
-- [ ] Household collaboration with explicit roles and audit history.
+- [x] Household collaboration with explicit roles, aggregate-only sharing, and audit history.
 - [ ] Optional provider-backed bank sync, receipt OCR, investments, and credit data.
+
+Provider-backed bank sync remains deliberately deferred. Manual entry and
+reviewed CSV imports keep the current product useful without asking early users
+to grant financial-institution access. A provider integration should begin only
+after the manual finance loop, privacy disclosures, incident response process,
+and production support model are stable.
 
 ## Later Ideas
 

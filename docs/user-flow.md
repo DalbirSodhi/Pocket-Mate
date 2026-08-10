@@ -186,6 +186,21 @@ The deletion request never contains a target user ID. The database derives the
 account from the active authenticated session, and the complete deletion occurs
 in one transaction.
 
+## Household Collaboration Flow
+
+1. Open **Settings > Household** and create one household, or paste a private
+   invitation code.
+2. An owner enters an email, chooses editor or viewer access, and shares the
+   generated single-use code through the system share sheet.
+3. The invited user signs in with that email and accepts the code before it
+   expires.
+4. Members review the current month's combined income, spending, net, and each
+   member's totals. Itemized finance records remain private.
+5. Owners can promote another member to owner, change editor/viewer access, or
+   remove a member. Every access change appears in Activity history.
+6. A non-owner can leave without deleting private finance data. An owner must
+   transfer ownership before leaving a household that still has members.
+
 ## Bill Payment Plan Flow
 
 ```mermaid

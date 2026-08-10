@@ -40,6 +40,9 @@ export function FormField({
         ]}
       >
         <TextInput
+          accessibilityHint={error || undefined}
+          accessibilityLabel={label}
+          accessibilityState={{ disabled: !editable }}
           autoCapitalize={autoCapitalize}
           autoComplete={autoComplete}
           autoCorrect={autoCorrect}
@@ -77,7 +80,11 @@ export function FormField({
           </Pressable>
         ) : null}
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text accessibilityLiveRegion="polite" style={styles.error}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }

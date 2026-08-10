@@ -6,6 +6,8 @@ card bills, installment plans, budgets, savings goals, and safe-to-spend
 guidance. Its monthly activity ledger supports search, correction, and category
 insights while keeping unpaid commitments separate from completed spending.
 Monthly reports can be exported as local CSV files on mobile or web.
+Trusted household members can also share aggregate monthly progress through
+explicit roles without exposing one another's itemized transactions.
 
 ## Repository
 

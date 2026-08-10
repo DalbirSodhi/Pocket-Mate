@@ -30,7 +30,13 @@ export function InlineNotice({ message, variant = 'info' }) {
   const Icon = palette.icon;
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.backgroundColor }]}>
+    <View
+      accessibilityLabel={message}
+      accessibilityLiveRegion={variant === 'error' ? 'assertive' : 'polite'}
+      accessibilityRole={variant === 'error' ? 'alert' : undefined}
+      accessible
+      style={[styles.container, { backgroundColor: palette.backgroundColor }]}
+    >
       <Icon color={palette.color} size={19} />
       <Text style={[styles.message, { color: palette.color }]}>{message}</Text>
     </View>

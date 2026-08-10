@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(32);
+select plan(36);
 
 select has_table(
   'public',
@@ -36,6 +36,10 @@ from unnest(array[
   ,'transaction_import_batches'
   ,'transaction_import_rows'
   ,'debt_settings'
+  ,'households'
+  ,'household_members'
+  ,'household_invitations'
+  ,'household_audit_events'
 ]) as table_name;
 
 select is(
@@ -71,10 +75,14 @@ select is(
         ,'transaction_import_batches'
         ,'transaction_import_rows'
         ,'debt_settings'
+        ,'households'
+        ,'household_members'
+        ,'household_invitations'
+        ,'household_audit_events'
       ])
       and pg_class.relrowsecurity
   ),
-  26::bigint,
+  30::bigint,
   'RLS is enabled on every user-owned table'
 );
 
@@ -108,6 +116,10 @@ select ok(
       ,'transaction_import_batches'
       ,'transaction_import_rows'
       ,'debt_settings'
+      ,'households'
+      ,'household_members'
+      ,'household_invitations'
+      ,'household_audit_events'
     ]) as table_name
     where has_table_privilege(
       'anon',
@@ -174,6 +186,10 @@ select ok(
       'bill_payment_installments'
       ,'expense_splits'
       ,'expense_refunds'
+      ,'households'
+      ,'household_members'
+      ,'household_invitations'
+      ,'household_audit_events'
     ]) as table_name
   ),
   'bill-plan tables are read-only outside protected functions'

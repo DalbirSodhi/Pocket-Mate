@@ -5,6 +5,7 @@ import {
   FileUp,
   TrendingUp,
   Landmark,
+  UsersRound,
   WandSparkles,
   LogOut,
   Save,
@@ -167,6 +168,23 @@ export function SettingsScreen({
                 <View style={styles.dataCopy}>
                   <Text style={styles.dataTitle}>Accounts and transfers</Text>
                   <Text style={styles.dataBody}>Track actual balances and move money</Text>
+                </View>
+                <ChevronRight color={colors.inkMuted} size={18} />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('Household', { currencyCode })}
+                style={({ pressed }) => [
+                  styles.dataRow,
+                  pressed && styles.dataRowPressed,
+                ]}
+              >
+                <View style={styles.dataIcon}>
+                  <UsersRound color={colors.ink} size={20} />
+                </View>
+                <View style={styles.dataCopy}>
+                  <Text style={styles.dataTitle}>Household</Text>
+                  <Text style={styles.dataBody}>Share monthly totals with trusted people</Text>
                 </View>
                 <ChevronRight color={colors.inkMuted} size={18} />
               </Pressable>
