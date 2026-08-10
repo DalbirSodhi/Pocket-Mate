@@ -280,7 +280,7 @@ begin
     and accepted_at is null
     and revoked_at is null;
 
-  v_token := encode(public.gen_random_bytes(32), 'hex');
+  v_token := encode(extensions.gen_random_bytes(32), 'hex');
 
   insert into public.household_invitations (
     household_id,
@@ -293,7 +293,7 @@ begin
     p_household_id,
     v_email,
     v_role,
-    public.digest(v_token, 'sha256'),
+    extensions.digest(v_token, 'sha256'),
     now() + interval '7 days',
     v_user_id
   );
@@ -345,7 +345,7 @@ begin
   select invitation.*
   into v_invitation
   from public.household_invitations as invitation
-  where invitation.token_hash = public.digest(trim(p_token), 'sha256')
+  where invitation.token_hash = extensions.digest(trim(p_token), 'sha256')
   for update;
 
   if not found then

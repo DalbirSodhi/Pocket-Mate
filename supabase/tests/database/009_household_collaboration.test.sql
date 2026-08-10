@@ -215,7 +215,7 @@ select lives_ok(
 select ok(
   (
     select
-      invitation.token_hash = public.digest(state.value, 'sha256')
+      invitation.token_hash = extensions.digest(state.value, 'sha256')
       and encode(invitation.token_hash, 'hex') <> state.value
     from public.household_invitations as invitation
     join household_test_state as state on state.key = 'editor_token'
@@ -400,7 +400,7 @@ update public.household_invitations
 set
   created_at = now() - interval '8 days',
   expires_at = now() - interval '1 day'
-where token_hash = public.digest(
+where token_hash = extensions.digest(
   (select value from household_test_state where key = 'expired_token'),
   'sha256'
 );
