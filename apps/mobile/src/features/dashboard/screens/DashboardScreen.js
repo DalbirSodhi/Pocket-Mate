@@ -22,10 +22,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandMark } from '../../../components/BrandMark';
+import { InlineNotice } from '../../../components/InlineNotice';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { RetryNotice } from '../../../components/RetryNotice';
+import { classifyAppError } from '../../../infrastructure/network/errorClassifier.cjs';
+import { useNetworkStatus } from '../../../infrastructure/network';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
+import {
+  formatCachedAt,
+  loadCachedDashboardSummary,
+  saveCachedDashboardSummary,
+} from '../services/dashboardCache';
 import { getDashboardSummary } from '../services/dashboardService';
 import { formatCurrency } from '../utils/formatCurrency';
 
@@ -66,17 +74,63 @@ function EmptyBills() {
 }
 
 export function DashboardScreen({ navigation, profile }) {
-  const { user } = useAuthSession();
+  const { expireSession, user } = useAuthSession();
+  const { isOffline } = useNetworkStatus();
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [cachedAt, setCachedAt] = useState('');
+  const [isUsingCachedSummary, setIsUsingCachedSummary] = useState(false);
+
+  const loadCachedSummary = useCallback(async () => {
+    const cached = await loadCachedDashboardSummary(user.id);
+
+    if (!cached) {
+      return false;
+    }
+
+    setSummary(cached.summary);
+    setCachedAt(cached.cachedAt);
+    setIsUsingCachedSummary(true);
+    return true;
+  }, [user.id]);
 
   const loadDashboard = useCallback(async () => {
-    const nextSummary = await getDashboardSummary(user.id, profile);
-    setSummary(nextSummary);
-    setError('');
-  }, [profile, user.id]);
+    if (isOffline) {
+      const hasCachedSummary = await loadCachedSummary();
+
+      if (!hasCachedSummary) {
+        throw new Error('You are offline and no saved dashboard is available yet.');
+      }
+
+      setError('');
+      return;
+    }
+
+    try {
+      const nextSummary = await getDashboardSummary(user.id, profile);
+      await saveCachedDashboardSummary(user.id, nextSummary);
+      setSummary(nextSummary);
+      setCachedAt('');
+      setIsUsingCachedSummary(false);
+      setError('');
+    } catch (dashboardError) {
+      const appError = classifyAppError(dashboardError);
+      const hasCachedSummary = await loadCachedSummary();
+
+      if (appError.isAuthError) {
+        expireSession();
+      }
+
+      if (hasCachedSummary && appError.isNetworkError) {
+        setError('');
+        return;
+      }
+
+      throw dashboardError;
+    }
+  }, [expireSession, isOffline, loadCachedSummary, profile, user.id]);
 
   const refreshDashboard = useCallback(async () => {
     setIsRefreshing(true);
@@ -84,7 +138,10 @@ export function DashboardScreen({ navigation, profile }) {
     try {
       await loadDashboard();
     } catch (dashboardError) {
-      setError(dashboardError.message || 'Unable to load your dashboard.');
+      setError(
+        classifyAppError(dashboardError).userMessage ||
+          'Unable to load your dashboard.',
+      );
     } finally {
       setIsRefreshing(false);
       setIsInitialLoading(false);
@@ -95,16 +152,18 @@ export function DashboardScreen({ navigation, profile }) {
     useCallback(() => {
       let isActive = true;
 
-      getDashboardSummary(user.id, profile)
-        .then((nextSummary) => {
+      loadDashboard()
+        .then(() => {
           if (isActive) {
-            setSummary(nextSummary);
             setError('');
           }
         })
         .catch((dashboardError) => {
           if (isActive) {
-            setError(dashboardError.message || 'Unable to load your dashboard.');
+            setError(
+              classifyAppError(dashboardError).userMessage ||
+                'Unable to load your dashboard.',
+            );
           }
         })
         .finally(() => {
@@ -116,7 +175,7 @@ export function DashboardScreen({ navigation, profile }) {
       return () => {
         isActive = false;
       };
-    }, [profile, user.id]),
+    }, [loadDashboard]),
   );
 
   const currencyCode = profile.currency_code || 'CAD';
@@ -240,6 +299,14 @@ export function DashboardScreen({ navigation, profile }) {
               isRetrying={isRefreshing}
               message={error}
               onRetry={refreshDashboard}
+            />
+            <InlineNotice
+              message={
+                isUsingCachedSummary
+                  ? `Showing saved dashboard from ${formatCachedAt(cachedAt)}. Reconnect to update totals.`
+                  : ''
+              }
+              variant={isOffline ? 'warning' : 'info'}
             />
 
             <View style={styles.summary}>

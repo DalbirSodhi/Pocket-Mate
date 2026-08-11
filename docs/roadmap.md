@@ -43,6 +43,9 @@
 - [x] Recoverable error states on primary data screens.
 - [x] Initial loading states that do not display false zero balances.
 - [x] Empty states for dashboard, activity, budgets, savings, bills, and cards.
+- [x] Offline-aware dashboard fallback using the last saved summary.
+- [x] Duplicate-submit guards and offline save messaging for primary money flows.
+- [x] Session-expiry handling that returns users to authentication.
 
 ## Phase 5: Deployment
 

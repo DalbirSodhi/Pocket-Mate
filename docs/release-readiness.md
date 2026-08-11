@@ -1,8 +1,9 @@
 # Release Readiness
 
-Audit date: 2026-08-10  
-Branch: `feature/add-household-collaboration`  
-Baseline commit: `1de900a`
+Audit date: 2026-08-10
+Updated: 2026-08-10
+Branch: `feature/improve-beta-reliability`
+Baseline commit: `06703d4`
 
 ## Verdict
 
@@ -10,8 +11,8 @@ Pocket-Mate's JavaScript application is buildable for web and iOS, its current
 unit suite passes, Expo reports compatible dependencies, and release
 configuration validation passes. It is **not ready for a public store release**
 yet because two Expo/Metro build-time advisories need an upstream resolution,
-database policy tests were not reproducible on this machine, and no signed
-build or real-device release flow was tested during this audit.
+no signed build or real-device release flow was tested during this audit, and
+manual offline/session QA still needs to be repeated on a physical iPhone.
 
 This verdict applies to release readiness, not ordinary Expo Go development.
 
@@ -51,6 +52,9 @@ Automated tests exercise deterministic behavior for:
 - CSV normalization, duplicate detection, rollback-oriented import metadata,
   and spreadsheet-safe report export.
 - Account-deletion confirmation and household input/role rules.
+- Offline/error classification, versioned dashboard cache parsing, and
+  calendar-date behavior across leap days, month ends, and daylight-saving
+  boundaries.
 
 These tests validate pure calculations and contracts. They do not prove hosted
 Supabase availability, notification delivery, navigation behavior, or a full
@@ -82,6 +86,8 @@ Verified controls:
   configuration. Example files contain empty placeholders only.
 - Authentication sessions persist in AsyncStorage and refresh only while the
   native app is active.
+- Expired local sessions are cleared during startup so the app returns to
+  authentication instead of showing a false connected state.
 - CI includes Supabase schema lint and database policy/function tests.
 - Production EAS builds are rejected outside `main`, and production builds use
   a separate EAS environment name.
@@ -132,8 +138,8 @@ physical iPhone:
 - [ ] Schedule reminders, deny and grant notification permission, and verify a
   local notification arrives after the app is backgrounded.
 - [ ] Export a monthly CSV and open the shared file.
-- [ ] Test offline launch, network loss during save, retry behavior, and session
-  expiry.
+- [ ] Test offline launch, cached-dashboard fallback, network loss during save,
+  retry behavior, and session expiry.
 - [ ] Run VoiceOver through authentication and one finance-entry flow; test
   accessibility text sizes, reduced motion, and landscape/tablet layouts where
   supported.

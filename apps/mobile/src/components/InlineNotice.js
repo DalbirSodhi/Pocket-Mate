@@ -19,6 +19,11 @@ const variants = {
     color: colors.info,
     icon: Info,
   },
+  warning: {
+    backgroundColor: colors.warningSoft,
+    color: colors.warning,
+    icon: AlertCircle,
+  },
 };
 
 export function InlineNotice({ message, variant = 'info' }) {

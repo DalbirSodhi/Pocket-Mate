@@ -17,6 +17,8 @@ import { AppButton } from '../../../components/AppButton';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
+import { getOfflineMutationMessage } from '../../../infrastructure/network/errorClassifier.cjs';
+import { useNetworkStatus } from '../../../infrastructure/network';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
 import {
@@ -33,6 +35,7 @@ import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
 
 export function CardBillScreen({ navigation, route }) {
   const { user } = useAuthSession();
+  const { isOffline } = useNetworkStatus();
   const currencyCode = route.params?.currencyCode || 'CAD';
   const [cards, setCards] = useState([]);
   const [creditCardId, setCreditCardId] = useState('');
@@ -101,9 +104,18 @@ export function CardBillScreen({ navigation, route }) {
   }
 
   async function handleAddCard() {
+    if (isSavingCard) {
+      return;
+    }
+
     const nextErrors = getCardErrors();
     setErrors(nextErrors);
     setRequestError('');
+
+    if (isOffline) {
+      setRequestError(getOfflineMutationMessage('save this card'));
+      return;
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       return;
@@ -136,6 +148,10 @@ export function CardBillScreen({ navigation, route }) {
   }
 
   async function handleSave() {
+    if (isSaving) {
+      return;
+    }
+
     const isCreatingCard = cards.length === 0;
     const nextErrors = validateCardBill({
       amount,
@@ -154,6 +170,11 @@ export function CardBillScreen({ navigation, route }) {
 
     setErrors(nextErrors);
     setRequestError('');
+
+    if (isOffline) {
+      setRequestError(getOfflineMutationMessage('save this card bill'));
+      return;
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       return;
@@ -235,6 +256,14 @@ export function CardBillScreen({ navigation, route }) {
               variant="info"
             />
             <InlineNotice message={requestError} variant="error" />
+            <InlineNotice
+              message={
+                isOffline
+                  ? 'You can review this card bill offline. Saving needs a connection.'
+                  : ''
+              }
+              variant="warning"
+            />
 
             {cards.length > 0 ? (
               <View style={styles.cardBlock}>
