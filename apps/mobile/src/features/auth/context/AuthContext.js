@@ -6,6 +6,7 @@ import {
   getCurrentSession,
   subscribeToAuthChanges,
 } from '../services/authService';
+import { classifyAppError } from '../../../infrastructure/network/errorClassifier.cjs';
 
 export const AuthContext = createContext(undefined);
 
@@ -15,6 +16,13 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+
+  const expireSession = useCallback(() => {
+    setSession(null);
+    setIsPasswordRecovery(false);
+    setError(null);
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -47,15 +55,19 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        setError(sessionError);
-        setIsLoading(false);
+        if (classifyAppError(sessionError).isAuthError) {
+          expireSession();
+        } else {
+          setError(sessionError);
+          setIsLoading(false);
+        }
       });
 
     return () => {
       isActive = false;
       unsubscribe();
     };
-  }, [retryCount]);
+  }, [expireSession, retryCount]);
 
   useEffect(() => {
     let isActive = true;
@@ -106,11 +118,13 @@ export function AuthProvider({ children }) {
       isPasswordRecovery,
       finishPasswordRecovery,
       retryInitialization,
+      expireSession,
       isLoading,
       error,
     }),
     [
       error,
+      expireSession,
       finishPasswordRecovery,
       isLoading,
       isPasswordRecovery,

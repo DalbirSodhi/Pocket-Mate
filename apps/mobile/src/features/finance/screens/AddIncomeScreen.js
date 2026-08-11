@@ -16,6 +16,8 @@ import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenHeader } from '../../../components/ScreenHeader';
+import { getOfflineMutationMessage } from '../../../infrastructure/network/errorClassifier.cjs';
+import { useNetworkStatus } from '../../../infrastructure/network';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
 import { AccountPicker, getAccounts } from '../../accounts';
@@ -37,6 +39,7 @@ function formatAmount(amountCents) {
 
 export function AddIncomeScreen({ navigation, route }) {
   const { user } = useAuthSession();
+  const { isOffline } = useNetworkStatus();
   const incomeId = route.params?.incomeId;
   const isEditing = Boolean(incomeId);
   const [amount, setAmount] = useState('');
@@ -84,9 +87,18 @@ export function AddIncomeScreen({ navigation, route }) {
   );
 
   async function handleSave() {
+    if (isSaving) {
+      return;
+    }
+
     const nextErrors = validateEntry({ amount, date });
     setErrors(nextErrors);
     setRequestError('');
+
+    if (isOffline) {
+      setRequestError(getOfflineMutationMessage('save income'));
+      return;
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       return;
@@ -159,6 +171,14 @@ export function AddIncomeScreen({ navigation, route }) {
             </View>
 
             <InlineNotice message={requestError} variant="error" />
+            <InlineNotice
+              message={
+                isOffline
+                  ? 'You can review this income entry offline. Saving needs a connection.'
+                  : ''
+              }
+              variant="warning"
+            />
 
             <View style={styles.form}>
               {accounts.length ? (

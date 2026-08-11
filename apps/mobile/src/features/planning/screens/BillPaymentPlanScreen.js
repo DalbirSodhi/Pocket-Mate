@@ -26,6 +26,8 @@ import { DateField } from '../../../components/DateField';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
+import { getOfflineMutationMessage } from '../../../infrastructure/network/errorClassifier.cjs';
+import { useNetworkStatus } from '../../../infrastructure/network';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
 import { AccountPicker, getAccounts } from '../../accounts';
@@ -97,6 +99,7 @@ function PaymentRow({
 
 export function BillPaymentPlanScreen({ navigation, route }) {
   const { user } = useAuthSession();
+  const { isOffline } = useNetworkStatus();
   const {
     creditCardBillId,
     recurringExpenseId,
@@ -324,6 +327,10 @@ export function BillPaymentPlanScreen({ navigation, route }) {
   }
 
   async function handleSave() {
+    if (isSaving) {
+      return;
+    }
+
     const totalAmountCents = parseAmountToCents(totalAmount);
     const validation = validatePaymentPlan({
       installments,
@@ -342,6 +349,11 @@ export function BillPaymentPlanScreen({ navigation, route }) {
     };
     setErrors(nextErrors);
     setRequestError('');
+
+    if (isOffline) {
+      setRequestError(getOfflineMutationMessage('save this payment plan'));
+      return;
+    }
 
     if (!validation.isValid || nextErrors.totalAmount) {
       return;
@@ -377,6 +389,15 @@ export function BillPaymentPlanScreen({ navigation, route }) {
   }
 
   async function handleTogglePayment(installment) {
+    if (updatingId) {
+      return;
+    }
+
+    if (isOffline) {
+      setRequestError(getOfflineMutationMessage('mark this payment paid'));
+      return;
+    }
+
     setUpdatingId(installment.id);
     setRequestError('');
 
@@ -413,6 +434,14 @@ export function BillPaymentPlanScreen({ navigation, route }) {
             />
 
             <InlineNotice message={requestError} variant="error" />
+            <InlineNotice
+              message={
+                isOffline
+                  ? 'You can review this plan offline. Saving and marking payments need a connection.'
+                  : ''
+              }
+              variant="warning"
+            />
 
             <View style={styles.billSummary}>
               <View style={styles.billSummaryHeading}>

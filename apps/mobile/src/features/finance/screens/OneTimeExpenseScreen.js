@@ -17,6 +17,8 @@ import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenHeader } from '../../../components/ScreenHeader';
+import { getOfflineMutationMessage } from '../../../infrastructure/network/errorClassifier.cjs';
+import { useNetworkStatus } from '../../../infrastructure/network';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
 import { AccountPicker, getAccounts } from '../../accounts';
@@ -48,6 +50,7 @@ function formatPrefillAmount(amountCents) {
 
 export function OneTimeExpenseScreen({ navigation, route }) {
   const { user } = useAuthSession();
+  const { isOffline } = useNetworkStatus();
   const prefill = route.params?.prefill;
   const expenseId = route.params?.expenseId;
   const isEditing = Boolean(expenseId);
@@ -133,6 +136,10 @@ export function OneTimeExpenseScreen({ navigation, route }) {
   );
 
   async function handleSave() {
+    if (isSaving) {
+      return;
+    }
+
     const nextErrors = validateEntry({ amount, date });
 
     if (!categoryId) {
@@ -141,6 +148,11 @@ export function OneTimeExpenseScreen({ navigation, route }) {
 
     setErrors(nextErrors);
     setRequestError('');
+
+    if (isOffline) {
+      setRequestError(getOfflineMutationMessage('save this expense'));
+      return;
+    }
 
     if (Object.keys(nextErrors).length > 0) {
       return;
@@ -212,6 +224,14 @@ export function OneTimeExpenseScreen({ navigation, route }) {
             />
 
             <InlineNotice message={requestError} variant="error" />
+            <InlineNotice
+              message={
+                isOffline
+                  ? 'You can review this expense offline. Saving needs a connection.'
+                  : ''
+              }
+              variant="warning"
+            />
             <InlineNotice
               message={matchedRule ? `Rule “${matchedRule.name}” will set ${matchedRule.expense_categories?.name || 'the saved category'}.` : ''}
               variant="info"
