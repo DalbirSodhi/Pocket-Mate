@@ -29,6 +29,28 @@ Posted batches retain duplicate fingerprints and result identifiers so users
 can reverse an import. Rolling back deletes the ledger entries created by that
 batch and preserves the batch as auditable history.
 
+## Local Session Storage
+
+On web, Supabase authentication follows the browser storage behavior expected
+by Supabase's JavaScript client. On native Expo builds, Pocket-Mate encrypts the
+stored Supabase session payload before writing it locally. The encryption key is
+stored through Expo SecureStore so the full session is not kept as readable
+AsyncStorage text.
+
+Legacy native sessions written before this protection are migrated the next
+time Supabase reads the session. If migration or decryption fails, the local
+session is cleared and the user signs in again instead of seeing a stale or
+partially authenticated app state.
+
+## Error Reports
+
+Pocket-Mate can send crash reports to
+`EXPO_PUBLIC_ERROR_REPORTING_ENDPOINT` when that public endpoint is configured.
+Reports are redacted before they leave the app: email addresses, token-shaped
+values, secret query parameters, currency amounts, and long card-like numbers
+are replaced with placeholders. The reporter is intentionally provider-neutral
+so a future Sentry or PostHog integration can reuse the same privacy boundary.
+
 ## Access Controls
 
 The mobile app uses the public Supabase anonymous key. Every finance table uses

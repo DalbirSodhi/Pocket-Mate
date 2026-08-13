@@ -1,18 +1,19 @@
 # Release Readiness
 
 Audit date: 2026-08-10
-Updated: 2026-08-10
-Branch: `feature/improve-beta-reliability`
-Baseline commit: `06703d4`
+Updated: 2026-08-12
+Branch: `feature/harden-beta-security`
+Baseline commit: `64d3b76`
 
 ## Verdict
 
-Pocket-Mate's JavaScript application is buildable for web and iOS, its current
-unit suite passes, Expo reports compatible dependencies, and release
-configuration validation passes. It is **not ready for a public store release**
-yet because two Expo/Metro build-time advisories need an upstream resolution,
-no signed build or real-device release flow was tested during this audit, and
-manual offline/session QA still needs to be repeated on a physical iPhone.
+Pocket-Mate's JavaScript application is buildable for web, iOS, and Android,
+its current unit suite passes, Expo reports compatible dependencies, and
+release configuration validation passes. It is **not ready for a public store
+release** yet because two Expo/Metro build-time advisories need an upstream
+resolution, no signed build or real-device release flow was tested during this
+audit, and manual offline/session QA still needs to be repeated on a physical
+iPhone.
 
 This verdict applies to release readiness, not ordinary Expo Go development.
 
@@ -22,14 +23,14 @@ The following commands were run from `apps/mobile` unless noted otherwise.
 
 | Command | Result | Evidence |
 | --- | --- | --- |
-| `npm test` | Pass | 117 tests passed, 0 failed. |
+| `npm test` | Pass | 132 tests passed, 0 failed. |
 | `npm run lint` | Pass | Expo ESLint completed with no findings. |
 | `npm run release:check` | Pass | App identifiers, assets, runtime policy, and EAS profiles validated. |
 | `npx expo-doctor` | Pass | 18 of 18 checks passed. |
-| `npx expo export --platform web --output-dir /private/tmp/pocket-mate-release-audit-web --clear` | Pass | Web bundle exported successfully. |
-| `npx expo export --platform ios --output-dir /private/tmp/pocket-mate-release-audit-ios --clear` | Pass | iOS Hermes bundle exported successfully. |
-| `npx expo export --platform all --output-dir /private/tmp/pocket-mate-household-all --clear` | Pass | Web, iOS, and Android bundles exported successfully. |
-| `npm run audit:production` | Conditional pass | Non-breaking fixes were applied; only two exact Expo/Metro `image-size` advisories are temporarily allowlisted through 2026-09-30. |
+| `npx expo export --platform web --output-dir /private/tmp/pocket-mate-security-web --clear` | Pass | Web bundle exported successfully. |
+| `npx expo export --platform ios --output-dir /private/tmp/pocket-mate-security-ios --clear` | Pass | iOS Hermes bundle exported successfully. |
+| `npx expo export --platform android --output-dir /private/tmp/pocket-mate-security-android --clear` | Pass | Android Hermes bundle exported successfully. |
+| `npm run audit:production` | Pass | No unapproved high or critical production advisories found. |
 | `npx supabase --agent no status` from the repository root | Blocked | Docker and Podman were unavailable, so local schema lint and policy tests were not run. |
 
 The remaining high findings reach the Expo/Metro build toolchain through
@@ -84,38 +85,43 @@ Verified controls:
 - The app accepts only the public Supabase URL and anonymous key.
 - No service-role value or private signing material was found in tracked app
   configuration. Example files contain empty placeholders only.
-- Authentication sessions persist in AsyncStorage and refresh only while the
-  native app is active.
+- Authentication sessions persist in browser storage on web. On native, the
+  Supabase session payload is encrypted before it is stored locally, and the
+  encryption key is kept in Expo SecureStore.
 - Expired local sessions are cleared during startup so the app returns to
   authentication instead of showing a false connected state.
 - CI includes Supabase schema lint and database policy/function tests.
 - Production EAS builds are rejected outside `main`, and production builds use
   a separate EAS environment name.
 - CSV source files stay local; only normalized rows are sent to Supabase.
+- A top-level crash boundary prevents render failures from leaving a blank
+  screen, and the optional error-reporting endpoint receives only redacted
+  events.
 
 Residual security risks:
 
-- Supabase sessions use AsyncStorage rather than OS keychain storage. This is
-  acceptable for the current Expo architecture but increases exposure on a
-  compromised device; evaluate secure native storage before public release.
 - Two build-time parser advisories remain a public-release blocker. Their
   narrow CI exception is time-limited and does not apply to new advisories.
 - Hosted RLS behavior was not independently verified in this run. Required CI
   database checks must pass on the final pull request and release commit.
-- There is no crash-reporting or production error-observability integration.
+- Error reporting is provider-neutral. Configure
+  `EXPO_PUBLIC_ERROR_REPORTING_ENDPOINT` or wire the existing reporter to a
+  provider such as Sentry before public release if richer crash triage is
+  needed.
 
 ## CI Review
 
 The pull-request workflow installs from the lockfile and runs documentation
 checks, lint, tests, dependency audit, release validation, Expo Doctor, local
-database lint, and database policy tests. The EAS workflow requires an Expo
-token, supports development/preview/production profiles, and prevents
-production builds from non-`main` branches.
+database lint, database policy tests, and explicit web/iOS/Android Expo bundle
+exports. The EAS workflow requires an Expo token, supports
+development/preview/production profiles, and prevents production builds from
+non-`main` branches.
 
 Remaining CI risks:
 
-- GitHub Actions are pinned to mutable major-version tags rather than immutable
-  commit SHAs, leaving avoidable workflow supply-chain exposure.
+- GitHub Actions are pinned to immutable commit SHAs with comments noting the
+  source tag.
 - EAS reruns the app quality gate, while database policy tests remain the
   responsibility of required pull-request CI before a release branch is built.
 
@@ -164,8 +170,8 @@ no provider secret should ever ship in the Expo client.
 - Resolve or formally risk-accept the npm audit findings without an unsupported
   Expo downgrade.
 - Require successful project and database CI on the final pull request.
-- Add bundle compilation to CI or run repeatable web, iOS, and Android bundle
-  checks for every release candidate.
+- Keep repeatable web, iOS, and Android bundle checks green for every release
+  candidate.
 - Complete the physical-device checklist and record results by app version and
   build number.
 - Produce and test signed preview builds before merging `Development` to `main`.

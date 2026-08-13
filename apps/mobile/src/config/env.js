@@ -3,6 +3,10 @@ const requiredEnv = {
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
 };
 
+export const optionalEnv = {
+  errorReportingEndpoint: process.env.EXPO_PUBLIC_ERROR_REPORTING_ENDPOINT,
+};
+
 function assertEnvValue(name, value) {
   if (!value || value.trim().length === 0) {
     throw new Error(`Missing required environment variable: ${name}`);
