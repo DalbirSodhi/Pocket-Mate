@@ -28,10 +28,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@ab058987d8d6c725971f6cf9d0b5c98467e30bd1 # v1.7.1
         with:
           version: 2.109.1
 
@@ -72,7 +72,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Validate documentation files
         run: |
@@ -95,7 +95,7 @@ jobs:
 
       - name: Set up Node.js
         if: steps.js_project.outputs.exists == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -136,7 +136,17 @@ jobs:
         working-directory: apps/mobile
         run: npx expo-doctor
 
-      - name: Compile Expo bundles
+      - name: Compile Expo web bundle
         if: steps.js_project.outputs.exists == 'true'
         working-directory: apps/mobile
-        run: npx expo export --platform all --output-dir /tmp/pocket-mate-ci-export --clear
+        run: npx expo export --platform web --output-dir /tmp/pocket-mate-ci-web --clear
+
+      - name: Compile Expo iOS bundle
+        if: steps.js_project.outputs.exists == 'true'
+        working-directory: apps/mobile
+        run: npx expo export --platform ios --output-dir /tmp/pocket-mate-ci-ios --clear
+
+      - name: Compile Expo Android bundle
+        if: steps.js_project.outputs.exists == 'true'
+        working-directory: apps/mobile
+        run: npx expo export --platform android --output-dir /tmp/pocket-mate-ci-android --clear

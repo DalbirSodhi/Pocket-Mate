@@ -62,6 +62,12 @@ EXPO_PUBLIC_SUPABASE_URL
 EXPO_PUBLIC_SUPABASE_ANON_KEY
 ```
 
+Optional public value for redacted crash-report delivery:
+
+```text
+EXPO_PUBLIC_ERROR_REPORTING_ENDPOINT
+```
+
 They can be entered under the Expo project environment-variable settings or
 with `eas env:create`. Client-side values are readable from a compiled app even
 when a dashboard labels them sensitive. Supabase Auth and Row Level Security,
