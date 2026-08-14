@@ -14,6 +14,20 @@ function calculateActualBalance({ incomeCents, expenseCents }) {
   return Number(incomeCents || 0) - Number(expenseCents || 0);
 }
 
+function getSafeToSpendBase({
+  plannedAvailableCents,
+  spendableCashCents,
+  hasSpendableCashAccounts,
+}) {
+  const planned = Math.max(Number(plannedAvailableCents || 0), 0);
+
+  if (!hasSpendableCashAccounts) {
+    return planned;
+  }
+
+  return Math.min(planned, Math.max(Number(spendableCashCents || 0), 0));
+}
+
 function getPaidInstallmentCents(plan, startDate, endDate) {
   return (plan?.bill_payment_installments || []).reduce(
     (total, installment) => {
@@ -437,6 +451,7 @@ module.exports = {
   calculateActualBalance,
   calculateSafeToSpend,
   calculatePlanTotals,
+  getSafeToSpendBase,
   getBudgetPressure,
   getCycleSavingsContribution,
   getMonthRange,

@@ -1,4 +1,4 @@
-const DASHBOARD_CACHE_VERSION = 1;
+const DASHBOARD_CACHE_VERSION = 2;
 
 function getDashboardSummaryCacheKey(userId) {
   if (!userId) {

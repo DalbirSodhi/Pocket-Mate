@@ -25,14 +25,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '../../../components/AppButton';
+import { DateField } from '../../../components/DateField';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { signOut } from '../../auth';
 import { ProfileChoiceGroup } from '../components/ProfileChoiceGroup';
-import { currencyOptions } from '../profileOptions';
+import { currencyOptions, payCycleOptions } from '../profileOptions';
 import { saveProfile } from '../services/profileService';
+import {
+  getInitialPayCycleFormValues,
+  getPayCycleAnchorHint,
+  getPayCycleAnchorLabel,
+  getTodayDateString,
+} from '../utils/payCycleProfile.cjs';
 
 export function SettingsScreen({
   navigation,
@@ -43,6 +50,12 @@ export function SettingsScreen({
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [currencyCode, setCurrencyCode] = useState(
     profile.currency_code || 'CAD',
+  );
+  const [payCycle, setPayCycle] = useState(() =>
+    getInitialPayCycleFormValues(profile).payCycle,
+  );
+  const [payCycleAnchorDate, setPayCycleAnchorDate] = useState(() =>
+    getInitialPayCycleFormValues(profile).payCycleAnchorDate,
   );
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -59,6 +72,8 @@ export function SettingsScreen({
         userId: profile.id,
         displayName,
         currencyCode,
+        payCycle,
+        payCycleAnchorDate,
       });
       onProfileChange(nextProfile);
       if (!isTabRoot) {
@@ -145,10 +160,29 @@ export function SettingsScreen({
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Monthly tracking</Text>
+              <Text style={styles.sectionTitle}>Pay cycle</Text>
+              <ProfileChoiceGroup
+                label="How often do you get paid?"
+                onSelect={setPayCycle}
+                options={payCycleOptions}
+                selectedValue={payCycle}
+              />
+              <DateField
+                label={getPayCycleAnchorLabel(payCycle)}
+                maximumDate={getTodayDateString()}
+                onChange={setPayCycleAnchorDate}
+                value={payCycleAnchorDate}
+              />
               <Text style={styles.sectionBody}>
-                Income, spending, bills, and goals are calculated from the first
-                day through the last day of each month.
+                {getPayCycleAnchorHint(payCycle)}
+              </Text>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Plan timing</Text>
+              <Text style={styles.sectionBody}>
+                Monthly totals stay on the calendar month. Your pay cycle sets
+                the next payday and daily safe-to-spend horizon.
               </Text>
             </View>
 

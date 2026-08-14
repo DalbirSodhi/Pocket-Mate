@@ -82,12 +82,21 @@ function summarizeAccounts(accounts = []) {
         if (['checking', 'savings', 'cash'].includes(account.account_type)) {
           summary.liquidCents += normalizeCents(account.balanceCents);
         }
+        if (['checking', 'cash'].includes(account.account_type)) {
+          summary.spendableCashCents += normalizeCents(account.balanceCents);
+        }
       }
 
       summary.netWorthCents = summary.assetCents - summary.liabilityCents;
       return summary;
     },
-    { assetCents: 0, liabilityCents: 0, liquidCents: 0, netWorthCents: 0 },
+    {
+      assetCents: 0,
+      liabilityCents: 0,
+      liquidCents: 0,
+      spendableCashCents: 0,
+      netWorthCents: 0,
+    },
   );
 }
 

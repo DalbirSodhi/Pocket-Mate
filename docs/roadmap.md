@@ -97,6 +97,17 @@
 - [x] Household collaboration with explicit roles, aggregate-only sharing, and audit history.
 - [ ] Optional provider-backed bank sync, receipt OCR, investments, and credit data.
 
+## Phase 10: Finance Planning Completion
+
+- [x] Payday frequency and anchor-date setup in onboarding and settings.
+- [x] First-run checklist for income, spendable accounts, category limits, and savings.
+- [x] Separate calendar-month balance, actual spendable cash, and after-plan money.
+- [x] Cap safe-to-spend by checking/cash while excluding protected savings.
+- [x] Account-backed savings contributions with atomic transfer and undo history.
+- [x] Edit and delete controls for recurring expenses and unpaid card statements.
+- [x] Require a funding account before completing a credit-card payment.
+- [x] Paginate account and dashboard history beyond the API row limit.
+
 Provider-backed bank sync remains deliberately deferred. Manual entry and
 reviewed CSV imports keep the current product useful without asking early users
 to grant financial-institution access. A provider integration should begin only

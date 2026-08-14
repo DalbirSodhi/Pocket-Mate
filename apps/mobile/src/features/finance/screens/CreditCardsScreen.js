@@ -1,7 +1,8 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { CheckCircle2, CreditCard, Plus } from 'lucide-react-native';
+import { Check, CheckCircle2, CreditCard, Pencil, Plus, Trash2 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
+  Alert,
   RefreshControl,
   ScrollView,
   Pressable,
@@ -22,13 +23,19 @@ import { AccountPicker, getAccounts } from '../../accounts';
 import { formatCurrency } from '../../dashboard/utils/formatCurrency';
 import {
   createCreditCard,
+  deleteCreditCardBill,
   getCreditCardBills,
   getCreditCards,
   setCreditCardActive,
   setCreditCardBillPaid,
   setCreditCardTrackingMode,
+  updateCreditCardBill,
 } from '../services/financeService';
-import { getLocalDateString } from '../utils/financeValidation.cjs';
+import {
+  getLocalDateString,
+  parseAmountToCents,
+  validateCardBill,
+} from '../utils/financeValidation.cjs';
 import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
 
 export function CreditCardsScreen({ navigation, route }) {
@@ -46,6 +53,13 @@ export function CreditCardsScreen({ navigation, route }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState('');
+  const [editingBillId, setEditingBillId] = useState('');
+  const [billAmount, setBillAmount] = useState('');
+  const [billStatementOn, setBillStatementOn] = useState('');
+  const [billDueOn, setBillDueOn] = useState('');
+  const [billNote, setBillNote] = useState('');
+  const [billErrors, setBillErrors] = useState({});
+  const [isSavingBillEdit, setIsSavingBillEdit] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsRefreshing(true);
@@ -174,8 +188,17 @@ export function CreditCardsScreen({ navigation, route }) {
   }
 
   async function handleBillToggle(bill) {
-    setUpdatingId(bill.id);
     const paidOn = bill.paid_on ? null : getLocalDateString();
+
+    if (paidOn && !paymentAccountId) {
+      setRequestError(
+        'Add or choose the account this payment leaves before marking it paid.',
+      );
+      return;
+    }
+
+    setUpdatingId(bill.id);
+    setRequestError('');
 
     try {
       await setCreditCardBillPaid({
@@ -196,6 +219,113 @@ export function CreditCardsScreen({ navigation, route }) {
     } finally {
       setUpdatingId('');
     }
+  }
+
+  function handleStartBillEdit(bill) {
+    setRequestError('');
+
+    if (bill.mutationLockedReason) {
+      setRequestError(bill.mutationLockedReason);
+      return;
+    }
+
+    setEditingBillId(bill.id);
+    setBillAmount((bill.amount_cents / 100).toFixed(2));
+    setBillStatementOn(bill.statement_on);
+    setBillDueOn(bill.due_on);
+    setBillNote(bill.note || '');
+    setBillErrors({});
+  }
+
+  function handleCancelBillEdit() {
+    setEditingBillId('');
+    setBillErrors({});
+  }
+
+  async function handleSaveBillEdit(bill) {
+    const nextErrors = validateCardBill({
+      amount: billAmount,
+      statementDate: billStatementOn,
+      dueDate: billDueOn,
+    });
+    setBillErrors(nextErrors);
+    setRequestError('');
+
+    if (Object.keys(nextErrors).length > 0) {
+      return;
+    }
+
+    setIsSavingBillEdit(true);
+
+    try {
+      const updatedBill = await updateCreditCardBill({
+        userId: user.id,
+        billId: bill.id,
+        amountCents: parseAmountToCents(billAmount),
+        statementOn: billStatementOn,
+        dueOn: billDueOn,
+        note: billNote,
+      });
+      setBills((current) =>
+        current.map((item) =>
+          item.id === bill.id
+            ? { ...item, ...updatedBill }
+            : item,
+        ),
+      );
+      handleCancelBillEdit();
+    } catch (error) {
+      setRequestError(
+        getFinanceErrorMessage(
+          error,
+          'Unable to save changes to this card bill.',
+          'A bill for this card and statement date already exists.',
+        ),
+      );
+    } finally {
+      setIsSavingBillEdit(false);
+    }
+  }
+
+  function confirmDeleteBill(bill) {
+    setRequestError('');
+
+    if (bill.mutationLockedReason) {
+      setRequestError(bill.mutationLockedReason);
+      return;
+    }
+
+    const planNote = bill.paymentPlanId
+      ? ' Its unfinished payment plan will also be removed.'
+      : '';
+    Alert.alert(
+      'Delete card bill?',
+      `Remove this ${formatCurrency(bill.amount_cents, currencyCode)} card bill?${planNote}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setUpdatingId(bill.id);
+
+            try {
+              await deleteCreditCardBill({ userId: user.id, billId: bill.id });
+              setBills((current) => current.filter((item) => item.id !== bill.id));
+              if (editingBillId === bill.id) {
+                handleCancelBillEdit();
+              }
+            } catch (error) {
+              setRequestError(
+                getFinanceErrorMessage(error, 'Unable to delete this card bill.'),
+              );
+            } finally {
+              setUpdatingId('');
+            }
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -365,19 +495,109 @@ export function CreditCardsScreen({ navigation, route }) {
                       <Text style={styles.amount}>
                         {formatCurrency(bill.amount_cents, currencyCode)}
                       </Text>
-                      <Switch
-                        accessibilityLabel={`Mark bill ${bill.paid_on ? 'unpaid' : 'paid'}`}
-                        disabled={updatingId === bill.id}
-                        onValueChange={() => handleBillToggle(bill)}
-                        thumbColor={colors.white}
-                        trackColor={{
-                          false: colors.border,
-                          true: colors.success,
-                        }}
-                        value={Boolean(bill.paid_on)}
-                      />
+                      <View style={styles.billActions}>
+                        {!bill.mutationLockedReason ? (
+                          <>
+                            <Pressable
+                              accessibilityLabel={`Edit ${bill.card?.nickname || 'credit card'} bill`}
+                              accessibilityRole="button"
+                              disabled={Boolean(updatingId) || isSavingBillEdit}
+                              onPress={() => handleStartBillEdit(bill)}
+                              style={styles.iconButton}
+                            >
+                              <Pencil color={colors.primary} size={17} />
+                            </Pressable>
+                            <Pressable
+                              accessibilityLabel={`Delete ${bill.card?.nickname || 'credit card'} bill`}
+                              accessibilityRole="button"
+                              disabled={Boolean(updatingId) || isSavingBillEdit}
+                              onPress={() => confirmDeleteBill(bill)}
+                              style={styles.iconButton}
+                            >
+                              <Trash2 color={colors.danger} size={17} />
+                            </Pressable>
+                          </>
+                        ) : null}
+                        <Switch
+                          accessibilityLabel={`Mark bill ${bill.paid_on ? 'unpaid' : 'paid'}`}
+                          disabled={updatingId === bill.id || isSavingBillEdit}
+                          onValueChange={() => handleBillToggle(bill)}
+                          thumbColor={colors.white}
+                          trackColor={{
+                            false: colors.border,
+                            true: colors.success,
+                          }}
+                          value={Boolean(bill.paid_on)}
+                        />
+                      </View>
                     </View>
                   </View>
+                  {bill.mutationLockedReason ? (
+                    <Text style={styles.lockedBillMessage}>
+                      {bill.mutationLockedReason}
+                    </Text>
+                  ) : null}
+                  {editingBillId === bill.id ? (
+                    <View style={styles.billEditForm}>
+                      <Text style={styles.editTitle}>Edit card bill</Text>
+                      {bill.paymentPlanId ? (
+                        <InlineNotice
+                          message="This bill has an unfinished payment plan. Change its total or due date from the payment plan so scheduled payments stay accurate."
+                          variant="info"
+                        />
+                      ) : null}
+                      <FormField
+                        editable={!bill.paymentPlanId}
+                        error={billErrors.amount}
+                        keyboardType="decimal-pad"
+                        label="Statement amount"
+                        onChangeText={setBillAmount}
+                        value={billAmount}
+                      />
+                      <FormField
+                        autoCapitalize="none"
+                        error={billErrors.date}
+                        keyboardType="numbers-and-punctuation"
+                        label="Statement date"
+                        maxLength={10}
+                        onChangeText={setBillStatementOn}
+                        value={billStatementOn}
+                      />
+                      <FormField
+                        autoCapitalize="none"
+                        editable={!bill.paymentPlanId}
+                        error={billErrors.dueDate}
+                        keyboardType="numbers-and-punctuation"
+                        label="Payment due date"
+                        maxLength={10}
+                        onChangeText={setBillDueOn}
+                        value={billDueOn}
+                      />
+                      <FormField
+                        label="Note (optional)"
+                        maxLength={240}
+                        multiline
+                        numberOfLines={3}
+                        onChangeText={setBillNote}
+                        value={billNote}
+                      />
+                      <View style={styles.editActions}>
+                        <AppButton
+                          label="Cancel"
+                          onPress={handleCancelBillEdit}
+                          style={styles.editAction}
+                          variant="secondary"
+                        />
+                        <AppButton
+                          icon={Check}
+                          isLoading={isSavingBillEdit}
+                          label="Save changes"
+                          onPress={() => handleSaveBillEdit(bill)}
+                          style={styles.editAction}
+                        />
+                      </View>
+                    </View>
+                  ) : null}
                   {index < bills.length - 1 ? <View style={styles.divider} /> : null}
                 </View>
               ))}
@@ -487,6 +707,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: spacing.xs,
   },
+  billActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   amount: {
     ...typography.label,
     color: colors.ink,
@@ -494,6 +726,31 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: colors.border,
+  },
+  lockedBillMessage: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    paddingBottom: spacing.md,
+    paddingLeft: 54,
+  },
+  billEditForm: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.surfaceMuted,
+    marginHorizontal: -spacing.lg,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  editTitle: {
+    ...typography.label,
+    color: colors.ink,
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  editAction: {
+    flex: 1,
   },
   emptyLabel: {
     ...typography.caption,

@@ -23,8 +23,21 @@ test('asset balances include linked cash flow and transfers', () => {
     assetCents: 32500,
     liabilityCents: 0,
     liquidCents: 32500,
+    spendableCashCents: 24500,
     netWorthCents: 32500,
   });
+});
+
+test('spendable cash excludes protected savings balances', () => {
+  const accounts = calculateAccountBalances({
+    accounts: [
+      { id: 'checking', account_type: 'checking', opening_balance_cents: 12000, is_active: true },
+      { id: 'cash', account_type: 'cash', opening_balance_cents: 3000, is_active: true },
+      { id: 'savings', account_type: 'savings', opening_balance_cents: 40000, is_active: true },
+    ],
+  });
+
+  assert.equal(summarizeAccounts(accounts).spendableCashCents, 15000);
 });
 
 test('transactional card charges increase debt and payments reduce it', () => {

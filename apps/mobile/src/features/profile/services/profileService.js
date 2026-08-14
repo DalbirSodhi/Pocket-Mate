@@ -1,9 +1,10 @@
 import { supabase } from '../../../infrastructure/supabase/client';
-import {
-  getLocalDateString,
-  isValidDateString,
-} from '../../../utils/date.cjs';
 import { syncUserReminderSchedule } from '../../preferences/services/reminderCoordinator';
+import {
+  assertValidPayCycleSettings,
+  DEFAULT_PAY_CYCLE,
+  getDefaultPayCycleAnchorDate,
+} from '../utils/payCycleProfile.cjs';
 
 const supportedCurrencies = ['CAD', 'USD', 'GBP', 'EUR', 'AUD'];
 const supportedPayCycles = [
@@ -38,10 +39,6 @@ function assertAllowedValue(value, allowedValues, fieldName) {
   }
 }
 
-function getCurrentMonthStartDate() {
-  return `${getLocalDateString().slice(0, 7)}-01`;
-}
-
 export async function getProfile(userId) {
   const response = await supabase
     .from('profiles')
@@ -58,19 +55,12 @@ export async function saveProfile({
   userId,
   displayName,
   currencyCode,
-  payCycle = 'monthly',
-  payCycleAnchorDate = getCurrentMonthStartDate(),
+  payCycle = DEFAULT_PAY_CYCLE,
+  payCycleAnchorDate = getDefaultPayCycleAnchorDate(),
 }) {
   assertAllowedValue(currencyCode, supportedCurrencies, 'currency');
   assertAllowedValue(payCycle, supportedPayCycles, 'pay cycle');
-
-  if (!isValidDateString(payCycleAnchorDate)) {
-    throw new Error('Enter the payday as a valid YYYY-MM-DD date.');
-  }
-
-  if (payCycleAnchorDate > getLocalDateString()) {
-    throw new Error('The most recent payday cannot be in the future.');
-  }
+  assertValidPayCycleSettings({ payCycle, payCycleAnchorDate });
 
   const response = await supabase
     .from('profiles')

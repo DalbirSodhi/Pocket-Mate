@@ -14,6 +14,7 @@ const {
   getPlanHealth,
   getPlannedInstallmentCents,
   getRemainingPaymentPlanCents,
+  getSafeToSpendBase,
   isMonthlyChargeInRange,
   sumCents,
 } = require('./dashboardMath.cjs');
@@ -25,6 +26,25 @@ test('actual balance is monthly income minus recorded spending', () => {
       expenseCents: 26513,
     }),
     56187,
+  );
+});
+
+test('safe-to-spend base never exceeds actual spendable cash', () => {
+  assert.equal(
+    getSafeToSpendBase({
+      plannedAvailableCents: 80000,
+      spendableCashCents: 25000,
+      hasSpendableCashAccounts: true,
+    }),
+    25000,
+  );
+  assert.equal(
+    getSafeToSpendBase({
+      plannedAvailableCents: 80000,
+      spendableCashCents: 25000,
+      hasSpendableCashAccounts: false,
+    }),
+    80000,
   );
 });
 

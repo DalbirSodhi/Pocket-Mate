@@ -11,7 +11,7 @@ const {
 test('dashboard cache keys are user scoped and versioned', () => {
   assert.equal(
     getDashboardSummaryCacheKey('user-123'),
-    'pocket-mate:dashboard-summary:v1:user-123',
+    'pocket-mate:dashboard-summary:v2:user-123',
   );
   assert.equal(getDashboardSummaryCacheKey(''), null);
 });
@@ -25,7 +25,7 @@ test('dashboard cache records round trip valid summaries', () => {
   assert.deepEqual(
     parseDashboardCacheRecord(JSON.stringify(record)),
     {
-      version: 1,
+      version: 2,
       cachedAt: '2026-08-10T10:00:00.000Z',
       summary: { incomeCents: 120000 },
     },

@@ -91,6 +91,51 @@ export async function addSavingsGoalProgress({
   return response.data.current_amount_cents;
 }
 
+export async function getSavingsContributionHistory(userId) {
+  const response = await supabase
+    .from('savings_goal_contributions')
+    .select(
+      'id, savings_goal_id, from_account_id, to_account_id, amount_cents, contributed_on, created_at',
+    )
+    .eq('user_id', userId)
+    .order('contributed_on', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  return unwrap(response);
+}
+
+export async function recordSavingsGoalContribution({
+  goalId,
+  fromAccountId,
+  toAccountId,
+  amountCents,
+  contributedOn,
+}) {
+  const response = await supabase.rpc('record_savings_goal_contribution', {
+    p_savings_goal_id: goalId,
+    p_from_account_id: fromAccountId,
+    p_to_account_id: toAccountId,
+    p_amount_cents: amountCents,
+    p_contributed_on: contributedOn,
+  });
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function undoSavingsGoalContribution(contributionId) {
+  const response = await supabase.rpc('undo_savings_goal_contribution', {
+    p_contribution_id: contributionId,
+  });
+
+  if (response.error) {
+    throw response.error;
+  }
+}
+
 export async function getBudgetCaps(userId, date = new Date()) {
   const budgets = await getMonthlyBudget({ userId, monthKey: getMonthKey(date) });
   return budgets.map((budget) => ({

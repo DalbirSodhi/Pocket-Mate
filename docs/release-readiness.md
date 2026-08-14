@@ -1,9 +1,21 @@
 # Release Readiness
 
 Audit date: 2026-08-10
-Updated: 2026-08-12
-Branch: `feature/harden-beta-security`
-Baseline commit: `64d3b76`
+Updated: 2026-08-13
+Branch: `feature/complete-finance-planning-loop`
+Development baseline: `76b93b1`
+
+## Finance Completion Update
+
+The finance-planning completion milestone added payday setup, a first-run plan
+checklist, explicit monthly/actual/after-plan balances, account-backed savings
+contributions, and correction controls for recurring costs and unpaid card
+statements. Credit-card payments now require a funding account, protected
+savings is excluded from everyday cash, and long account histories paginate
+beyond the Data API row limit.
+
+Both savings migrations were dry-run before application and are recorded on the
+linked development project as `202608130001` and `202608130002`.
 
 ## Verdict
 
@@ -23,7 +35,7 @@ The following commands were run from `apps/mobile` unless noted otherwise.
 
 | Command | Result | Evidence |
 | --- | --- | --- |
-| `npm test` | Pass | 132 tests passed, 0 failed. |
+| `npm test` | Pass | 142 tests passed, 0 failed. |
 | `npm run lint` | Pass | Expo ESLint completed with no findings. |
 | `npm run release:check` | Pass | App identifiers, assets, runtime policy, and EAS profiles validated. |
 | `npx expo-doctor` | Pass | 18 of 18 checks passed. |
@@ -45,6 +57,7 @@ plus all platform exports.
 Automated tests exercise deterministic behavior for:
 
 - Account balances, transfers, card purchases, statements, and payments.
+- Account-backed savings transfers, contribution undo, and linked-transfer protection.
 - Monthly dashboard totals, commitments, safe-to-spend calculations, and plan
   health.
 - Income, expense, split, refund, categorization-rule, and validation math.

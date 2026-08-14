@@ -398,6 +398,13 @@ export function BillPaymentPlanScreen({ navigation, route }) {
       return;
     }
 
+    if (creditCardBillId && !installment.paid_on && !paymentAccountId) {
+      setRequestError(
+        'Add or choose the account this payment leaves before marking it paid.',
+      );
+      return;
+    }
+
     setUpdatingId(installment.id);
     setRequestError('');
 
@@ -708,8 +715,8 @@ export function BillPaymentPlanScreen({ navigation, route }) {
                       />
                     ) : (
                       <InlineNotice
-                        message="Add a checking, savings, or cash account to update your available balance when a payment is completed."
-                        variant="info"
+                        message="Add a checking, savings, or cash account before completing a card payment. This keeps your cash balance accurate."
+                        variant="warning"
                       />
                     )
                   ) : null}

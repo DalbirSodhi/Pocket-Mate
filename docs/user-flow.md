@@ -30,11 +30,11 @@ flowchart TD
 flowchart TD
     A["Create account"] --> B["Choose currency"]
     B --> C["Choose pay cycle"]
-    C --> D["Add expected income"]
-    D --> E["Create default categories"]
-    E --> F["Set category caps"]
-    F --> G["Set savings target"]
-    G --> H["Open dashboard"]
+    C --> D["Open dashboard setup checklist"]
+    D --> E["Add this month's income"]
+    E --> F["Add checking or cash"]
+    F --> G["Set a category limit"]
+    G --> H["Create a savings target"]
 ```
 
 ## Daily Use Flow
@@ -80,6 +80,22 @@ categories, attach tags, or record one or more refunds. Refunds reduce spending
 instead of inflating income, and a destination account receives the returned
 cash. Editing an expense amount clears a stale split and cannot reduce the total
 below refunds already received.
+
+Recurring expenses can be corrected or removed from **Monthly fixed**. Unpaid
+card statements can be corrected or removed from **Credit cards**. Paid
+statements and statements with completed payment chunks remain locked so a
+correction cannot rewrite cash history.
+
+## Savings Contribution Flow
+
+1. Create a savings goal and monthly target.
+2. With no accounts configured, progress can be tracked manually.
+3. Once accounts exist, choose an active checking or cash source and an active
+   savings destination.
+4. Recording a contribution atomically creates an account transfer and updates
+   goal progress exactly once.
+5. Undoing a contribution reverses both records together. Linked transfers
+   cannot be edited or deleted outside this flow.
 
 ## Monthly Budget And Rollover Flow
 
@@ -276,6 +292,7 @@ The dashboard should make these visible without digging:
 - Spent this calendar month.
 - Savings protected.
 - Remaining balance.
+- Actual checking and cash available, excluding savings.
 - Days until next payday.
 - Category warnings.
 - Top category spending with access to the full monthly breakdown.

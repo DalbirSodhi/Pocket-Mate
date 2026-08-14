@@ -125,9 +125,16 @@ transfers, which update cash and liability balances without becoming spending
 twice.
 
 Income and expenses may be assigned to accounts. Balances combine opening
-balances, assigned cash flow, and transfers. When liquid accounts exist, the
-dashboard uses their total for actual available money; monthly planning remains
-based on the calendar month's income, spending, and commitments.
+balances, assigned cash flow, and transfers. The dashboard keeps calendar-month
+balance, checking/cash available, and after-plan money separate. Savings
+accounts remain liquid for net-worth reporting but are excluded from everyday
+spendable cash. Safe-to-spend cannot exceed either the monthly plan or actual
+checking/cash, and uses the configured payday as its daily horizon.
+
+Savings contributions use protected Postgres functions to create or reverse
+the goal-progress row and account transfer in one transaction. Direct mutation
+of a linked transfer is blocked so account balances and goal progress cannot
+drift apart.
 
 Purchase-impact checks are client-side, deterministic projections over the
 dashboard summary and category-cap service results. The calculator does not

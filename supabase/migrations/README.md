@@ -26,6 +26,9 @@ Current migrations:
 202608050002_add_transaction_planning.sql
 202608060001_add_calendar_preferences.sql
 202608060002_add_imports_and_debt_settings.sql
+202608100001_add_household_collaboration.sql
+202608130001_record_savings_contributions.sql
+202608130002_harden_savings_transfer_links.sql
 ```
 
 The transaction-planning migration adds month-specific budgets and rollovers,
@@ -38,3 +41,7 @@ dashboard-display settings and includes them in transactional account deletion.
 
 The import/debt migration adds reversible RLS-protected CSV staging, protected
 post/rollback functions, duplicate indexes, and per-account debt assumptions.
+
+The savings-contribution migration links goal progress to owned account
+transfers, provides protected record/undo functions, and blocks direct mutation
+of linked transfers.

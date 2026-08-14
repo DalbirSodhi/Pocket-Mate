@@ -78,6 +78,12 @@ Finance totals must follow one cash-movement rule: unpaid bills are commitments,
 while completed bill payments and recorded expenses are spending. Dashboard,
 Activity, and Insights must reconcile to that same rule.
 
+The Home dashboard presents three different values explicitly: calendar-month
+balance is income minus completed spending, spendable cash is the current total
+in checking and cash accounts, and after-plan money subtracts unpaid commitments
+and protected savings. Safe-to-spend uses the lower of spendable cash and
+after-plan money, divided across the days to the next configured payday.
+
 Users own their finance records. Reports must be generated from owner-scoped
 queries, remain on the user's device, and export standard CSV without sending
 data through an additional analytics or file-storage service.
