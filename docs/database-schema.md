@@ -338,6 +338,28 @@ created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
 ```
 
+### savings_goal_contributions
+
+Stores account-backed savings progress and links each contribution to exactly
+one checking/cash-to-savings transfer.
+
+```text
+id uuid primary key
+user_id uuid not null references auth.users(id)
+savings_goal_id uuid not null references savings_goals(id)
+from_account_id uuid not null references financial_accounts(id)
+to_account_id uuid not null references financial_accounts(id)
+account_transfer_id uuid not null unique references account_transfers(id)
+amount_cents integer not null
+contributed_on date not null
+created_at timestamptz not null default now()
+```
+
+Protected functions record and undo the contribution atomically. They require
+owned active accounts, restrict the source to checking or cash, restrict the
+destination to savings, prevent progress beyond the goal target, and preserve
+the link by blocking direct transfer mutation.
+
 ### user_preferences
 
 Stores one private preference record per authenticated user. Reminder settings
@@ -430,8 +452,8 @@ Initial dashboard calculations can happen in app utilities. Later they can move 
 
 Required calculations:
 
-- total income in current cycle
-- total expenses in current cycle
+- total income in the current calendar month
+- total expenses in the current calendar month
 - completed bill installments in the current cycle
 - active fixed commitments in current cycle
 - remaining card-bill commitments in current cycle
@@ -455,7 +477,8 @@ cycle_income
 - protected_savings_remaining
 = remaining_spendable
 
-remaining_spendable / days_until_next_payday
+min(remaining_spendable, checking_and_cash_balance)
+/ days_until_next_payday
 = safe_to_spend_today
 ```
 

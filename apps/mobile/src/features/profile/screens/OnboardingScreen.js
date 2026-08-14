@@ -12,12 +12,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '../../../components/AppButton';
 import { BrandMark } from '../../../components/BrandMark';
+import { DateField } from '../../../components/DateField';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { colors, spacing, typography } from '../../../theme/tokens';
 import { ProfileChoiceGroup } from '../components/ProfileChoiceGroup';
-import { currencyOptions } from '../profileOptions';
+import { currencyOptions, payCycleOptions } from '../profileOptions';
 import { saveProfile } from '../services/profileService';
+import {
+  DEFAULT_PAY_CYCLE,
+  getDefaultPayCycleAnchorDate,
+  getPayCycleAnchorHint,
+  getPayCycleAnchorLabel,
+  getTodayDateString,
+} from '../utils/payCycleProfile.cjs';
 
 export function OnboardingScreen({
   user,
@@ -31,6 +39,10 @@ export function OnboardingScreen({
   );
   const [displayName, setDisplayName] = useState(initialName);
   const [currencyCode, setCurrencyCode] = useState('CAD');
+  const [payCycle, setPayCycle] = useState(DEFAULT_PAY_CYCLE);
+  const [payCycleAnchorDate, setPayCycleAnchorDate] = useState(() =>
+    getDefaultPayCycleAnchorDate(),
+  );
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,6 +55,8 @@ export function OnboardingScreen({
         userId: user.id,
         displayName,
         currencyCode,
+        payCycle,
+        payCycleAnchorDate,
       });
       onComplete(profile);
     } catch (profileError) {
@@ -93,8 +107,23 @@ export function OnboardingScreen({
                   options={currencyOptions}
                   selectedValue={currencyCode}
                 />
+                <ProfileChoiceGroup
+                  label="How often do you get paid?"
+                  onSelect={setPayCycle}
+                  options={payCycleOptions}
+                  selectedValue={payCycle}
+                />
+                <DateField
+                  label={getPayCycleAnchorLabel(payCycle)}
+                  maximumDate={getTodayDateString()}
+                  onChange={setPayCycleAnchorDate}
+                  value={payCycleAnchorDate}
+                />
+                <Text style={styles.fieldHint}>
+                  {getPayCycleAnchorHint(payCycle)}
+                </Text>
                 <InlineNotice
-                  message="Your income, spending, and plan reset together on the first day of each month."
+                  message="Monthly totals stay on the calendar month. Your pay cycle sets the next payday and daily spending horizon."
                   variant="info"
                 />
                 <AppButton
@@ -150,5 +179,10 @@ const styles = StyleSheet.create({
   form: {
     marginTop: spacing.xxl,
     gap: spacing.xl,
+  },
+  fieldHint: {
+    ...typography.caption,
+    color: colors.inkMuted,
+    marginTop: -spacing.md,
   },
 });

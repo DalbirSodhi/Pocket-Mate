@@ -5,7 +5,12 @@ import {
   ArrowUpRight,
   CalendarClock,
   ChevronRight,
+  Circle,
+  CircleCheck,
   CreditCard,
+  Gauge,
+  Landmark,
+  PiggyBank,
   Plus,
   ReceiptText,
   Settings2,
@@ -179,12 +184,16 @@ export function DashboardScreen({ navigation, profile }) {
   );
 
   const currencyCode = profile.currency_code || 'CAD';
-  const availableCents = summary?.availableCents || 0;
+  const monthlyBalanceCents = summary?.monthlyBalanceCents || 0;
+  const spendableCents = summary?.spendableCents || 0;
+  const cashAvailableCents = summary?.cashAvailableCents || 0;
+  const hasSpendableCashAccounts = summary?.hasSpendableCashAccounts === true;
   const safeToSpendCents = summary?.safeToSpendCents || 0;
   const incomeCents = summary?.incomeCents || 0;
   const expenseCents = summary?.expenseCents || 0;
   const totalOutflowCents = summary?.totalOutflowCents || 0;
   const daysUntilReset = summary?.daysUntilReset || 1;
+  const daysUntilNextPayday = summary?.daysUntilNextPayday || daysUntilReset;
   const preferences = summary?.preferences || {};
   const isCompact = preferences.dashboard_density === 'compact';
   const highContrast = preferences.high_contrast === true;
@@ -208,6 +217,37 @@ export function DashboardScreen({ navigation, profile }) {
         : planHealth.tone === 'warning'
           ? { background: colors.warningSoft, foreground: colors.warning }
           : { background: colors.infoSoft, foreground: colors.info };
+  const setupSteps = [
+    {
+      id: 'income',
+      label: 'Record this month’s income',
+      detail: 'Start the monthly plan with money received.',
+      isComplete: incomeCents > 0,
+      onPress: () => navigation.navigate('AddIncome', { currencyCode }),
+    },
+    {
+      id: 'accounts',
+      label: 'Add checking or cash',
+      detail: 'Compare the plan with money actually available.',
+      isComplete: hasSpendableCashAccounts,
+      onPress: () => navigation.navigate('Accounts', { currencyCode }),
+    },
+    {
+      id: 'budget',
+      label: 'Set a category limit',
+      detail: 'Get warnings before flexible spending runs high.',
+      isComplete: (summary?.activeBudgetCaps || 0) > 0,
+      onPress: () => navigation.navigate('BudgetCaps', { currencyCode }),
+    },
+    {
+      id: 'savings',
+      label: 'Create a savings goal',
+      detail: 'Protect savings before daily spending.',
+      isComplete: (summary?.activeSavingsGoals || 0) > 0,
+      onPress: () => navigation.navigate('SavingsGoals', { currencyCode }),
+    },
+  ];
+  const incompleteSetupSteps = setupSteps.filter((step) => !step.isComplete);
 
   if (isInitialLoading && !summary) {
     return <LoadingScreen message="Loading your monthly plan..." />;
@@ -259,12 +299,12 @@ export function DashboardScreen({ navigation, profile }) {
               </Text>
               <View style={styles.balanceMeta}>
                 <Text style={[styles.availableText, highContrast && styles.panelTextHigh]}>
-                  {money(availableCents)} available
+                  {money(monthlyBalanceCents)} earned minus spent this month
                 </Text>
                 <View style={styles.metaDot} />
                 <Text style={[styles.remainingText, highContrast && styles.panelTextHigh]}>
-                  {daysUntilReset} {daysUntilReset === 1 ? 'day' : 'days'} left
-                  this month
+                  {daysUntilNextPayday}{' '}
+                  {daysUntilNextPayday === 1 ? 'day' : 'days'} to payday
                 </Text>
               </View>
             </View>
@@ -287,7 +327,8 @@ export function DashboardScreen({ navigation, profile }) {
                 />
               </View>
               <Text style={[styles.resetDate, highContrast && styles.panelTextHigh]}>
-                Resets {formatShortDate(summary?.nextMonthStartDate)}
+                {money(spendableCents)} after commitments · Resets{' '}
+                {formatShortDate(summary?.nextMonthStartDate)}
               </Text>
             </View>
           </View>
@@ -308,6 +349,62 @@ export function DashboardScreen({ navigation, profile }) {
               }
               variant={isOffline ? 'warning' : 'info'}
             />
+
+            {incompleteSetupSteps.length > 0 ? (
+              <View style={styles.setupSection}>
+                <View style={styles.setupHeading}>
+                  <View>
+                    <Text style={styles.setupTitle}>Finish your money setup</Text>
+                    <Text style={styles.setupSubtitle}>
+                      {setupSteps.length - incompleteSetupSteps.length} of{' '}
+                      {setupSteps.length} essentials complete
+                    </Text>
+                  </View>
+                  <Text style={styles.setupCount}>{incompleteSetupSteps.length} left</Text>
+                </View>
+                <View style={styles.setupList}>
+                  {setupSteps.map((step, index) => {
+                    const StepIcon = step.isComplete ? CircleCheck : Circle;
+
+                    return (
+                      <View key={step.id}>
+                        <Pressable
+                          accessibilityRole="button"
+                          disabled={step.isComplete}
+                          onPress={step.onPress}
+                          style={({ pressed }) => [
+                            styles.setupRow,
+                            pressed && styles.setupRowPressed,
+                          ]}
+                        >
+                          <StepIcon
+                            color={step.isComplete ? colors.success : colors.primary}
+                            size={20}
+                          />
+                          <View style={styles.setupCopy}>
+                            <Text
+                              style={[
+                                styles.setupLabel,
+                                step.isComplete && styles.setupLabelComplete,
+                              ]}
+                            >
+                              {step.label}
+                            </Text>
+                            <Text style={styles.setupDetail}>{step.detail}</Text>
+                          </View>
+                          {!step.isComplete ? (
+                            <ChevronRight color={colors.inkMuted} size={17} />
+                          ) : null}
+                        </Pressable>
+                        {index < setupSteps.length - 1 ? (
+                          <View style={styles.setupDivider} />
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
 
             <View style={styles.summary}>
               <Pressable
@@ -349,6 +446,31 @@ export function DashboardScreen({ navigation, profile }) {
                 </Text>
               </Pressable>
             </View>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => navigation.navigate('Accounts', { currencyCode })}
+              style={({ pressed }) => [
+                styles.cashRow,
+                pressed && styles.cashRowPressed,
+              ]}
+            >
+              <View style={styles.cashIcon}>
+                <Landmark color={colors.iconInk} size={20} />
+              </View>
+              <View style={styles.cashCopy}>
+                <Text style={styles.cashTitle}>Cash available now</Text>
+                <Text style={styles.cashDetail}>
+                  {hasSpendableCashAccounts
+                    ? 'Checking and cash balances; protected savings stay excluded.'
+                    : 'Add a checking or cash account to compare your plan with real cash.'}
+                </Text>
+              </View>
+              <Text style={styles.cashValue}>
+                {hasSpendableCashAccounts ? money(cashAvailableCents) : 'Set up'}
+              </Text>
+              <ChevronRight color={colors.inkMuted} size={17} />
+            </Pressable>
 
             <View style={styles.section}>
               <View style={styles.sectionHeading}>
@@ -486,6 +608,47 @@ export function DashboardScreen({ navigation, profile }) {
                   />
                 </View>
               </Pressable>
+              <View style={styles.planSignals}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate('SavingsGoals', { currencyCode })}
+                  style={({ pressed }) => [
+                    styles.planSignal,
+                    pressed && styles.planSignalPressed,
+                  ]}
+                >
+                  <PiggyBank color={colors.primary} size={18} />
+                  <View style={styles.planSignalCopy}>
+                    <Text style={styles.planSignalLabel}>Savings protected</Text>
+                    <Text style={styles.planSignalValue}>
+                      {money(summary?.monthlySavingsCents || 0)} this month
+                    </Text>
+                  </View>
+                  <ChevronRight color={colors.inkMuted} size={16} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => navigation.navigate('BudgetCaps', { currencyCode })}
+                  style={({ pressed }) => [
+                    styles.planSignal,
+                    pressed && styles.planSignalPressed,
+                  ]}
+                >
+                  <Gauge
+                    color={summary?.overBudgetCaps > 0 ? colors.warning : colors.primary}
+                    size={18}
+                  />
+                  <View style={styles.planSignalCopy}>
+                    <Text style={styles.planSignalLabel}>Category limits</Text>
+                    <Text style={styles.planSignalValue}>
+                      {summary?.overBudgetCaps > 0
+                        ? `${summary.overBudgetCaps} over limit`
+                        : `${summary?.activeBudgetCaps || 0} active`}
+                    </Text>
+                  </View>
+                  <ChevronRight color={colors.inkMuted} size={16} />
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.section}>
@@ -724,6 +887,62 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
     gap: spacing.xl,
   },
+  setupSection: {
+    gap: spacing.md,
+  },
+  setupHeading: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  setupTitle: {
+    ...typography.section,
+    color: colors.ink,
+  },
+  setupSubtitle: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  setupCount: {
+    ...typography.caption,
+    color: colors.primary,
+  },
+  setupList: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  setupRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  setupRowPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  setupCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  setupLabel: {
+    ...typography.label,
+    color: colors.ink,
+  },
+  setupLabelComplete: {
+    color: colors.inkMuted,
+    textDecorationLine: 'line-through',
+  },
+  setupDetail: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  setupDivider: {
+    height: 1,
+    marginLeft: 32,
+    backgroundColor: colors.border,
+  },
   summary: {
     minHeight: 74,
     flexDirection: 'row',
@@ -758,6 +977,43 @@ const styles = StyleSheet.create({
   summaryDivider: {
     width: 1,
     backgroundColor: colors.border,
+  },
+  cashRow: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  cashRowPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  cashIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.iconSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cashCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cashTitle: {
+    ...typography.label,
+    color: colors.ink,
+  },
+  cashDetail: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  cashValue: {
+    ...typography.label,
+    color: colors.ink,
   },
   section: {
     gap: spacing.md,
@@ -876,6 +1132,32 @@ const styles = StyleSheet.create({
   planFill: {
     height: '100%',
     borderRadius: radius.round,
+  },
+  planSignals: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
+  },
+  planSignal: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  planSignalPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  planSignalCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  planSignalLabel: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  planSignalValue: {
+    ...typography.label,
+    color: colors.ink,
   },
   billList: {
     borderTopWidth: 1,

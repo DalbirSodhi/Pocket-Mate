@@ -1,5 +1,6 @@
 import { supabase } from '../../../infrastructure/supabase/client';
 import { getNextMonthlyDateString } from '../utils/financeValidation.cjs';
+import { getCreditCardBillMutationBlockReason } from '../utils/financeCorrectionRules.cjs';
 import { syncUserReminderSchedule } from '../../preferences/services/reminderCoordinator';
 
 export const DEFAULT_EXPENSE_CATEGORIES = [
@@ -370,6 +371,55 @@ export async function setRecurringExpenseActive({
   return response.data;
 }
 
+export async function updateRecurringExpense({
+  userId,
+  recurringExpenseId,
+  categoryId,
+  name,
+  amountCents,
+  startsOn,
+  note,
+}) {
+  const response = await supabase
+    .from('recurring_expenses')
+    .update({
+      category_id: categoryId,
+      name: name.trim(),
+      amount_cents: amountCents,
+      charge_day: Number(startsOn.split('-')[2]),
+      starts_on: startsOn,
+      note: note.trim() || null,
+    })
+    .eq('user_id', userId)
+    .eq('id', recurringExpenseId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  await syncUserReminderSchedule(userId);
+  return response.data;
+}
+
+export async function deleteRecurringExpense({ userId, recurringExpenseId }) {
+  const response = await supabase
+    .from('recurring_expenses')
+    .delete()
+    .eq('user_id', userId)
+    .eq('id', recurringExpenseId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  await syncUserReminderSchedule(userId);
+  return response.data;
+}
+
 export async function getCreditCards(userId) {
   const response = await supabase
     .from('credit_cards')
@@ -465,7 +515,7 @@ export async function createCreditCardBill({
 }
 
 export async function getCreditCardBills(userId, limit = 100) {
-  const [billsResponse, cards] = await Promise.all([
+  const [billsResponse, cards, plansResponse] = await Promise.all([
     supabase
       .from('credit_card_bills')
       .select(
@@ -476,13 +526,141 @@ export async function getCreditCardBills(userId, limit = 100) {
       .order('created_at', { ascending: false })
       .limit(limit),
     getCreditCards(userId),
+    supabase
+      .from('bill_payment_plans')
+      .select('id, credit_card_bill_id')
+      .eq('user_id', userId)
+      .not('credit_card_bill_id', 'is', null),
   ]);
   const cardById = new Map(cards.map((card) => [card.id, card]));
+  const plans = unwrap(plansResponse);
+  const planIds = plans.map((plan) => plan.id);
+  const installmentsResponse = planIds.length
+    ? await supabase
+      .from('bill_payment_installments')
+      .select('payment_plan_id')
+      .eq('user_id', userId)
+      .in('payment_plan_id', planIds)
+      .not('paid_on', 'is', null)
+    : { data: [], error: null };
+  const completedPlanIds = new Set(
+    unwrap(installmentsResponse).map((installment) => installment.payment_plan_id),
+  );
+  const planByBillId = new Map(
+    plans.map((plan) => [plan.credit_card_bill_id, plan]),
+  );
 
   return unwrap(billsResponse).map((bill) => ({
     ...bill,
     card: cardById.get(bill.credit_card_id) || null,
+    paymentPlanId: planByBillId.get(bill.id)?.id || null,
+    mutationLockedReason: getCreditCardBillMutationBlockReason({
+      paidOn: bill.paid_on,
+      hasCompletedInstallment: completedPlanIds.has(planByBillId.get(bill.id)?.id),
+    }),
   }));
+}
+
+async function getCreditCardBillForCorrection({ userId, billId }) {
+  const billResponse = await supabase
+    .from('credit_card_bills')
+    .select('id, amount_cents, statement_on, due_on, paid_on, note')
+    .eq('user_id', userId)
+    .eq('id', billId)
+    .single();
+
+  if (billResponse.error) {
+    throw billResponse.error;
+  }
+
+  const plansResponse = await supabase
+    .from('bill_payment_plans')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('credit_card_bill_id', billId);
+  const plans = unwrap(plansResponse);
+  const planIds = plans.map((plan) => plan.id);
+  const installmentsResponse = planIds.length
+    ? await supabase
+      .from('bill_payment_installments')
+      .select('id')
+      .eq('user_id', userId)
+      .in('payment_plan_id', planIds)
+      .not('paid_on', 'is', null)
+      .limit(1)
+    : { data: [], error: null };
+  const mutationLockedReason = getCreditCardBillMutationBlockReason({
+    paidOn: billResponse.data.paid_on,
+    hasCompletedInstallment: unwrap(installmentsResponse).length > 0,
+  });
+
+  if (mutationLockedReason) {
+    throw new Error(mutationLockedReason);
+  }
+
+  return {
+    ...billResponse.data,
+    paymentPlanId: planIds[0] || null,
+  };
+}
+
+export async function updateCreditCardBill({
+  userId,
+  billId,
+  amountCents,
+  statementOn,
+  dueOn,
+  note,
+}) {
+  const bill = await getCreditCardBillForCorrection({ userId, billId });
+
+  if (
+    bill.paymentPlanId &&
+    (bill.amount_cents !== amountCents || bill.due_on !== dueOn)
+  ) {
+    throw new Error(
+      'This bill already has a payment plan. Update its total and due date from the payment plan to keep scheduled payments accurate.',
+    );
+  }
+
+  const response = await supabase
+    .from('credit_card_bills')
+    .update({
+      amount_cents: amountCents,
+      statement_on: statementOn,
+      due_on: dueOn,
+      note: note.trim() || null,
+    })
+    .eq('user_id', userId)
+    .eq('id', billId)
+    .select('id, credit_card_id, amount_cents, statement_on, due_on, paid_on, note, created_at')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  await syncUserReminderSchedule(userId);
+  return response.data;
+}
+
+export async function deleteCreditCardBill({ userId, billId }) {
+  await getCreditCardBillForCorrection({ userId, billId });
+
+  const response = await supabase
+    .from('credit_card_bills')
+    .delete()
+    .eq('user_id', userId)
+    .eq('id', billId)
+    .select('id')
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  await syncUserReminderSchedule(userId);
+  return response.data;
 }
 
 export async function setCreditCardBillPaid({

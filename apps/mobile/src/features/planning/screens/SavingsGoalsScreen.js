@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { PiggyBank, Plus } from 'lucide-react-native';
+import { History, PiggyBank, Plus, Undo2 } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import {
   RefreshControl,
@@ -18,22 +18,29 @@ import { InlineNotice } from '../../../components/InlineNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
+import { AccountPicker, getAccounts } from '../../accounts';
 import { formatCurrency } from '../../dashboard/utils/formatCurrency';
 import {
   isValidDateString,
+  getLocalDateString,
   parseAmountToCents,
 } from '../../finance/utils/financeValidation.cjs';
 import {
   addSavingsGoalProgress,
   createSavingsGoal,
+  getSavingsContributionHistory,
   getSavingsGoals,
+  recordSavingsGoalContribution,
   setSavingsGoalActive,
+  undoSavingsGoalContribution,
 } from '../services/planningService';
 
 export function SavingsGoalsScreen({ navigation, route }) {
   const { user } = useAuthSession();
   const currencyCode = route.params?.currencyCode || 'CAD';
   const [goals, setGoals] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [contributions, setContributions] = useState([]);
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [monthlyContribution, setMonthlyContribution] = useState('');
@@ -43,13 +50,43 @@ export function SavingsGoalsScreen({ navigation, route }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [updatingId, setUpdatingId] = useState('');
+  const [contributionGoalId, setContributionGoalId] = useState('');
+  const [contributionAmount, setContributionAmount] = useState('');
+  const [contributionDate, setContributionDate] = useState(getLocalDateString());
+  const [fromAccountId, setFromAccountId] = useState('');
+  const [toAccountId, setToAccountId] = useState('');
 
   const loadGoals = useCallback(async () => {
     setIsRefreshing(true);
     setRequestError('');
 
     try {
-      setGoals(await getSavingsGoals(user.id));
+      const [nextGoals, nextAccounts, nextContributions] = await Promise.all([
+        getSavingsGoals(user.id),
+        getAccounts(user.id),
+        getSavingsContributionHistory(user.id),
+      ]);
+      setGoals(nextGoals);
+      setAccounts(nextAccounts);
+      setContributions(nextContributions);
+
+      const sourceAccounts = nextAccounts.filter(
+        (account) =>
+          account.is_active && ['checking', 'cash'].includes(account.account_type),
+      );
+      const savingsAccounts = nextAccounts.filter(
+        (account) => account.is_active && account.account_type === 'savings',
+      );
+      setFromAccountId((current) =>
+        sourceAccounts.some((account) => account.id === current)
+          ? current
+          : sourceAccounts[0]?.id || '',
+      );
+      setToAccountId((current) =>
+        savingsAccounts.some((account) => account.id === current)
+          ? current
+          : savingsAccounts[0]?.id || '',
+      );
     } catch (error) {
       setRequestError(error.message || 'Unable to load savings goals.');
     } finally {
@@ -144,6 +181,27 @@ export function SavingsGoalsScreen({ navigation, route }) {
   }
 
   async function handleRecordContribution(goal) {
+    if (accounts.length > 0) {
+      if (!sourceAccounts.length || !savingsAccounts.length) {
+        setRequestError(
+          'Add an active checking or cash account and an active savings account before contributing.',
+        );
+        return;
+      }
+      setContributionGoalId(goal.id);
+      setContributionAmount(
+        String(
+          Math.min(
+            goal.monthly_contribution_cents,
+            goal.target_amount_cents - goal.current_amount_cents,
+          ) / 100,
+        ),
+      );
+      setContributionDate(getLocalDateString());
+      setErrors({});
+      return;
+    }
+
     setUpdatingId(goal.id);
     setRequestError('');
 
@@ -168,6 +226,77 @@ export function SavingsGoalsScreen({ navigation, route }) {
       setUpdatingId('');
     }
   }
+
+  async function handleSaveAccountBackedContribution(goal) {
+    const nextErrors = {};
+    const amountCents = parseAmountToCents(contributionAmount);
+
+    if (amountCents === null) {
+      nextErrors.contributionAmount = 'Enter an amount greater than zero.';
+    } else if (amountCents > goal.target_amount_cents - goal.current_amount_cents) {
+      nextErrors.contributionAmount = 'This amount is more than the remaining goal balance.';
+    }
+    if (!fromAccountId) {
+      nextErrors.fromAccount = 'Choose where the money comes from.';
+    }
+    if (!toAccountId) {
+      nextErrors.toAccount = 'Choose a savings account.';
+    }
+    if (fromAccountId && fromAccountId === toAccountId) {
+      nextErrors.toAccount = 'Choose a different savings account.';
+    }
+    if (!isValidDateString(contributionDate)) {
+      nextErrors.contributionDate = 'Use a valid date in YYYY-MM-DD format.';
+    }
+
+    setErrors(nextErrors);
+    setRequestError('');
+    if (Object.keys(nextErrors).length > 0) return;
+
+    setUpdatingId(goal.id);
+    try {
+      await recordSavingsGoalContribution({
+        goalId: goal.id,
+        fromAccountId,
+        toAccountId,
+        amountCents,
+        contributedOn: contributionDate,
+      });
+      setContributionGoalId('');
+      setContributionAmount('');
+      await loadGoals();
+    } catch (error) {
+      setRequestError(error.message || 'Unable to record this contribution.');
+    } finally {
+      setUpdatingId('');
+    }
+  }
+
+  async function handleUndoContribution(contributionId) {
+    setUpdatingId(contributionId);
+    setRequestError('');
+
+    try {
+      await undoSavingsGoalContribution(contributionId);
+      await loadGoals();
+    } catch (error) {
+      setRequestError(error.message || 'Unable to undo this contribution.');
+    } finally {
+      setUpdatingId('');
+    }
+  }
+
+  const sourceAccounts = accounts.filter(
+    (account) =>
+      account.is_active && ['checking', 'cash'].includes(account.account_type),
+  );
+  const savingsAccounts = accounts.filter(
+    (account) => account.is_active && account.account_type === 'savings',
+  );
+  const accountById = useMemo(
+    () => new Map(accounts.map((account) => [account.id, account])),
+    [accounts],
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -252,6 +381,9 @@ export function SavingsGoalsScreen({ navigation, route }) {
             <Text style={styles.sectionTitle}>Your goals</Text>
             <View style={styles.list}>
               {goals.map((goal, index) => {
+                const goalContributions = contributions.filter(
+                  (contribution) => contribution.savings_goal_id === goal.id,
+                );
                 const progress =
                   goal.target_amount_cents > 0
                     ? Math.min(
@@ -295,13 +427,112 @@ export function SavingsGoalsScreen({ navigation, route }) {
                           >
                             <Plus color={colors.primary} size={15} />
                             <Text style={styles.contributionLabel}>
-                              Record{' '}
+                              {accounts.length === 0 ? 'Track ' : 'Contribute '}
                               {formatCurrency(
                                 goal.monthly_contribution_cents,
                                 currencyCode,
                               )}
                             </Text>
                           </Pressable>
+                        ) : null}
+                        {accounts.length === 0 ? (
+                          <InlineNotice
+                            message="Tracking-only: add accounts to move real money into savings."
+                            variant="info"
+                          />
+                        ) : null}
+                        {accounts.length > 0 &&
+                        (!sourceAccounts.length || !savingsAccounts.length) ? (
+                          <InlineNotice
+                            message="Add an active checking or cash account and an active savings account before contributing."
+                            variant="warning"
+                          />
+                        ) : null}
+                        {contributionGoalId === goal.id &&
+                        sourceAccounts.length &&
+                        savingsAccounts.length ? (
+                          <View style={styles.contributionForm}>
+                            <Text style={styles.contributionFormTitle}>
+                              Move money to this goal
+                            </Text>
+                            <AccountPicker
+                              accounts={sourceAccounts}
+                              allowUnassigned={false}
+                              currencyCode={currencyCode}
+                              error={errors.fromAccount}
+                              label="From"
+                              onSelect={setFromAccountId}
+                              selectedId={fromAccountId}
+                            />
+                            <AccountPicker
+                              accounts={savingsAccounts}
+                              allowUnassigned={false}
+                              currencyCode={currencyCode}
+                              error={errors.toAccount}
+                              label="To savings"
+                              onSelect={setToAccountId}
+                              selectedId={toAccountId}
+                            />
+                            <FormField
+                              error={errors.contributionAmount}
+                              keyboardType="decimal-pad"
+                              label="Amount"
+                              onChangeText={setContributionAmount}
+                              placeholder="0.00"
+                              value={contributionAmount}
+                            />
+                            <FormField
+                              error={errors.contributionDate}
+                              label="Contribution date"
+                              onChangeText={setContributionDate}
+                              placeholder="YYYY-MM-DD"
+                              value={contributionDate}
+                            />
+                            <AppButton
+                              icon={Plus}
+                              isLoading={updatingId === goal.id}
+                              label="Move money to savings"
+                              onPress={() => handleSaveAccountBackedContribution(goal)}
+                            />
+                            <AppButton
+                              label="Cancel"
+                              onPress={() => setContributionGoalId('')}
+                              variant="secondary"
+                            />
+                          </View>
+                        ) : null}
+                        {goalContributions.length ? (
+                          <View style={styles.history}>
+                            <View style={styles.historyTitleRow}>
+                              <History color={colors.iconInk} size={16} />
+                              <Text style={styles.historyTitle}>Contribution history</Text>
+                            </View>
+                            {goalContributions.map((contribution) => (
+                              <View key={contribution.id} style={styles.historyRow}>
+                                <View style={styles.historyCopy}>
+                                  <Text style={styles.historyAmount}>
+                                    {formatCurrency(contribution.amount_cents, currencyCode)}
+                                  </Text>
+                                  <Text style={styles.historyBody}>
+                                    {contribution.contributed_on} {' from '}
+                                    {accountById.get(contribution.from_account_id)?.name || 'Source account'}
+                                    {' to '}
+                                    {accountById.get(contribution.to_account_id)?.name || 'Savings account'}
+                                  </Text>
+                                </View>
+                                <Pressable
+                                  accessibilityLabel={`Undo ${formatCurrency(contribution.amount_cents, currencyCode)} contribution`}
+                                  accessibilityRole="button"
+                                  disabled={updatingId === contribution.id}
+                                  onPress={() => handleUndoContribution(contribution.id)}
+                                  style={styles.undoButton}
+                                >
+                                  <Undo2 color={colors.primary} size={17} />
+                                  <Text style={styles.undoLabel}>Undo</Text>
+                                </Pressable>
+                              </View>
+                            ))}
+                          </View>
                         ) : null}
                       </View>
                       <Switch
@@ -405,6 +636,58 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   contributionLabel: {
+    ...typography.label,
+    color: colors.primary,
+  },
+  contributionForm: {
+    marginTop: spacing.md,
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceMuted,
+  },
+  contributionFormTitle: {
+    ...typography.label,
+    color: colors.ink,
+  },
+  history: {
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  historyTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  historyTitle: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  historyCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  historyAmount: {
+    ...typography.label,
+    color: colors.ink,
+  },
+  historyBody: {
+    ...typography.caption,
+    color: colors.inkMuted,
+  },
+  undoButton: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  undoLabel: {
     ...typography.label,
     color: colors.primary,
   },

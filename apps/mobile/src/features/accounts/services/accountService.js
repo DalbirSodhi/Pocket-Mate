@@ -1,4 +1,5 @@
 import { supabase } from '../../../infrastructure/supabase/client';
+import { fetchAllRows } from '../../../infrastructure/supabase/pagination';
 import {
   calculateAccountBalances,
   summarizeAccounts,
@@ -25,22 +26,22 @@ export async function getAccounts(userId) {
       .eq('user_id', userId)
       .order('is_active', { ascending: false })
       .order('created_at', { ascending: true }),
-    supabase.from('income_entries').select('account_id, amount_cents').eq('user_id', userId).not('account_id', 'is', null),
-    supabase.from('expenses').select('account_id, amount_cents').eq('user_id', userId).not('account_id', 'is', null),
-    supabase.from('account_transfers').select('from_account_id, to_account_id, amount_cents').eq('user_id', userId),
+    fetchAllRows(() => supabase.from('income_entries').select('account_id, amount_cents').eq('user_id', userId).not('account_id', 'is', null).order('id')),
+    fetchAllRows(() => supabase.from('expenses').select('account_id, amount_cents').eq('user_id', userId).not('account_id', 'is', null).order('id')),
+    fetchAllRows(() => supabase.from('account_transfers').select('from_account_id, to_account_id, amount_cents').eq('user_id', userId).order('id')),
     supabase.from('credit_cards').select('id, financial_account_id, tracking_mode').eq('user_id', userId),
-    supabase.from('credit_card_bills').select('credit_card_id, amount_cents').eq('user_id', userId).is('paid_on', null),
-    supabase.from('expense_refunds').select('account_id, amount_cents').eq('user_id', userId).not('account_id', 'is', null),
+    fetchAllRows(() => supabase.from('credit_card_bills').select('credit_card_id, amount_cents').eq('user_id', userId).is('paid_on', null).order('id')),
+    fetchAllRows(() => supabase.from('expense_refunds').select('account_id, amount_cents').eq('user_id', userId).not('account_id', 'is', null).order('id')),
   ]);
 
   return calculateAccountBalances({
     accounts: unwrap(accountResponse),
-    incomeEntries: unwrap(incomeResponse),
-    expenses: unwrap(expenseResponse),
-    transfers: unwrap(transferResponse),
+    incomeEntries: incomeResponse,
+    expenses: expenseResponse,
+    transfers: transferResponse,
     creditCards: unwrap(cardResponse),
-    unpaidCardBills: unwrap(billResponse),
-    refunds: unwrap(refundResponse),
+    unpaidCardBills: billResponse,
+    refunds: refundResponse,
   });
 }
 
