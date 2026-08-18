@@ -14,7 +14,7 @@ import { getMonthKey, getMonthRangeForKey, shiftMonthKey } from '../../insights/
 import { getPlanningCalendar } from '../services/calendarService';
 
 function EventIcon({ type }) {
-  const Icon = type === 'credit_card_bill' ? CreditCard : type === 'income' || type === 'payday' ? CircleDollarSign : ReceiptText;
+  const Icon = type === 'credit_card_bill' ? CreditCard : ['income', 'projected_income', 'payday'].includes(type) ? CircleDollarSign : ReceiptText;
   return <Icon color={colors.ink} size={19} />;
 }
 
@@ -56,6 +56,18 @@ export function CalendarScreen({ navigation, route }) {
       navigation.navigate('IncomeDetail', { incomeId: event.incomeId, currencyCode });
       return;
     }
+    if (event.type === 'projected_income' && event.recurringIncomeScheduleId) {
+      navigation.navigate('RecurringIncome', {
+        currencyCode,
+        ...(event.canRecord
+          ? {
+              scheduleId: event.recurringIncomeScheduleId,
+              occurrenceOn: event.expectedOn,
+            }
+          : {}),
+      });
+      return;
+    }
     if (event.type === 'credit_card_bill' || event.type === 'recurring_expense' || event.type === 'bill_installment') {
       navigation.navigate('BillPaymentPlan', {
         creditCardBillId: event.creditCardBillId,
@@ -85,7 +97,7 @@ export function CalendarScreen({ navigation, route }) {
 
           <View style={styles.summary}>
             <View><Text style={styles.summaryLabel}>Expected outflow</Text><Text style={styles.summaryValue}>{formatCurrency(calendar?.totals?.outflowCents || 0, currencyCode)}</Text></View>
-            <View><Text style={styles.summaryLabel}>Recorded income</Text><Text style={styles.summaryValue}>{formatCurrency(calendar?.totals?.incomeCents || 0, currencyCode)}</Text></View>
+            <View><Text style={styles.summaryLabel}>Recorded + expected income</Text><Text style={styles.summaryValue}>{formatCurrency(calendar?.totals?.incomeCents || 0, currencyCode)}</Text></View>
           </View>
 
           {grouped.map(([date, dateEvents]) => (
@@ -101,7 +113,7 @@ export function CalendarScreen({ navigation, route }) {
                   >
                     <View style={styles.eventIcon}><EventIcon type={event.type} /></View>
                     <View style={styles.eventCopy}><Text style={styles.eventTitle}>{event.title}</Text><Text style={styles.eventBody}>{event.coveredByPaymentPlan ? 'Covered by payment plan' : event.statusLabel || event.subtitle || event.status || event.type.replaceAll('_', ' ')}</Text></View>
-                    {event.amountCents ? <Text style={[styles.eventAmount, (event.type === 'income' || event.type === 'payday') && styles.incomeAmount]}>{event.type === 'income' ? '+' : ''}{formatCurrency(event.amountCents, currencyCode)}</Text> : null}
+                    {event.amountCents ? <Text style={[styles.eventAmount, ['income', 'projected_income', 'payday'].includes(event.type) && styles.incomeAmount]}>{['income', 'projected_income'].includes(event.type) ? '+' : ''}{formatCurrency(event.amountCents, currencyCode)}</Text> : null}
                     {event.type !== 'payday' ? <ChevronRight color={colors.inkMuted} size={17} /> : null}
                   </Pressable>
                   {index < dateEvents.length - 1 ? <View style={styles.divider} /> : null}

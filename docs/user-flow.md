@@ -81,7 +81,7 @@ instead of inflating income, and a destination account receives the returned
 cash. Editing an expense amount clears a stale split and cannot reduce the total
 below refunds already received.
 
-Recurring expenses can be corrected or removed from **Monthly fixed**. Unpaid
+Recurring expenses can be corrected or removed from **Repeating expenses**. Unpaid
 card statements can be corrected or removed from **Credit cards**. Paid
 statements and statements with completed payment chunks remain locked so a
 correction cannot rewrite cash history.
@@ -123,9 +123,11 @@ correction cannot rewrite cash history.
 2. Move between calendar months without changing finance data.
 3. Select an income entry to review it, or select a bill or payment chunk to
    open its payment plan.
-4. Open **Settings > Reminders and display** to enable local reminders, choose
+4. Select projected income to confirm the received date. Confirmation creates
+   one income entry and prevents the same occurrence from being posted twice.
+5. Open **Settings > Reminders and display** to enable local reminders, choose
    event types, lead days, and a reminder hour.
-5. Pocket-Mate replaces only its own scheduled notifications on that device
+6. Pocket-Mate replaces only its own scheduled notifications on that device
    when settings or source bills change.
 
 The calendar keeps the original obligation visible when a payment plan exists,
@@ -168,11 +170,13 @@ amounts, and are created locally without uploading another copy.
 1. Open **Settings > Import transactions** and choose a CSV file.
 2. Pocket-Mate normalizes common bank headers, validates every row, and marks
    duplicates from the file or earlier posted imports.
-3. Choose the expense category, review accepted and rejected rows, then post the
-   accepted rows as one transactional batch.
-4. Use Import history to undo a posted batch and remove only entries created by
+3. Choose default category and account assignments, then expand any row that
+   needs a different category or account.
+4. Post only after every expense row has a category. The accepted rows are
+   committed as one transactional batch.
+5. Use Import history to undo a posted batch and remove only entries created by
    that batch.
-5. Open **Settings > Cash-flow trends** to compare six months of reconciled
+6. Open **Settings > Cash-flow trends** to compare six months of reconciled
    income, spending after refunds, monthly net, and savings rate.
 
 ## Debt Payoff Flow
@@ -273,6 +277,23 @@ Plan screen.
    account funding it. The payment reduces available cash and card debt.
 6. Each card explicitly uses statement or purchase tracking. Statement tracking
    remains the backward-compatible default.
+7. If a displayed balance differs from a statement, the user enters the actual
+   balance and date. Pocket-Mate records only the signed difference as an
+   auditable correction; undo removes that correction without rewriting ledger
+   history.
+
+## Recurring Income And Expense Flow
+
+1. Open **Plan > Income plans** and add salary, benefits, freelance work, or
+   another expected deposit.
+2. Choose weekly, biweekly, twice-monthly, or monthly cadence, the next expected
+   date, an optional end date, and an optional deposit account.
+3. Projected occurrences appear in the planning calendar but do not count as
+   earned money.
+4. Mark an occurrence received to create the real income entry exactly once.
+5. Add repeating expenses with weekly, biweekly, monthly, or yearly cadence.
+   Dashboard commitments and calendar totals include every occurrence due in
+   the selected month.
 
 ## Main Navigation
 

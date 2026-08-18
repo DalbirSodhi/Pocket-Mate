@@ -10,6 +10,7 @@ const {
 const MONTH_PATTERN = /^\d{4}-\d{2}$/;
 const EVENT_TYPES = Object.freeze({
   INCOME: 'income',
+  PROJECTED_INCOME: 'projected_income',
   PAYDAY: 'payday',
   RECURRING_EXPENSE: 'recurring_expense',
   CREDIT_CARD_BILL: 'credit_card_bill',
@@ -18,9 +19,10 @@ const EVENT_TYPES = Object.freeze({
 const TYPE_ORDER = Object.freeze({
   [EVENT_TYPES.PAYDAY]: 0,
   [EVENT_TYPES.INCOME]: 1,
-  [EVENT_TYPES.RECURRING_EXPENSE]: 2,
-  [EVENT_TYPES.CREDIT_CARD_BILL]: 3,
-  [EVENT_TYPES.BILL_INSTALLMENT]: 4,
+  [EVENT_TYPES.PROJECTED_INCOME]: 2,
+  [EVENT_TYPES.RECURRING_EXPENSE]: 3,
+  [EVENT_TYPES.CREDIT_CARD_BILL]: 4,
+  [EVENT_TYPES.BILL_INSTALLMENT]: 5,
 });
 
 function normalizeCents(value) {

@@ -20,8 +20,8 @@ const EXPENSE_TYPES = [
   },
   {
     id: 'RecurringExpense',
-    title: 'Monthly fixed expense',
-    description: 'Set rent, subscriptions, and other repeating commitments once.',
+    title: 'Repeating expense',
+    description: 'Set weekly, biweekly, monthly, or yearly commitments once.',
     icon: CalendarClock,
     tone: { background: colors.iconSurface, foreground: colors.iconInk },
   },

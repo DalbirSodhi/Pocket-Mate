@@ -32,6 +32,7 @@ import {
   FixedExpensesScreen,
   IncomeDetailScreen,
   OneTimeExpenseScreen,
+  RecurringIncomeScreen,
   RecurringExpenseScreen,
   TransactionsScreen,
 } from '../features/finance';
@@ -176,6 +177,7 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={AddIncomeScreen} name="AddIncome" />
       <Stack.Screen component={OneTimeExpenseScreen} name="OneTimeExpense" />
       <Stack.Screen component={RecurringExpenseScreen} name="RecurringExpense" />
+      <Stack.Screen component={RecurringIncomeScreen} name="RecurringIncome" />
       <Stack.Screen component={CardBillScreen} name="CardBill" />
       <Stack.Screen component={CategoriesScreen} name="Categories" />
       <Stack.Screen component={FixedExpensesScreen} name="FixedExpenses" />

@@ -5,19 +5,18 @@ import { getAccountOverview } from '../../accounts/services/accountService';
 import { getMonthlyBudget } from '../../planning/services/budgetService';
 import { buildCategorizedAdjustments } from '../../finance/utils/transactionMath.cjs';
 import { getUserPreferences } from '../../preferences/services/preferencesService';
+import { generateCalendarEvents } from '../../planning/utils/calendarMath.cjs';
 import {
   calculateActualBalance,
   calculateSafeToSpend,
   calculatePlanTotals,
   getMonthRange,
-  getNextMonthlyDueDate,
   getPaidInstallmentCents,
   getPayCycleRange,
   getPlanHealth,
   getPlannedInstallmentCents,
   getRemainingPaymentPlanCents,
   getSafeToSpendBase,
-  isMonthlyChargeInRange,
   sumCents,
 } from '../utils/dashboardMath.cjs';
 
@@ -59,6 +58,7 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     refundResponse,
     splitResponse,
     preferences,
+    reviewResponse,
   ] = await Promise.all([
     fetchAllRows(() =>
       supabase
@@ -99,7 +99,7 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     getMonthlyBudget({ userId, monthKey: month.startDate.slice(0, 7) }),
     supabase
       .from('recurring_expenses')
-      .select('id, name, amount_cents, charge_day')
+      .select('id, name, amount_cents, cadence, charge_day, starts_on, ends_on, is_active')
       .eq('user_id', userId)
       .eq('is_active', true)
       .lte('starts_on', month.endDate)
@@ -164,7 +164,16 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
         .order('category_id'),
     ),
     getUserPreferences(userId),
+    supabase
+      .from('review_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'pending'),
   ]);
+
+  if (reviewResponse.error) {
+    throw reviewResponse.error;
+  }
 
   const income = unwrapResponse(incomeResponse);
   const expenses = unwrapResponse(expenseResponse);
@@ -176,14 +185,23 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     category_id: budget.category_id,
     amount_cents: budget.availableCents,
   }));
-  const recurringExpenses = unwrapResponse(recurringResponse).filter(
-    (expense) =>
-      isMonthlyChargeInRange({
-        chargeDay: expense.charge_day,
-        startDate: month.startDate,
-        endDate: month.endDate,
-      }),
-  );
+  const recurringExpenses = unwrapResponse(recurringResponse);
+  const recurringEvents = generateCalendarEvents({
+    month: month.startDate.slice(0, 7),
+    recurringExpenses,
+  }).filter((event) => event.type === 'recurring_expense');
+  const recurringEventsById = new Map();
+  for (const event of recurringEvents) {
+    const events = recurringEventsById.get(event.recurringExpenseId) || [];
+    events.push(event);
+    recurringEventsById.set(event.recurringExpenseId, events);
+  }
+  const dueRecurringExpenses = recurringExpenses
+    .map((expense) => ({
+      ...expense,
+      events: recurringEventsById.get(expense.id) || [],
+    }))
+    .filter((expense) => expense.events.length > 0);
   const unpaidCardBills = unwrapResponse(cardBillResponse);
   const creditCards = unwrapResponse(creditCardResponse);
   const paymentPlans = unwrapResponse(paymentPlanResponse);
@@ -273,12 +291,16 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
   const categorySpentById = new Map(
     categoryInsights.rows.map((row) => [row.categoryId, row.amountCents]),
   );
-  const fixedExpenseCents = recurringExpenses.reduce((total, expense) => {
+  const fixedExpenseCents = dueRecurringExpenses.reduce((total, expense) => {
     const paymentPlan = recurringPlanBySource.get(
       `${expense.id}-${month.startDate}`,
     );
+    const scheduledCents = expense.events.reduce(
+      (sum, event) => sum + event.amountCents,
+      0,
+    );
 
-    return total + (paymentPlan?.plannedCents ?? expense.amount_cents);
+    return total + (paymentPlan?.plannedCents ?? scheduledCents);
   }, 0);
   const cardBillCents = unpaidCardBills.reduce((total, bill) => {
     const paymentPlan = cardPlanByBillId.get(bill.id);
@@ -313,6 +335,7 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     incomeCents,
     totalOutflowCents: planTotals.totalOutflowCents,
     overBudgetCaps,
+    pendingReviewCount: reviewResponse.count || 0,
   });
   const actualAvailableCents = calculateActualBalance({
     incomeCents,
@@ -340,7 +363,7 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     unpaidCardBills.map((bill) => bill.credit_card_id),
   );
   const upcomingBills = [
-    ...recurringExpenses
+    ...dueRecurringExpenses
       .map((expense) => {
         const paymentPlan = recurringPlanBySource.get(
           `${expense.id}-${month.startDate}`,
@@ -351,15 +374,15 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
           type: 'recurring',
           title: expense.name,
           amountCents:
-            paymentPlan?.totalAmountCents ?? expense.amount_cents,
+            paymentPlan?.totalAmountCents ?? expense.events.reduce(
+              (sum, event) => sum + event.amountCents,
+              0,
+            ),
           recurringExpenseId: expense.id,
           periodStart: month.startDate,
           paymentPlan,
-          dueOn: getNextMonthlyDueDate({
-            chargeDay: expense.charge_day,
-            date,
-            endDate: month.endDate,
-          }),
+          dueOn: expense.events.find((event) => event.date >= today)?.date
+            || expense.events[0]?.date,
         };
       })
       .filter((expense) => expense.dueOn),
@@ -436,7 +459,7 @@ export async function getDashboardSummary(userId, profile, date = new Date()) {
     budgetSpentCents,
     overBudgetCaps,
     planHealth,
-    dueRecurringExpenses: recurringExpenses.length,
+    dueRecurringExpenses: recurringEvents.length,
     currentCardBills: committedCardBills.length,
     unpaidCardBills: unpaidCardBills.length,
     upcomingBills,

@@ -108,6 +108,17 @@
 - [x] Require a funding account before completing a credit-card payment.
 - [x] Paginate account and dashboard history beyond the API row limit.
 
+## Phase 11: Manual Finance Controls
+
+- [x] Recurring income plans with weekly, biweekly, twice-monthly, and monthly schedules.
+- [x] Project expected income on the planning calendar and post it once when received.
+- [x] Weekly, biweekly, monthly, and yearly repeating expense schedules.
+- [x] Account balance reconciliation with auditable, reversible corrections.
+- [x] Edit and delete savings goals without breaking linked contributions.
+- [x] Edit existing category budgets and preserve rollover behavior.
+- [x] Review CSV category and account assignments row by row before posting.
+- [x] Surface pending categorization work on the dashboard.
+
 Provider-backed bank sync remains deliberately deferred. Manual entry and
 reviewed CSV imports keep the current product useful without asking early users
 to grant financial-institution access. A provider integration should begin only

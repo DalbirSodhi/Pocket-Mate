@@ -304,6 +304,7 @@ export async function createRecurringExpense({
   categoryId,
   name,
   amountCents,
+  cadence,
   startsOn,
   note,
 }) {
@@ -314,7 +315,7 @@ export async function createRecurringExpense({
       category_id: categoryId,
       name: name.trim(),
       amount_cents: amountCents,
-      cadence: 'monthly',
+      cadence,
       charge_day: Number(startsOn.split('-')[2]),
       starts_on: startsOn,
       note: note.trim() || null,
@@ -377,6 +378,7 @@ export async function updateRecurringExpense({
   categoryId,
   name,
   amountCents,
+  cadence,
   startsOn,
   note,
 }) {
@@ -386,6 +388,7 @@ export async function updateRecurringExpense({
       category_id: categoryId,
       name: name.trim(),
       amount_cents: amountCents,
+      cadence,
       charge_day: Number(startsOn.split('-')[2]),
       starts_on: startsOn,
       note: note.trim() || null,

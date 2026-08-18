@@ -51,6 +51,74 @@ export async function createSavingsGoal({
   return response.data;
 }
 
+export async function updateSavingsGoal({
+  userId,
+  goalId,
+  name,
+  targetAmountCents,
+  monthlyContributionCents,
+  targetDate,
+}) {
+  const response = await supabase
+    .from('savings_goals')
+    .update({
+      name: name.trim(),
+      target_amount_cents: targetAmountCents,
+      monthly_contribution_cents: monthlyContributionCents,
+      target_date: targetDate || null,
+    })
+    .eq('user_id', userId)
+    .eq('id', goalId)
+    .select(
+      'id, name, target_amount_cents, current_amount_cents, monthly_contribution_cents, target_date, is_active',
+    )
+    .single();
+
+  if (response.error) {
+    throw response.error;
+  }
+
+  return response.data;
+}
+
+export async function deleteSavingsGoal({ userId, goalId }) {
+  const contributionResponse = await supabase
+    .from('savings_goal_contributions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('savings_goal_id', goalId)
+    .limit(1);
+
+  if (contributionResponse.error) {
+    throw contributionResponse.error;
+  }
+
+  if (contributionResponse.data?.length) {
+    const error = new Error(
+      'This goal has linked contributions. Undo those contributions before deleting the goal.',
+    );
+    error.code = 'SAVINGS_GOAL_HAS_CONTRIBUTIONS';
+    throw error;
+  }
+
+  const response = await supabase
+    .from('savings_goals')
+    .delete()
+    .eq('user_id', userId)
+    .eq('id', goalId);
+
+  if (response.error) {
+    if (response.error.code === '23503') {
+      const error = new Error(
+        'This goal has linked contributions. Undo those contributions before deleting the goal.',
+      );
+      error.code = 'SAVINGS_GOAL_HAS_CONTRIBUTIONS';
+      throw error;
+    }
+    throw response.error;
+  }
+}
+
 export async function setSavingsGoalActive({ userId, goalId, isActive }) {
   const response = await supabase
     .from('savings_goals')
