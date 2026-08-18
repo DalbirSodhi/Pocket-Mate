@@ -76,6 +76,14 @@ created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
 ```
 
+### recurring_income_schedules and recurring_income_occurrences
+
+Schedules store expected income independently from earned income. Supported
+cadences are weekly, biweekly, twice monthly, and monthly. An occurrence is
+created only through a protected function that atomically creates the linked
+`income_entries` row and advances the schedule. A unique schedule/date key makes
+retries idempotent.
+
 ### expense_categories
 
 Stores user-defined spending categories.
@@ -143,6 +151,9 @@ created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
 ```
 
+Allowed recurring-expense cadence values are `weekly`, `bi_weekly`, `monthly`,
+and `yearly`.
+
 ### credit_cards
 
 Stores reusable, non-sensitive card labels. Full card numbers are never stored.
@@ -206,6 +217,12 @@ bill_payment_installment_id uuid
 created_at timestamptz not null default now()
 updated_at timestamptz not null default now()
 ```
+
+### account_balance_adjustments
+
+Stores signed, dated reconciliation differences. The resulting balance is kept
+for audit context, while calculations apply only `amount_delta_cents` so a
+correction can be undone without rewriting transactions or opening balances.
 
 ### credit_card_bills
 

@@ -6,6 +6,19 @@ function normalizeCents(value) {
   return Number.isFinite(cents) ? Math.round(cents) : 0;
 }
 
+function parseBalanceToCents(value) {
+  const normalized = String(value ?? '')
+    .replace(/[$,\s]/g, '')
+    .trim();
+
+  if (!/^-?\d+(\.\d{1,2})?$/.test(normalized)) {
+    return null;
+  }
+
+  const cents = Math.round(Number(normalized) * 100);
+  return Number.isSafeInteger(cents) ? cents : null;
+}
+
 function calculateAccountBalances({
   accounts = [],
   incomeEntries = [],
@@ -14,12 +27,18 @@ function calculateAccountBalances({
   transfers = [],
   creditCards = [],
   unpaidCardBills = [],
+  balanceAdjustments = [],
 }) {
   const incomeByAccount = sumByAccount(incomeEntries, 'account_id');
   const expenseByAccount = sumByAccount(expenses, 'account_id');
   const refundByAccount = sumByAccount(refunds, 'account_id');
   const incomingByAccount = sumByAccount(transfers, 'to_account_id');
   const outgoingByAccount = sumByAccount(transfers, 'from_account_id');
+  const adjustmentsByAccount = sumByAccount(
+    balanceAdjustments,
+    'account_id',
+    'amount_delta_cents',
+  );
   const cardByAccount = new Map(
     creditCards.map((card) => [card.financial_account_id, card]),
   );
@@ -39,6 +58,7 @@ function calculateAccountBalances({
     const refundsReceived = refundByAccount.get(account.id) || 0;
     const incoming = incomingByAccount.get(account.id) || 0;
     const outgoing = outgoingByAccount.get(account.id) || 0;
+    const adjustments = adjustmentsByAccount.get(account.id) || 0;
     let balanceCents;
 
     if (account.account_type === 'credit_card') {
@@ -49,13 +69,14 @@ function calculateAccountBalances({
           : billsByCard.get(card?.id) || 0;
       const cardRefunds = card?.tracking_mode === 'transactions' ? refundsReceived : 0;
       balanceCents = Math.max(
-        opening + charges - cardRefunds + outgoing - incoming,
+        opening + charges - cardRefunds + outgoing - incoming + adjustments,
         0,
       );
     } else if (LIABILITY_TYPES.has(account.account_type)) {
-      balanceCents = Math.max(opening + outgoing - incoming, 0);
+      balanceCents = Math.max(opening + outgoing - incoming + adjustments, 0);
     } else {
-      balanceCents = opening + income + refundsReceived + incoming - spending - outgoing;
+      balanceCents =
+        opening + income + refundsReceived + incoming - spending - outgoing + adjustments;
     }
 
     return {
@@ -100,7 +121,7 @@ function summarizeAccounts(accounts = []) {
   );
 }
 
-function sumByAccount(rows, key) {
+function sumByAccount(rows, key, amountKey = 'amount_cents') {
   const totals = new Map();
 
   for (const row of rows) {
@@ -108,7 +129,7 @@ function sumByAccount(rows, key) {
     if (!accountId) continue;
     totals.set(
       accountId,
-      (totals.get(accountId) || 0) + normalizeCents(row.amount_cents),
+      (totals.get(accountId) || 0) + normalizeCents(row[amountKey]),
     );
   }
 
@@ -119,5 +140,6 @@ module.exports = {
   ASSET_TYPES,
   LIABILITY_TYPES,
   calculateAccountBalances,
+  parseBalanceToCents,
   summarizeAccounts,
 };

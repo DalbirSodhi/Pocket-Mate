@@ -40,6 +40,7 @@ function formatAmount(amountCents) {
 export function AddIncomeScreen({ navigation, route }) {
   const { user } = useAuthSession();
   const { isOffline } = useNetworkStatus();
+  const currencyCode = route.params?.currencyCode || 'CAD';
   const incomeId = route.params?.incomeId;
   const isEditing = Boolean(incomeId);
   const [amount, setAmount] = useState('');
@@ -184,7 +185,7 @@ export function AddIncomeScreen({ navigation, route }) {
               {accounts.length ? (
                 <AccountPicker
                   accounts={accounts}
-                  currencyCode="CAD"
+                  currencyCode={currencyCode}
                   label="Deposit to"
                   onSelect={setAccountId}
                   selectedId={accountId}

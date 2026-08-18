@@ -48,6 +48,8 @@ The first complete version should include:
 - Budget pressure warning.
 - Purchase-impact check before recording an expense.
 - Recurring expenses and credit card statements.
+- Recurring income plans and projected paydays that become real income only when received.
+- Manual account reconciliation with an audit trail.
 - Editable bill payment plans with user-selected payment dates.
 - Searchable monthly activity with correction and deletion controls.
 - Monthly category insights that reconcile completed bill payments.
@@ -83,6 +85,11 @@ balance is income minus completed spending, spendable cash is the current total
 in checking and cash accounts, and after-plan money subtracts unpaid commitments
 and protected savings. Safe-to-spend uses the lower of spendable cash and
 after-plan money, divided across the days to the next configured payday.
+
+Expected income is planning context, not available cash. It appears on the
+calendar but does not increase dashboard income, account balances, or safe-to-
+spend until the user marks that occurrence received. Repeating expense cadence
+is counted by actual occurrences within the selected calendar month.
 
 Users own their finance records. Reports must be generated from owner-scoped
 queries, remain on the user's device, and export standard CSV without sending

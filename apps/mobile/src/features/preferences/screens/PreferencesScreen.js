@@ -100,7 +100,7 @@ export function PreferencesScreen({ navigation, route }) {
             <Text style={styles.sectionTitle}>Reminders</Text>
             <PreferenceToggle icon={BellRing} title="Local reminders" detail="Scheduled on this device; no push token is collected" value={preferences.reminders_enabled} onValueChange={(value) => update('reminders_enabled', value)} />
             <PreferenceToggle icon={Bell} title="Card bills" detail="Remind before statement due dates" value={preferences.remind_card_bills} onValueChange={(value) => update('remind_card_bills', value)} />
-            <PreferenceToggle icon={Bell} title="Monthly fixed" detail="Remind before recurring charge dates" value={preferences.remind_recurring_bills} onValueChange={(value) => update('remind_recurring_bills', value)} />
+            <PreferenceToggle icon={Bell} title="Repeating expenses" detail="Remind before recurring charge dates" value={preferences.remind_recurring_bills} onValueChange={(value) => update('remind_recurring_bills', value)} />
             <PreferenceToggle icon={Bell} title="Paydays" detail="Show expected payday reminders" value={preferences.remind_paydays} onValueChange={(value) => update('remind_paydays', value)} />
             <Text style={styles.fieldLabel}>Remind me before</Text>
             <View style={styles.choices}>{LEAD_OPTIONS.map((day) => { const selected = preferences.lead_days.includes(day); return <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected }} key={day} onPress={() => toggleLeadDay(day)} style={[styles.choice, selected && styles.choiceSelected]}><Text style={[styles.choiceLabel, selected && styles.choiceLabelSelected]}>{day === 0 ? 'Due day' : `${day}d`}</Text></Pressable>; })}</View>

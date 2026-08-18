@@ -29,12 +29,20 @@ import {
 } from '../utils/financeValidation.cjs';
 import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
 
+const CADENCE_OPTIONS = [
+  { id: 'weekly', label: 'Weekly' },
+  { id: 'bi_weekly', label: 'Biweekly' },
+  { id: 'monthly', label: 'Monthly' },
+  { id: 'yearly', label: 'Yearly' },
+];
+
 export function RecurringExpenseScreen({ navigation }) {
   const { user } = useAuthSession();
   const [categories, setCategories] = useState([]);
   const [categoryId, setCategoryId] = useState('');
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
+  const [cadence, setCadence] = useState('monthly');
   const [startsOn, setStartsOn] = useState(getLocalDateString());
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState({});
@@ -73,7 +81,7 @@ export function RecurringExpenseScreen({ navigation }) {
     const nextErrors = validateEntry({ amount, date: startsOn });
 
     if (!name.trim()) {
-      nextErrors.name = 'Enter a name for this monthly expense.';
+      nextErrors.name = 'Enter a name for this repeating expense.';
     }
 
     if (!categoryId) {
@@ -95,13 +103,14 @@ export function RecurringExpenseScreen({ navigation }) {
         categoryId,
         name,
         amountCents: parseAmountToCents(amount),
+        cadence,
         startsOn,
         note,
       });
       navigation.popToTop();
     } catch (error) {
       setRequestError(
-        getFinanceErrorMessage(error, 'Unable to save this monthly expense.'),
+        getFinanceErrorMessage(error, 'Unable to save this repeating expense.'),
       );
     } finally {
       setIsSaving(false);
@@ -121,15 +130,15 @@ export function RecurringExpenseScreen({ navigation }) {
           <View style={styles.content}>
             <ScreenHeader
               onBack={navigation.goBack}
-              subtitle="Count it automatically every month"
-              title="Monthly fixed expense"
+              subtitle="Reserve repeating commitments automatically"
+              title="Repeating expense"
             />
 
             <View style={styles.intro}>
               <CalendarClock color={colors.primary} size={23} />
               <Text style={styles.introText}>
-                This amount is reserved in every monthly plan while the expense
-                remains active.
+                Pocket-Mate reserves each occurrence in the month while this
+                expense remains active.
               </Text>
             </View>
 
@@ -147,11 +156,31 @@ export function RecurringExpenseScreen({ navigation }) {
               <FormField
                 error={errors.amount}
                 keyboardType="decimal-pad"
-                label="Monthly amount"
+                label="Amount per occurrence"
                 onChangeText={setAmount}
                 placeholder="0.00"
                 value={amount}
               />
+
+              <View style={styles.cadenceBlock}>
+                <Text style={styles.fieldLabel}>Repeats</Text>
+                <View accessibilityRole="radiogroup" style={styles.cadenceGrid}>
+                  {CADENCE_OPTIONS.map((option) => {
+                    const isSelected = option.id === cadence;
+                    return (
+                      <Pressable
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isSelected }}
+                        key={option.id}
+                        onPress={() => setCadence(option.id)}
+                        style={[styles.cadenceOption, isSelected && styles.cadenceOptionSelected]}
+                      >
+                        <Text style={[styles.cadenceLabel, isSelected && styles.cadenceLabelSelected]}>{option.label}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
 
               <View style={styles.categoryBlock}>
                 <View style={styles.categoryHeading}>
@@ -219,7 +248,7 @@ export function RecurringExpenseScreen({ navigation }) {
                 value={startsOn}
               />
               <Text style={styles.dateHint}>
-                The day in this date becomes the monthly charge day.
+                This date anchors the repeating schedule.
               </Text>
               <FormField
                 label="Note (optional)"
@@ -236,7 +265,7 @@ export function RecurringExpenseScreen({ navigation }) {
               disabled={isLoadingCategories}
               icon={Check}
               isLoading={isSaving}
-              label="Save monthly expense"
+              label="Save repeating expense"
               onPress={handleSave}
             />
           </View>
@@ -283,6 +312,12 @@ const styles = StyleSheet.create({
   categoryBlock: {
     gap: spacing.sm,
   },
+  cadenceBlock: { gap: spacing.sm },
+  cadenceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  cadenceOption: { minHeight: 42, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, alignItems: 'center', justifyContent: 'center' },
+  cadenceOptionSelected: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  cadenceLabel: { ...typography.caption, color: colors.inkMuted },
+  cadenceLabelSelected: { color: colors.primary, fontWeight: '700' },
   categoryHeading: {
     minHeight: 24,
     flexDirection: 'row',

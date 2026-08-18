@@ -350,6 +350,31 @@ export function DashboardScreen({ navigation, profile }) {
               variant={isOffline ? 'warning' : 'info'}
             />
 
+            {summary?.pendingReviewCount > 0 ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => navigation.navigate('Automation', { currencyCode })}
+                style={({ pressed }) => [
+                  styles.reviewNotice,
+                  pressed && styles.reviewNoticePressed,
+                ]}
+              >
+                <View style={styles.reviewNoticeIcon}>
+                  <CircleCheck color={colors.primary} size={20} />
+                </View>
+                <View style={styles.reviewNoticeCopy}>
+                  <Text style={styles.reviewNoticeTitle}>
+                    {summary.pendingReviewCount}{' '}
+                    {summary.pendingReviewCount === 1 ? 'transaction needs' : 'transactions need'} review
+                  </Text>
+                  <Text style={styles.reviewNoticeBody}>
+                    Confirm imported or rule-matched activity before relying on its category.
+                  </Text>
+                </View>
+                <ChevronRight color={colors.inkMuted} size={17} />
+              </Pressable>
+            ) : null}
+
             {incompleteSetupSteps.length > 0 ? (
               <View style={styles.setupSection}>
                 <View style={styles.setupHeading}>
@@ -1015,6 +1040,28 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.ink,
   },
+  reviewNotice: {
+    minHeight: 72,
+    borderRadius: radius.md,
+    backgroundColor: colors.infoSoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  reviewNoticePressed: { opacity: 0.82 },
+  reviewNoticeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewNoticeCopy: { flex: 1, minWidth: 0 },
+  reviewNoticeTitle: { ...typography.label, color: colors.ink },
+  reviewNoticeBody: { ...typography.caption, color: colors.inkMuted },
   section: {
     gap: spacing.md,
   },

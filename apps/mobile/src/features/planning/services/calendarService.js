@@ -1,6 +1,10 @@
 import { supabase } from '../../../infrastructure/supabase/client';
 import { getMonthRangeForKey, shiftMonthKey } from '../../insights/utils/monthlyInsights.cjs';
-import { buildPlanningCalendar } from '../utils/calendarMath.cjs';
+import {
+  buildPlanningCalendar,
+  calculateCalendarEventTotals,
+} from '../utils/calendarMath.cjs';
+import { buildProjectedIncomeEvents } from '../../finance/utils/recurringIncomeMath.cjs';
 
 function unwrap(response) {
   if (response.error) throw response.error;
@@ -15,6 +19,8 @@ export async function getPlanningCalendar({ userId, profile, monthKey }) {
     planResponse,
     installmentResponse,
     incomeResponse,
+    incomeScheduleResponse,
+    incomeOccurrenceResponse,
   ] = await Promise.all([
     supabase
       .from('recurring_expenses')
@@ -46,9 +52,22 @@ export async function getPlanningCalendar({ userId, profile, monthKey }) {
       .eq('user_id', userId)
       .gte('received_on', range.startDate)
       .lte('received_on', range.endDate),
+    supabase
+      .from('recurring_income_schedules')
+      .select('id, source, amount_cents, account_id, cadence, anchor_day, next_expected_on, ends_on, is_active')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .lte('next_expected_on', range.endDate)
+      .or(`ends_on.is.null,ends_on.gte.${range.startDate}`),
+    supabase
+      .from('recurring_income_occurrences')
+      .select('schedule_id, expected_on')
+      .eq('user_id', userId)
+      .gte('expected_on', range.startDate)
+      .lte('expected_on', range.endDate),
   ]);
 
-  return buildPlanningCalendar({
+  const calendar = buildPlanningCalendar({
     month: monthKey,
     recurringExpenses: unwrap(recurringResponse),
     creditCardBills: unwrap(billResponse).map((bill) => ({ ...bill, card: bill.credit_cards })),
@@ -57,6 +76,20 @@ export async function getPlanningCalendar({ userId, profile, monthKey }) {
     incomeEntries: unwrap(incomeResponse),
     profile,
   });
+  const projectedIncome = buildProjectedIncomeEvents({
+    month: monthKey,
+    schedules: unwrap(incomeScheduleResponse),
+    occurrences: unwrap(incomeOccurrenceResponse),
+  });
+  const events = [...calendar.events, ...projectedIncome].sort(
+    (left, right) => left.date.localeCompare(right.date) || left.title.localeCompare(right.title),
+  );
+
+  return {
+    ...calendar,
+    events,
+    totals: calculateCalendarEventTotals(events),
+  };
 }
 
 export async function getReminderEvents({ userId, profile, monthCount = 4 }) {

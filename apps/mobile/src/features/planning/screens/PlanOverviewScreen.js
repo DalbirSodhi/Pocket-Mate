@@ -7,6 +7,7 @@ import {
   CreditCard,
   Gauge,
   Landmark,
+  Repeat2,
   Target,
 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
@@ -282,6 +283,15 @@ export function PlanOverviewScreen({ navigation, profile }) {
                 value="Open"
               />
               <PlanRow
+                detail="Plan salary, benefits, and other repeating deposits"
+                icon={Repeat2}
+                onPress={() =>
+                  navigation.navigate('RecurringIncome', { currencyCode })
+                }
+                title="Income plans"
+                value="Manage"
+              />
+              <PlanRow
                 detail={`${summary?.activeSavingsGoals || 0} active goals`}
                 icon={Target}
                 onPress={() =>
@@ -299,7 +309,7 @@ export function PlanOverviewScreen({ navigation, profile }) {
                 onPress={() =>
                   navigation.navigate('FixedExpenses', { currencyCode })
                 }
-                title="Monthly fixed"
+                title="Repeating expenses"
                 value={formatCurrency(
                   summary?.fixedExpenseCents || 0,
                   currencyCode,

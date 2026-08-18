@@ -1,7 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { History, PiggyBank, Plus, Undo2 } from 'lucide-react-native';
+import { History, Pencil, PiggyBank, Plus, Trash2, Undo2, X } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import {
+  Alert,
+  Platform,
   RefreshControl,
   Pressable,
   ScrollView,
@@ -28,10 +30,12 @@ import {
 import {
   addSavingsGoalProgress,
   createSavingsGoal,
+  deleteSavingsGoal,
   getSavingsContributionHistory,
   getSavingsGoals,
   recordSavingsGoalContribution,
   setSavingsGoalActive,
+  updateSavingsGoal,
   undoSavingsGoalContribution,
 } from '../services/planningService';
 
@@ -45,6 +49,7 @@ export function SavingsGoalsScreen({ navigation, route }) {
   const [targetAmount, setTargetAmount] = useState('');
   const [monthlyContribution, setMonthlyContribution] = useState('');
   const [targetDate, setTargetDate] = useState('');
+  const [editingGoalId, setEditingGoalId] = useState('');
   const [errors, setErrors] = useState({});
   const [requestError, setRequestError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -112,6 +117,29 @@ export function SavingsGoalsScreen({ navigation, route }) {
   );
 
   async function handleCreate() {
+    await saveGoal();
+  }
+
+  function resetGoalForm() {
+    setEditingGoalId('');
+    setName('');
+    setTargetAmount('');
+    setMonthlyContribution('');
+    setTargetDate('');
+    setErrors({});
+  }
+
+  function startEditing(goal) {
+    setEditingGoalId(goal.id);
+    setName(goal.name);
+    setTargetAmount(String(goal.target_amount_cents / 100));
+    setMonthlyContribution(String(goal.monthly_contribution_cents / 100));
+    setTargetDate(goal.target_date || '');
+    setErrors({});
+    setRequestError('');
+  }
+
+  async function saveGoal() {
     const nextErrors = {};
     const targetAmountCents = parseAmountToCents(targetAmount);
     const monthlyContributionCents = parseAmountToCents(monthlyContribution);
@@ -121,6 +149,14 @@ export function SavingsGoalsScreen({ navigation, route }) {
     }
     if (targetAmountCents === null) {
       nextErrors.targetAmount = 'Enter a valid target amount.';
+    }
+    const editingGoal = goals.find((goal) => goal.id === editingGoalId);
+    if (
+      editingGoal &&
+      targetAmountCents !== null &&
+      targetAmountCents < editingGoal.current_amount_cents
+    ) {
+      nextErrors.targetAmount = 'Target amount cannot be below money already saved.';
     }
     if (monthlyContributionCents === null) {
       nextErrors.monthlyContribution = 'Enter a valid monthly contribution.';
@@ -139,23 +175,75 @@ export function SavingsGoalsScreen({ navigation, route }) {
     setIsSaving(true);
 
     try {
-      const goal = await createSavingsGoal({
-        userId: user.id,
-        name,
-        targetAmountCents,
-        monthlyContributionCents,
-        targetDate,
-      });
-      setGoals((current) => [goal, ...current]);
-      setName('');
-      setTargetAmount('');
-      setMonthlyContribution('');
-      setTargetDate('');
+      const goal = editingGoalId
+        ? await updateSavingsGoal({
+            userId: user.id,
+            goalId: editingGoalId,
+            name,
+            targetAmountCents,
+            monthlyContributionCents,
+            targetDate,
+          })
+        : await createSavingsGoal({
+            userId: user.id,
+            name,
+            targetAmountCents,
+            monthlyContributionCents,
+            targetDate,
+          });
+      setGoals((current) =>
+        editingGoalId
+          ? current.map((item) => (item.id === goal.id ? goal : item))
+          : [goal, ...current],
+      );
+      resetGoalForm();
     } catch (error) {
-      setRequestError(error.message || 'Unable to create this savings goal.');
+      setRequestError(
+        error.message ||
+          (editingGoalId
+            ? 'Unable to update this savings goal.'
+            : 'Unable to create this savings goal.'),
+      );
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function removeGoal(goal) {
+    setUpdatingId(goal.id);
+    setRequestError('');
+    try {
+      await deleteSavingsGoal({ userId: user.id, goalId: goal.id });
+      setGoals((current) => current.filter((item) => item.id !== goal.id));
+    } catch (error) {
+      setRequestError(
+        error.code === 'SAVINGS_GOAL_HAS_CONTRIBUTIONS'
+          ? error.message
+          : error.message || 'Unable to delete this savings goal.',
+      );
+    } finally {
+      setUpdatingId('');
+    }
+  }
+
+  function confirmRemoveGoal(goal) {
+    const message = `Delete ${goal.name}? Goals with linked contributions must be undone before they can be deleted.`;
+    if (Platform.OS === 'web') {
+      if (typeof window === 'undefined' || window.confirm(message)) {
+        removeGoal(goal);
+      }
+      return;
+    }
+
+    Alert.alert('Delete savings goal?', message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => removeGoal(goal) },
+    ]);
+  }
+
+  function cancelEditing() {
+    resetGoalForm();
+    setRequestError('');
   }
 
   async function handleToggle(goal) {
@@ -334,7 +422,14 @@ export function SavingsGoalsScreen({ navigation, route }) {
           <InlineNotice message={requestError} variant="error" />
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>New goal</Text>
+            <View style={styles.formHeading}>
+              <Text style={styles.sectionTitle}>{editingGoalId ? 'Edit goal' : 'New goal'}</Text>
+              {editingGoalId ? (
+                <Pressable accessibilityLabel="Cancel savings goal edit" accessibilityRole="button" onPress={cancelEditing} style={styles.cancelEditButton}>
+                  <X color={colors.inkMuted} size={18} />
+                </Pressable>
+              ) : null}
+            </View>
             <FormField
               error={errors.name}
               label="Goal name"
@@ -370,11 +465,14 @@ export function SavingsGoalsScreen({ navigation, route }) {
               value={targetDate}
             />
             <AppButton
-              icon={Plus}
+              icon={editingGoalId ? Pencil : Plus}
               isLoading={isSaving}
-              label="Create savings goal"
+              label={editingGoalId ? 'Update savings goal' : 'Create savings goal'}
               onPress={handleCreate}
             />
+            {editingGoalId ? (
+              <AppButton label="Cancel" onPress={cancelEditing} variant="secondary" />
+            ) : null}
           </View>
 
           <View style={styles.section}>
@@ -396,7 +494,17 @@ export function SavingsGoalsScreen({ navigation, route }) {
                   <View key={goal.id}>
                     <View style={styles.goalRow}>
                       <View style={styles.goalCopy}>
-                        <Text style={styles.goalTitle}>{goal.name}</Text>
+                        <View style={styles.goalTitleRow}>
+                          <Text style={styles.goalTitle}>{goal.name}</Text>
+                          <View style={styles.goalActions}>
+                            <Pressable accessibilityLabel={`Edit ${goal.name}`} accessibilityRole="button" onPress={() => startEditing(goal)} style={styles.goalActionButton}>
+                              <Pencil color={colors.primary} size={17} />
+                            </Pressable>
+                            <Pressable accessibilityLabel={`Delete ${goal.name}`} accessibilityRole="button" disabled={updatingId === goal.id} onPress={() => confirmRemoveGoal(goal)} style={styles.goalActionButton}>
+                              <Trash2 color={colors.danger} size={17} />
+                            </Pressable>
+                          </View>
+                        </View>
                         <Text style={styles.goalBody}>
                           {formatCurrency(
                             goal.monthly_contribution_cents,
@@ -599,6 +707,18 @@ const styles = StyleSheet.create({
   summaryValue: { ...typography.section, color: colors.white },
   section: { gap: spacing.lg },
   sectionTitle: { ...typography.section, color: colors.ink },
+  formHeading: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cancelEditButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   list: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -614,7 +734,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   goalCopy: { flex: 1, minWidth: 0, gap: spacing.xs },
-  goalTitle: { ...typography.label, color: colors.ink },
+  goalTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  goalTitle: { ...typography.label, color: colors.ink, flex: 1 },
+  goalActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  goalActionButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   goalBody: { ...typography.caption, color: colors.inkMuted },
   progressTrack: {
     height: 6,

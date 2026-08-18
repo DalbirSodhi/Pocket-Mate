@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { ChevronLeft, ChevronRight, Landmark, Save, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Landmark, Pencil, Save, Trash2, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
   Alert,
@@ -42,6 +42,7 @@ export function BudgetCapsScreen({ navigation, route }) {
   const [amount, setAmount] = useState('');
   const [rolloverMode, setRolloverMode] = useState('none');
   const [applyToFuture, setApplyToFuture] = useState(true);
+  const [editingCapId, setEditingCapId] = useState('');
   const [errors, setErrors] = useState({});
   const [requestError, setRequestError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -76,7 +77,26 @@ export function BudgetCapsScreen({ navigation, route }) {
     }, [loadData]),
   );
 
-  async function handleCreate() {
+  function resetForm() {
+    setEditingCapId('');
+    setCategoryId(categories[0]?.id || '');
+    setAmount('');
+    setRolloverMode('none');
+    setApplyToFuture(true);
+    setErrors({});
+  }
+
+  function startEditing(cap) {
+    setEditingCapId(cap.id);
+    setCategoryId(cap.category_id);
+    setAmount(String((cap.plannedAmountCents || 0) / 100));
+    setRolloverMode(cap.rolloverMode || 'none');
+    setApplyToFuture(true);
+    setErrors({});
+    setRequestError('');
+  }
+
+  async function handleSave() {
     const nextErrors = {};
     const amountCents = parseAmountToCents(amount);
 
@@ -104,7 +124,7 @@ export function BudgetCapsScreen({ navigation, route }) {
         rolloverMode,
         applyToFuture,
       });
-      setAmount('');
+      resetForm();
       await loadData();
     } catch (error) {
       setRequestError(
@@ -115,6 +135,11 @@ export function BudgetCapsScreen({ navigation, route }) {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  function cancelEditing() {
+    resetForm();
+    setRequestError('');
   }
 
   async function removeBudget(cap) {
@@ -183,6 +208,14 @@ export function BudgetCapsScreen({ navigation, route }) {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Set category amount</Text>
+            {editingCapId ? (
+              <View style={styles.editingNotice}>
+                <Text style={styles.editingLabel}>Editing monthly budget</Text>
+                <Pressable accessibilityLabel="Cancel budget edit" accessibilityRole="button" onPress={cancelEditing} style={styles.cancelEditButton}>
+                  <X color={colors.inkMuted} size={18} />
+                </Pressable>
+              </View>
+            ) : null}
             <View style={styles.categoryGrid}>
               {categories.map((category) => {
                 const isSelected = category.id === categoryId;
@@ -251,9 +284,12 @@ export function BudgetCapsScreen({ navigation, route }) {
             <AppButton
               icon={Save}
               isLoading={isSaving}
-              label="Save monthly budget"
-              onPress={handleCreate}
+              label={editingCapId ? 'Update monthly budget' : 'Save monthly budget'}
+              onPress={handleSave}
             />
+            {editingCapId ? (
+              <AppButton label="Cancel" onPress={cancelEditing} variant="secondary" />
+            ) : null}
           </View>
 
           <View style={styles.section}>
@@ -277,6 +313,9 @@ export function BudgetCapsScreen({ navigation, route }) {
                         </View>
                         <View style={styles.capActions}>
                           <Text style={styles.rolloverValue}>{cap.rolloverMode === 'none' ? 'No rollover' : `${formatCurrency(cap.rolloverInCents, currencyCode)} carried in`}</Text>
+                          <Pressable accessibilityLabel={`Edit ${cap.category?.name || 'category'} budget`} accessibilityRole="button" onPress={() => startEditing(cap)} style={styles.deleteButton}>
+                            <Pencil color={colors.primary} size={17} />
+                          </Pressable>
                           <Pressable accessibilityLabel={`Remove ${cap.category?.name || 'category'} budget`} accessibilityRole="button" onPress={() => confirmRemove(cap)} style={styles.deleteButton}>
                             <Trash2 color={colors.danger} size={18} />
                           </Pressable>
@@ -342,6 +381,17 @@ const styles = StyleSheet.create({
     gap: spacing.xxl,
   },
   section: { gap: spacing.lg },
+  editingNotice: {
+    minHeight: 42,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  editingLabel: { ...typography.caption, color: colors.primary, fontWeight: '700' },
+  cancelEditButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { ...typography.section, color: colors.ink },
   monthNavigation: {
     minHeight: 52,

@@ -91,6 +91,8 @@ Each user must only access their own rows through Supabase Row Level Security.
 ```text
 profiles
 income_entries
+recurring_income_schedules
+recurring_income_occurrences
 expense_categories
 expenses
 budget_caps
@@ -102,6 +104,7 @@ bill_payment_plans
 bill_payment_installments
 financial_accounts
 account_transfers
+account_balance_adjustments
 expense_splits
 expense_refunds
 budget_templates
@@ -125,7 +128,9 @@ transfers, which update cash and liability balances without becoming spending
 twice.
 
 Income and expenses may be assigned to accounts. Balances combine opening
-balances, assigned cash flow, and transfers. The dashboard keeps calendar-month
+balances, assigned cash flow, transfers, and signed reconciliation adjustments.
+Adjustments preserve ledger history and remain independently reversible. The
+dashboard keeps calendar-month
 balance, checking/cash available, and after-plan money separate. Savings
 accounts remain liquid for net-worth reporting but are excluded from everyday
 spendable cash. Safe-to-spend cannot exceed either the monthly plan or actual
@@ -154,14 +159,15 @@ code, and uncertain rules create owned review items rather than silently
 changing financial history.
 
 The planning calendar is a read model built by a deterministic utility from
-income, recurring expenses, card statements, payment installments, and the
+recorded and projected income, recurring expenses, card statements, payment installments, and the
 profile pay-cycle anchor. When installments cover a source bill, cash-flow
 totals count the installments and retain the source only as calendar context.
 An Expo notification adapter schedules reminders locally and cancels only
 identifiers owned by Pocket-Mate. No push provider or device token is required.
 
 CSV import uses Papa Parse and a deterministic normalization engine before any
-write. Accepted rows enter an owned staging batch; protected Postgres functions
+write. Users review default and row-level account/category assignments before
+accepted rows enter an owned staging batch; protected Postgres functions
 post or roll back ledger entries transactionally and recheck fingerprints at
 commit time. Cash-flow trends reuse the reconciled Activity ledger. Debt payoff
 scenarios use saved APR/minimum-payment settings and a deterministic cent-based

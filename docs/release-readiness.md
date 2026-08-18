@@ -1,21 +1,20 @@
 # Release Readiness
 
-Audit date: 2026-08-10
-Updated: 2026-08-13
-Branch: `feature/complete-finance-planning-loop`
-Development baseline: `76b93b1`
+Audit date: 2026-08-18
+Updated: 2026-08-18
+Branch: `feature/complete-manual-finance-controls`
+Development baseline: `3c47a80`
 
-## Finance Completion Update
+## Manual Finance Controls Update
 
-The finance-planning completion milestone added payday setup, a first-run plan
-checklist, explicit monthly/actual/after-plan balances, account-backed savings
-contributions, and correction controls for recurring costs and unpaid card
-statements. Credit-card payments now require a funding account, protected
-savings is excluded from everyday cash, and long account histories paginate
-beyond the Data API row limit.
+This milestone closes the highest-value gaps found in a manual-first comparison
+with YNAB, Monarch, Copilot, Rocket Money, and EveryDollar. It adds recurring
+income plans, multi-cadence repeating expenses, auditable account balance
+reconciliation, editable budgets and savings goals, row-level CSV assignment,
+and a dashboard entry point for transactions awaiting review.
 
-Both savings migrations were dry-run before application and are recorded on the
-linked development project as `202608130001` and `202608130002`.
+Both migrations were dry-run before application and are recorded on the linked
+development project as `202608160001` and `202608160002`.
 
 ## Verdict
 
@@ -35,15 +34,17 @@ The following commands were run from `apps/mobile` unless noted otherwise.
 
 | Command | Result | Evidence |
 | --- | --- | --- |
-| `npm test` | Pass | 142 tests passed, 0 failed. |
+| `npm test` | Pass | 148 tests passed, 0 failed. |
 | `npm run lint` | Pass | Expo ESLint completed with no findings. |
 | `npm run release:check` | Pass | App identifiers, assets, runtime policy, and EAS profiles validated. |
 | `npx expo-doctor` | Pass | 18 of 18 checks passed. |
-| `npx expo export --platform web --output-dir /private/tmp/pocket-mate-security-web --clear` | Pass | Web bundle exported successfully. |
-| `npx expo export --platform ios --output-dir /private/tmp/pocket-mate-security-ios --clear` | Pass | iOS Hermes bundle exported successfully. |
-| `npx expo export --platform android --output-dir /private/tmp/pocket-mate-security-android --clear` | Pass | Android Hermes bundle exported successfully. |
+| `npx expo export --platform web --output-dir /private/tmp/pocket-mate-manual-controls-web --clear` | Pass | Web bundle exported successfully. |
+| `npx expo export --platform ios --output-dir /private/tmp/pocket-mate-manual-controls-ios --clear` | Pass | iOS Hermes bundle exported successfully. |
+| `npx expo export --platform android --output-dir /private/tmp/pocket-mate-manual-controls-android --clear` | Pass | Android Hermes bundle exported successfully. |
 | `npm run audit:production` | Pass | No unapproved high or critical production advisories found. |
-| `npx supabase --agent no status` from the repository root | Blocked | Docker and Podman were unavailable, so local schema lint and policy tests were not run. |
+| `npx supabase --agent no db push --linked --dry-run` from the repository root | Pass | Both pending migrations were identified before application. |
+| `npx supabase --agent no db push --linked` from the repository root | Pass | Both migrations applied to the linked project. |
+| `npx supabase --agent no migration list --linked` from the repository root | Pass | Local and remote history match through `202608160002`. |
 
 The remaining high findings reach the Expo/Metro build toolchain through
 `image-size`. The suggested forced resolution would downgrade Expo to SDK 53,
@@ -63,6 +64,8 @@ Automated tests exercise deterministic behavior for:
 - Income, expense, split, refund, categorization-rule, and validation math.
 - Budget rollover chains, payment-plan rebalancing, purchase impact, calendar
   projections, debt payoff, trends, and monthly insights.
+- Recurring-income projections, short-month anchors, recurring-expense cadence,
+  and signed account reconciliation.
 - CSV normalization, duplicate detection, rollback-oriented import metadata,
   and spreadsheet-safe report export.
 - Account-deletion confirmation and household input/role rules.
@@ -74,9 +77,10 @@ These tests validate pure calculations and contracts. They do not prove hosted
 Supabase availability, notification delivery, navigation behavior, or a full
 signed-app workflow.
 
-The in-app browser surface was unavailable during this run, so a screenshot-
-based UI/accessibility audit could not be completed. Bundle compilation and
-source-level accessibility checks are not substitutes for visual inspection.
+The in-app browser surface was still unavailable after reconnecting, so a
+screenshot-based UI/accessibility audit could not be completed. Bundle
+compilation and source-level accessibility checks are not substitutes for
+visual inspection.
 
 ## Accessibility
 

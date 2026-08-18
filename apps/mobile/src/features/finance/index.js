@@ -23,6 +23,15 @@ export {
   updateExpenseEntry,
   updateIncomeEntry,
 } from './services/financeService';
+export {
+  createRecurringIncomeSchedule,
+  deleteRecurringIncomeSchedule,
+  getRecurringIncomeOccurrences,
+  getRecurringIncomeSchedules,
+  recordRecurringIncomeOccurrence,
+  setRecurringIncomeScheduleActive,
+  updateRecurringIncomeSchedule,
+} from './services/recurringIncomeService';
 export { AddExpenseScreen } from './screens/AddExpenseScreen';
 export { AddIncomeScreen } from './screens/AddIncomeScreen';
 export { AutomationScreen } from './screens/AutomationScreen';
@@ -35,4 +44,5 @@ export { FixedExpensesScreen } from './screens/FixedExpensesScreen';
 export { IncomeDetailScreen } from './screens/IncomeDetailScreen';
 export { OneTimeExpenseScreen } from './screens/OneTimeExpenseScreen';
 export { RecurringExpenseScreen } from './screens/RecurringExpenseScreen';
+export { RecurringIncomeScreen } from './screens/RecurringIncomeScreen';
 export { TransactionsScreen } from './screens/TransactionsScreen';

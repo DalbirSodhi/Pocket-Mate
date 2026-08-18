@@ -29,6 +29,23 @@ import {
 } from '../services/financeService';
 import { parseAmountToCents, validateEntry } from '../utils/financeValidation.cjs';
 import { getFinanceErrorMessage } from '../utils/getFinanceErrorMessage';
+import { generateCalendarEvents } from '../../planning/utils/calendarMath.cjs';
+
+const CADENCE_OPTIONS = [
+  { id: 'weekly', label: 'Weekly' },
+  { id: 'bi_weekly', label: 'Biweekly' },
+  { id: 'monthly', label: 'Monthly' },
+  { id: 'yearly', label: 'Yearly' },
+];
+
+function getMonthKey() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function cadenceLabel(cadence) {
+  return CADENCE_OPTIONS.find((option) => option.id === cadence)?.label || 'Monthly';
+}
 
 export function FixedExpensesScreen({ navigation, route }) {
   const { user } = useAuthSession();
@@ -41,6 +58,7 @@ export function FixedExpensesScreen({ navigation, route }) {
   const [editingId, setEditingId] = useState('');
   const [editName, setEditName] = useState('');
   const [editAmount, setEditAmount] = useState('');
+  const [editCadence, setEditCadence] = useState('monthly');
   const [editCategoryId, setEditCategoryId] = useState('');
   const [editStartsOn, setEditStartsOn] = useState('');
   const [editNote, setEditNote] = useState('');
@@ -62,7 +80,7 @@ export function FixedExpensesScreen({ navigation, route }) {
       setError(
         getFinanceErrorMessage(
           requestError,
-          'Unable to load monthly fixed expenses.',
+          'Unable to load repeating expenses.',
         ),
       );
     } finally {
@@ -77,10 +95,11 @@ export function FixedExpensesScreen({ navigation, route }) {
   );
 
   const activeTotal = useMemo(
-    () =>
-      plans
-        .filter((plan) => plan.is_active)
-        .reduce((total, plan) => total + plan.amount_cents, 0),
+    () => generateCalendarEvents({
+      month: getMonthKey(),
+      recurringExpenses: plans.filter((plan) => plan.is_active),
+    }).filter((event) => event.type === 'recurring_expense')
+      .reduce((total, event) => total + event.amountCents, 0),
     [plans],
   );
 
@@ -103,7 +122,7 @@ export function FixedExpensesScreen({ navigation, route }) {
       setError(
         getFinanceErrorMessage(
           requestError,
-          'Unable to update this monthly expense.',
+          'Unable to update this repeating expense.',
         ),
       );
     } finally {
@@ -115,6 +134,7 @@ export function FixedExpensesScreen({ navigation, route }) {
     setEditingId(plan.id);
     setEditName(plan.name);
     setEditAmount((plan.amount_cents / 100).toFixed(2));
+    setEditCadence(plan.cadence || 'monthly');
     setEditCategoryId(plan.category_id);
     setEditStartsOn(plan.starts_on);
     setEditNote(plan.note || '');
@@ -131,7 +151,7 @@ export function FixedExpensesScreen({ navigation, route }) {
     const nextErrors = validateEntry({ amount: editAmount, date: editStartsOn });
 
     if (!editName.trim()) {
-      nextErrors.name = 'Enter a name for this monthly expense.';
+      nextErrors.name = 'Enter a name for this repeating expense.';
     }
 
     if (!editCategoryId) {
@@ -154,6 +174,7 @@ export function FixedExpensesScreen({ navigation, route }) {
         categoryId: editCategoryId,
         name: editName,
         amountCents: parseAmountToCents(editAmount),
+        cadence: editCadence,
         startsOn: editStartsOn,
         note: editNote,
       });
@@ -163,7 +184,7 @@ export function FixedExpensesScreen({ navigation, route }) {
       setError(
         getFinanceErrorMessage(
           requestError,
-          'Unable to save changes to this monthly expense.',
+          'Unable to save changes to this repeating expense.',
         ),
       );
     } finally {
@@ -173,8 +194,8 @@ export function FixedExpensesScreen({ navigation, route }) {
 
   function confirmDelete(plan) {
     Alert.alert(
-      'Delete monthly expense?',
-      `Remove ${plan.name} from future monthly planning? Past one-time expense entries remain in your activity.`,
+      'Delete repeating expense?',
+      `Remove ${plan.name} from future planning? Past one-time expense entries remain in your activity.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -197,7 +218,7 @@ export function FixedExpensesScreen({ navigation, route }) {
               setError(
                 getFinanceErrorMessage(
                   requestError,
-                  'Unable to delete this monthly expense.',
+                  'Unable to delete this repeating expense.',
                 ),
               );
             } finally {
@@ -225,8 +246,8 @@ export function FixedExpensesScreen({ navigation, route }) {
         <View style={styles.content}>
           <ScreenHeader
             onBack={navigation.goBack}
-            subtitle="Known costs reserved every month"
-            title="Monthly fixed"
+            subtitle="Known costs reserved on their real schedule"
+            title="Repeating expenses"
           />
 
           <View style={styles.summary}>
@@ -234,7 +255,7 @@ export function FixedExpensesScreen({ navigation, route }) {
               <CalendarClock color={colors.primary} size={23} />
             </View>
             <View style={styles.summaryCopy}>
-              <Text style={styles.summaryLabel}>Active monthly total</Text>
+              <Text style={styles.summaryLabel}>Expected this month</Text>
               <Text style={styles.summaryValue}>
                 {formatCurrency(activeTotal, currencyCode)}
               </Text>
@@ -262,7 +283,7 @@ export function FixedExpensesScreen({ navigation, route }) {
                         {plan.name}
                       </Text>
                       <Text style={styles.rowBody}>
-                        {plan.category?.name || 'Expense'} - day {plan.charge_day}
+                        {plan.category?.name || 'Expense'} - {cadenceLabel(plan.cadence)}
                       </Text>
                     </View>
                     <View style={styles.rowValue}>
@@ -304,7 +325,7 @@ export function FixedExpensesScreen({ navigation, route }) {
                   </View>
                   {editingId === plan.id ? (
                     <View style={styles.editForm}>
-                      <Text style={styles.editTitle}>Edit monthly expense</Text>
+                      <Text style={styles.editTitle}>Edit repeating expense</Text>
                       <FormField
                         error={editErrors.name}
                         label="Expense name"
@@ -315,10 +336,29 @@ export function FixedExpensesScreen({ navigation, route }) {
                       <FormField
                         error={editErrors.amount}
                         keyboardType="decimal-pad"
-                        label="Monthly amount"
+                        label="Amount per occurrence"
                         onChangeText={setEditAmount}
                         value={editAmount}
                       />
+                      <View style={styles.categoryBlock}>
+                        <Text style={styles.fieldLabel}>Repeats</Text>
+                        <View accessibilityRole="radiogroup" style={styles.categoryGrid}>
+                          {CADENCE_OPTIONS.map((option) => {
+                            const isSelected = option.id === editCadence;
+                            return (
+                              <Pressable
+                                accessibilityRole="radio"
+                                accessibilityState={{ checked: isSelected }}
+                                key={option.id}
+                                onPress={() => setEditCadence(option.id)}
+                                style={[styles.categoryChip, isSelected && styles.categoryChipSelected]}
+                              >
+                                <Text style={[styles.categoryLabel, isSelected && styles.categoryLabelSelected]}>{option.label}</Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
                       <View style={styles.categoryBlock}>
                         <Text style={styles.fieldLabel}>Category</Text>
                         <View style={styles.categoryGrid}>
@@ -399,7 +439,7 @@ export function FixedExpensesScreen({ navigation, route }) {
             </View>
           ) : (
             <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>No monthly fixed expenses</Text>
+              <Text style={styles.emptyTitle}>No repeating expenses</Text>
               <Text style={styles.emptyBody}>
                 Add one from the expense menu to reserve it automatically.
               </Text>

@@ -29,6 +29,8 @@ Current migrations:
 202608100001_add_household_collaboration.sql
 202608130001_record_savings_contributions.sql
 202608130002_harden_savings_transfer_links.sql
+202608160001_add_recurring_income_schedules.sql
+202608160002_add_account_balance_adjustments.sql
 ```
 
 The transaction-planning migration adds month-specific budgets and rollovers,
@@ -45,3 +47,9 @@ post/rollback functions, duplicate indexes, and per-account debt assumptions.
 The savings-contribution migration links goal progress to owned account
 transfers, provides protected record/undo functions, and blocks direct mutation
 of linked transfers.
+
+The recurring-income migration adds owned schedule and occurrence tables plus
+protected create, update, archive, delete, and idempotent receive functions.
+
+The account-adjustment migration adds RLS-protected signed reconciliation rows
+that correct computed balances without mutating historical transactions.

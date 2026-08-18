@@ -37,7 +37,22 @@ export async function chooseAndParseCsv(userId) {
   };
 }
 
-export async function importTransactions({ userId, preview, categoryId }) {
+export async function importTransactions({ userId, preview, categoryId, accountId }) {
+  const rows = preview.transactions.map((row) => ({
+    ...row,
+    categoryId: row.categoryId || (row.type === 'expense' ? categoryId : null),
+    accountId: Object.prototype.hasOwnProperty.call(row, 'accountId')
+      ? row.accountId
+      : accountId || null,
+  }));
+  const missingCategoryRow = rows.find(
+    (row) => row.type === 'expense' && !row.categoryId,
+  );
+
+  if (missingCategoryRow) {
+    throw new Error(`Choose a category for row ${missingCategoryRow.sourceRowNumber}.`);
+  }
+
   const batchResponse = await supabase
     .from('transaction_import_batches')
     .insert({ user_id: userId, file_name: preview.fileName, row_count: preview.acceptedCount + preview.rejectedCount })
@@ -45,7 +60,7 @@ export async function importTransactions({ userId, preview, categoryId }) {
     .single();
   if (batchResponse.error) throw batchResponse.error;
   const batchId = batchResponse.data.id;
-  const rows = preview.transactions.map((row) => ({
+  const importRows = rows.map((row) => ({
     batch_id: batchId,
     user_id: userId,
     row_number: row.sourceRowNumber,
@@ -53,12 +68,13 @@ export async function importTransactions({ userId, preview, categoryId }) {
     amount_cents: row.amountCents,
     occurred_on: row.date,
     description: row.description,
-    category_id: row.type === 'expense' ? categoryId : null,
+    category_id: row.type === 'expense' ? row.categoryId : null,
+    account_id: row.accountId,
     fingerprint: row.fingerprint,
     raw_data: row,
   }));
-  if (rows.length) {
-    const rowResponse = await supabase.from('transaction_import_rows').insert(rows);
+  if (importRows.length) {
+    const rowResponse = await supabase.from('transaction_import_rows').insert(importRows);
     if (rowResponse.error) {
       await supabase.from('transaction_import_batches').delete().eq('id', batchId).eq('user_id', userId);
       throw rowResponse.error;

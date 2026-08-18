@@ -3,8 +3,17 @@ const assert = require('node:assert/strict');
 
 const {
   calculateAccountBalances,
+  parseBalanceToCents,
   summarizeAccounts,
 } = require('./accountMath.cjs');
+
+test('balance parser accepts zero, signed balances, and two decimals', () => {
+  assert.equal(parseBalanceToCents('0'), 0);
+  assert.equal(parseBalanceToCents('1,234.56'), 123456);
+  assert.equal(parseBalanceToCents('-12.30'), -1230);
+  assert.equal(parseBalanceToCents('12.345'), null);
+  assert.equal(parseBalanceToCents(''), null);
+});
 
 test('asset balances include linked cash flow and transfers', () => {
   const accounts = calculateAccountBalances({
@@ -61,4 +70,20 @@ test('statement card debt uses unpaid statements instead of purchase rows', () =
   });
 
   assert.equal(card.balanceCents, 280000);
+});
+
+test('signed balance adjustments reconcile asset and liability balances', () => {
+  const accounts = calculateAccountBalances({
+    accounts: [
+      { id: 'checking', account_type: 'checking', opening_balance_cents: 10000 },
+      { id: 'loan', account_type: 'loan', opening_balance_cents: 50000 },
+    ],
+    balanceAdjustments: [
+      { account_id: 'checking', amount_delta_cents: -1250 },
+      { account_id: 'loan', amount_delta_cents: 800 },
+    ],
+  });
+
+  assert.equal(accounts[0].balanceCents, 8750);
+  assert.equal(accounts[1].balanceCents, 50800);
 });
