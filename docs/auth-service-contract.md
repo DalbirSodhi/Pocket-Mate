@@ -103,6 +103,23 @@ destructive prompt. Users should be directed to export reports before deletion.
 Navigation should wait until `isLoading` is false before deciding whether to
 show authenticated or unauthenticated screens.
 
+## Email Confirmation
+
+Signup and resend requests redirect native confirmation links to:
+
+```text
+pocketmate://auth/callback
+```
+
+The signup screen keeps the pending address in memory and allows another
+confirmation request after Supabase's one-minute cooldown. Delivery failures
+must be shown as errors; the UI must not imply that an email was sent when the
+Auth service rejected it.
+
+Hosted environments must use custom SMTP before external testing. Supabase's
+built-in mail service is not an application delivery channel and may reject
+addresses outside the project team. Keep email confirmation enabled.
+
 ## Password Recovery
 
 Password reset requests redirect to:

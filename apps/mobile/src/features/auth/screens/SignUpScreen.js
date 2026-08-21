@@ -1,14 +1,19 @@
-import { UserPlus } from 'lucide-react-native';
-import { useState } from 'react';
+import { Mail, UserPlus } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../../../components/AppButton';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
 import { colors, spacing, typography } from '../../../theme/tokens';
-import { signUpWithEmail } from '../services/authService';
+import {
+  resendSignUpConfirmation,
+  signUpWithEmail,
+} from '../services/authService';
 import { getAuthErrorMessage } from '../utils/getAuthErrorMessage';
 import { AuthScreenLayout } from '../components/AuthScreenLayout';
+
+const RESEND_COOLDOWN_SECONDS = 60;
 
 export function SignUpScreen({ navigation }) {
   const [displayName, setDisplayName] = useState('');
@@ -18,6 +23,21 @@ export function SignUpScreen({ navigation }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setResendCooldown((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   async function handleSignUp() {
     setError('');
@@ -34,12 +54,34 @@ export function SignUpScreen({ navigation }) {
       const result = await signUpWithEmail({ email, password, displayName });
 
       if (!result.session) {
+        setPendingEmail(email.trim().toLowerCase());
+        setResendCooldown(RESEND_COOLDOWN_SECONDS);
         setSuccess('Check your inbox to confirm your email, then sign in.');
       }
     } catch (signUpError) {
       setError(getAuthErrorMessage(signUpError));
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    if (!pendingEmail || resendCooldown > 0) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setIsResending(true);
+
+    try {
+      await resendSignUpConfirmation(pendingEmail);
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      setSuccess('Confirmation email sent again. Check your inbox and spam folder.');
+    } catch (resendError) {
+      setError(getAuthErrorMessage(resendError));
+    } finally {
+      setIsResending(false);
     }
   }
 
@@ -91,18 +133,38 @@ export function SignUpScreen({ navigation }) {
           value={confirmPassword}
         />
         <AppButton
-          disabled={!displayName || !email || !password || !confirmPassword || Boolean(success)}
+          disabled={
+            !displayName ||
+            !email ||
+            !password ||
+            !confirmPassword ||
+            Boolean(pendingEmail)
+          }
           icon={UserPlus}
           isLoading={isSubmitting}
           label="Create account"
           onPress={handleSignUp}
         />
-        {success ? (
-          <AppButton
-            label="Go to sign in"
-            onPress={() => navigation.navigate('SignIn')}
-            variant="secondary"
-          />
+        {pendingEmail ? (
+          <>
+            <AppButton
+              disabled={resendCooldown > 0}
+              icon={Mail}
+              isLoading={isResending}
+              label={
+                resendCooldown > 0
+                  ? `Resend available in ${resendCooldown}s`
+                  : 'Resend confirmation email'
+              }
+              onPress={handleResend}
+              variant="secondary"
+            />
+            <AppButton
+              label="Go to sign in"
+              onPress={() => navigation.navigate('SignIn')}
+              variant="secondary"
+            />
+          </>
         ) : null}
         <Pressable
           accessibilityRole="button"

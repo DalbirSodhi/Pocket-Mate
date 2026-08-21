@@ -6,6 +6,7 @@ export {
   getCurrentSession,
   getCurrentUser,
   requestPasswordReset,
+  resendSignUpConfirmation,
   signInWithEmail,
   signOut,
   signUpWithEmail,
