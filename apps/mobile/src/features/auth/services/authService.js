@@ -1,16 +1,19 @@
 import { Platform } from 'react-native';
 
 import { supabase } from '../../../infrastructure/supabase/client';
+import { getAuthRedirectUrl } from '../utils/authRedirect.cjs';
 
 const MIN_PASSWORD_LENGTH = 8;
-const NATIVE_PASSWORD_RESET_REDIRECT_URL = 'pocketmate://reset-password';
 
-function getPasswordResetRedirectUrl() {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-
-  return NATIVE_PASSWORD_RESET_REDIRECT_URL;
+function getCurrentAuthRedirectUrl(flow) {
+  return getAuthRedirectUrl({
+    flow,
+    platform: Platform.OS,
+    webOrigin:
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.location.origin
+        : null,
+  });
 }
 
 function normalizeEmail(email) {
@@ -55,6 +58,23 @@ export async function signUpWithEmail({ email, password, displayName }) {
       data: {
         display_name: normalizeDisplayName(displayName),
       },
+      emailRedirectTo: getCurrentAuthRedirectUrl('confirmation'),
+    },
+  });
+
+  return unwrapAuthResponse(response);
+}
+
+export async function resendSignUpConfirmation(email) {
+  const normalizedEmail = normalizeEmail(email);
+
+  assertValidEmail(normalizedEmail);
+
+  const response = await supabase.auth.resend({
+    type: 'signup',
+    email: normalizedEmail,
+    options: {
+      emailRedirectTo: getCurrentAuthRedirectUrl('confirmation'),
     },
   });
 
@@ -103,7 +123,7 @@ export async function requestPasswordReset(email) {
   assertValidEmail(normalizedEmail);
 
   const response = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-    redirectTo: getPasswordResetRedirectUrl(),
+    redirectTo: getCurrentAuthRedirectUrl('recovery'),
   });
 
   return unwrapAuthResponse(response);

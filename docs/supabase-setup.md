@@ -86,11 +86,18 @@ The hosted Supabase Auth redirect allow list includes:
 
 ```text
 http://localhost:8081
+pocketmate://auth/callback
 pocketmate://reset-password
 ```
 
-The web app uses its current origin for password recovery. Native builds use the
-`pocketmate` URL scheme.
+The web app uses its current origin for confirmation and password recovery.
+Native builds use the `pocketmate` URL scheme.
+
+Before testing signup with addresses outside the Supabase organization, enable
+custom SMTP under Authentication email settings. Store SMTP credentials only in
+Supabase; they must never be added to Expo environment variables, mobile `.env`
+files, or Git. Keep email confirmation enabled and verify delivery through Auth
+logs before distributing a build.
 
 After reviewing the proposed diff, deploy linked project configuration with:
 
