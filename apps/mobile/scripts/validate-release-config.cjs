@@ -36,23 +36,31 @@ assert(
   'A valid EAS project ID must be configured',
 );
 assert(
-  appConfig.runtimeVersion?.policy === 'appVersion',
-  'Runtime version must track the public app version',
+  appConfig.runtimeVersion?.policy === 'fingerprint',
+  'Runtime version must prevent native-incompatible updates',
+);
+assert(
+  appConfig.updates?.url ===
+    `https://u.expo.dev/${appConfig.extra?.eas?.projectId}`,
+  'EAS Update URL must match the configured project ID',
 );
 
 validateIdentifier(appConfig.ios?.bundleIdentifier, 'iOS bundle identifier');
 validateIdentifier(appConfig.android?.package, 'Android package');
 assert(/^\d+$/.test(appConfig.ios?.buildNumber), 'iOS build number must be numeric');
 assert(
-  Number.isInteger(appConfig.android?.versionCode) && appConfig.android.versionCode > 0,
-  'Android version code must be a positive integer',
+  !Object.hasOwn(appConfig.android || {}, 'versionCode'),
+  'Remote app-version management must own Android version codes',
 );
 
 assertAsset(appConfig.icon, 'App icon');
 assertAsset(appConfig.web?.favicon, 'Web favicon');
 assertAsset(appConfig.android?.adaptiveIcon?.foregroundImage, 'Android foreground icon');
-assertAsset(appConfig.android?.adaptiveIcon?.backgroundImage, 'Android background icon');
 assertAsset(appConfig.android?.adaptiveIcon?.monochromeImage, 'Android monochrome icon');
+assert(
+  appConfig.android?.adaptiveIcon?.backgroundColor === '#101C2C',
+  'Android adaptive icon must use the Pocket-Mate navy background',
+);
 
 const expectedProfiles = {
   development: 'development',
@@ -67,6 +75,10 @@ for (const [profileName, environmentName] of Object.entries(expectedProfiles)) {
     profile.environment === environmentName,
     `${profileName} must use the ${environmentName} EAS environment`,
   );
+  assert(
+    profile.channel === environmentName,
+    `${profileName} must use the ${environmentName} EAS Update channel`,
+  );
 }
 
 assert(
@@ -75,8 +87,9 @@ assert(
   'Development must produce an internal development-client build',
 );
 assert(
-  easConfig.build.preview.distribution === 'internal',
-  'Preview must produce an installable internal build',
+  easConfig.build.preview.distribution === 'internal' &&
+    easConfig.build.preview.autoIncrement === true,
+  'Preview must produce a versioned installable internal build',
 );
 assert(
   easConfig.build.production.autoIncrement === true,

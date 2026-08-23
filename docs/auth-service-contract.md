@@ -116,6 +116,10 @@ confirmation request after Supabase's one-minute cooldown. Delivery failures
 must be shown as errors; the UI must not imply that an email was sent when the
 Auth service rejected it.
 
+If an existing unconfirmed user reaches sign-in, the Auth error enables the
+same resend action there. Editing the address clears that state so a resend is
+never sent to a different address without another sign-in attempt.
+
 Hosted environments must use custom SMTP before external testing. Supabase's
 built-in mail service is not an application delivery channel and may reject
 addresses outside the project team. Keep email confirmation enabled.
