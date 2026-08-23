@@ -3,9 +3,14 @@
     "name": "Pocket-Mate",
     "slug": "pocket-mate",
     "scheme": "pocketmate",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7a15c436-d6e0-414d-a4b7-106ef1a296b9",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,11 +22,9 @@
     },
     "android": {
       "package": "com.dalbirsodhi.pocketmate",
-      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF",
+        "backgroundColor": "#101C2C",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },

@@ -83,6 +83,12 @@ For now all environments may point to the same hosted Supabase project. Before
 external beta testing, create a separate preview Supabase project so test data
 cannot mix with production data.
 
+Preview and production builds include `expo-updates` and use separate EAS
+channels. JavaScript and asset-only fixes may be published to the matching
+channel after CI. Native dependencies, permissions, Expo SDK changes, or other
+fingerprint changes require a new binary. Fingerprint runtime versions prevent
+an incompatible update from loading into an older binary.
+
 ## Build For Testing
 
 ### Expo Go
