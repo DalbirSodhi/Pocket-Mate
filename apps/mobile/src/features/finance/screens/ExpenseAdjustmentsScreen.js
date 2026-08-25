@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../../../components/AppButton';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
+import { KeyboardAwareScrollView } from '../../../components/KeyboardAwareScrollView';
 import { LoadingScreen } from '../../../components/LoadingScreen';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
@@ -162,7 +163,7 @@ export function ExpenseAdjustmentsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <ScreenHeader onBack={navigation.goBack} subtitle="Correct category totals without changing income" title="Split and refund" />
           <InlineNotice message={error} variant="error" />
@@ -225,7 +226,7 @@ export function ExpenseAdjustmentsScreen({ navigation, route }) {
             </View>
           ) : null}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

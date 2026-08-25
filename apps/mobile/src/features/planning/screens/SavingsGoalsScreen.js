@@ -6,7 +6,6 @@ import {
   Platform,
   RefreshControl,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -17,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppButton } from '../../../components/AppButton';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
+import { KeyboardAwareScrollView } from '../../../components/KeyboardAwareScrollView';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
@@ -388,9 +388,8 @@ export function SavingsGoalsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             colors={[colors.primary]}
@@ -667,7 +666,7 @@ export function SavingsGoalsScreen({ navigation, route }) {
             </View>
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }

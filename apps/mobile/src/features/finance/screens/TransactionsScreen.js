@@ -23,6 +23,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LoadingScreen } from '../../../components/LoadingScreen';
+import { KeyboardAwareScrollView } from '../../../components/KeyboardAwareScrollView';
 import { RetryNotice } from '../../../components/RetryNotice';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
@@ -180,9 +181,8 @@ export function TransactionsScreen({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             colors={[colors.primary]}
@@ -415,7 +415,7 @@ export function TransactionsScreen({
             </View>
           )}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
