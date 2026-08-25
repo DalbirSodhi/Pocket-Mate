@@ -4,12 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as aes from 'aes-js';
 import * as SecureStore from 'expo-secure-store';
 
-const encryptedValuePrefix = 'pm-secure-v1:';
-const encryptionKeyPrefix = 'pm.supabase.auth.key:';
+import {
+  legacySecureStoreKeyName,
+  secureStoreKeyName,
+} from './authStorageKey.cjs';
 
-function encryptionKeyName(storageKey) {
-  return `${encryptionKeyPrefix}${storageKey}`;
-}
+const encryptedValuePrefix = 'pm-secure-v1:';
 
 function randomBytes(length) {
   const bytes = new Uint8Array(length);
@@ -23,7 +23,10 @@ async function encrypt(storageKey, value) {
   const cipher = new aes.ModeOfOperation.ctr(encryptionKey, new aes.Counter(counterSeed));
   const encryptedBytes = cipher.encrypt(aes.utils.utf8.toBytes(value));
 
-  await SecureStore.setItemAsync(encryptionKeyName(storageKey), aes.utils.hex.fromBytes(encryptionKey));
+  await SecureStore.setItemAsync(
+    secureStoreKeyName(storageKey),
+    aes.utils.hex.fromBytes(encryptionKey),
+  );
 
   return [
     encryptedValuePrefix,
@@ -47,7 +50,26 @@ async function decrypt(storageKey, value) {
 
   const counterSeed = aes.utils.hex.toBytes(payload.slice(0, separatorIndex));
   const encryptedBytes = aes.utils.hex.toBytes(payload.slice(separatorIndex + 1));
-  const encryptionKeyHex = await SecureStore.getItemAsync(encryptionKeyName(storageKey));
+  let encryptionKeyHex = await SecureStore.getItemAsync(
+    secureStoreKeyName(storageKey),
+  );
+
+  if (!encryptionKeyHex) {
+    try {
+      const legacyKeyName = legacySecureStoreKeyName(storageKey);
+      encryptionKeyHex = await SecureStore.getItemAsync(legacyKeyName);
+
+      if (encryptionKeyHex) {
+        await SecureStore.setItemAsync(
+          secureStoreKeyName(storageKey),
+          encryptionKeyHex,
+        );
+        await SecureStore.deleteItemAsync(legacyKeyName);
+      }
+    } catch {
+      // New Android SecureStore versions reject the legacy key's colon.
+    }
+  }
 
   if (!encryptionKeyHex) {
     return null;
@@ -90,6 +112,17 @@ export const supabaseAuthStorage = {
 
   async removeItem(storageKey) {
     await AsyncStorage.removeItem(storageKey);
-    await SecureStore.deleteItemAsync(encryptionKeyName(storageKey));
+
+    try {
+      await SecureStore.deleteItemAsync(secureStoreKeyName(storageKey));
+    } catch {
+      // Cleanup is best-effort; missing keychain values must not block sign-out.
+    }
+
+    try {
+      await SecureStore.deleteItemAsync(legacySecureStoreKeyName(storageKey));
+    } catch {
+      // New Android SecureStore versions reject the legacy key's colon.
+    }
   },
 };
