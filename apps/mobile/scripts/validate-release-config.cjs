@@ -52,6 +52,18 @@ assert(
   !Object.hasOwn(appConfig.android || {}, 'versionCode'),
   'Remote app-version management must own Android version codes',
 );
+assert(
+  appConfig.android?.softwareKeyboardLayoutMode === 'resize',
+  'Android keyboard layout must resize editable screens',
+);
+assert(
+  appConfig.android?.allowBackup === false,
+  'Android cloud backup must remain disabled for financial session data',
+);
+assert(
+  appConfig.androidStatusBar?.translucent === false,
+  'Android status bar must remain non-translucent for predictable layout insets',
+);
 
 assertAsset(appConfig.icon, 'App icon');
 assertAsset(appConfig.web?.favicon, 'Web favicon');

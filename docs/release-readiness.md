@@ -1,9 +1,22 @@
 # Release Readiness
 
 Audit date: 2026-08-18
-Updated: 2026-08-18
-Branch: `feature/complete-manual-finance-controls`
-Development baseline: `3c47a80`
+Updated: 2026-08-24
+Branch: `fix/mobile-release-candidate-audit`
+Development baseline: `d39f66f`
+
+## Android Release Candidate Update
+
+Version `1.0.2` adds Android-safe encrypted-session storage, explicit keyboard
+resize behavior, keyboard-aware scrolling on every editable long screen, a
+non-translucent status bar, and disabled Android cloud backup. Navigation and
+keyboard contracts now fail tests when a screen introduces an unreachable route
+or an editable layout without keyboard protection.
+
+The linked Supabase project accepted a live confirmation-required signup after
+the custom SMTP correction. The database migration dry run reports that local
+and remote schemas are current. A fresh signed preview APK must still be
+installed and exercised on a physical Android device before public release.
 
 ## Manual Finance Controls Update
 
@@ -22,9 +35,8 @@ Pocket-Mate's JavaScript application is buildable for web, iOS, and Android,
 its current unit suite passes, Expo reports compatible dependencies, and
 release configuration validation passes. It is **not ready for a public store
 release** yet because two Expo/Metro build-time advisories need an upstream
-resolution, no signed build or real-device release flow was tested during this
-audit, and manual offline/session QA still needs to be repeated on a physical
-iPhone.
+resolution and the new Android release candidate still requires physical-device
+session, keyboard, notification, and offline testing.
 
 This verdict applies to release readiness, not ordinary Expo Go development.
 
@@ -34,15 +46,15 @@ The following commands were run from `apps/mobile` unless noted otherwise.
 
 | Command | Result | Evidence |
 | --- | --- | --- |
-| `npm test` | Pass | 148 tests passed, 0 failed. |
+| `npm test` | Pass | 158 tests passed, 0 failed. |
 | `npm run lint` | Pass | Expo ESLint completed with no findings. |
 | `npm run release:check` | Pass | App identifiers, assets, runtime policy, and EAS profiles validated. |
 | `npx expo-doctor` | Pass | 18 of 18 checks passed. |
-| `npx expo export --platform web --output-dir /private/tmp/pocket-mate-manual-controls-web --clear` | Pass | Web bundle exported successfully. |
-| `npx expo export --platform ios --output-dir /private/tmp/pocket-mate-manual-controls-ios --clear` | Pass | iOS Hermes bundle exported successfully. |
-| `npx expo export --platform android --output-dir /private/tmp/pocket-mate-manual-controls-android --clear` | Pass | Android Hermes bundle exported successfully. |
+| `npx expo export --platform web --output-dir /private/tmp/pocket-mate-rc-web-102 --clear` | Pass | Web bundle exported successfully. |
+| `npx expo export --platform ios --output-dir /private/tmp/pocket-mate-rc-ios-102 --clear` | Pass | iOS Hermes bundle exported successfully. |
+| `npx expo export --platform android --output-dir /private/tmp/pocket-mate-rc-android-102 --clear` | Pass | Android Hermes bundle exported successfully. |
 | `npm run audit:production` | Pass | No unapproved high or critical production advisories found. |
-| `npx supabase --agent no db push --linked --dry-run` from the repository root | Pass | Both pending migrations were identified before application. |
+| `npx supabase --agent no db push --linked --dry-run` from the repository root | Pass | Remote database is up to date; no migrations are pending. |
 | `npx supabase --agent no db push --linked` from the repository root | Pass | Both migrations applied to the linked project. |
 | `npx supabase --agent no migration list --linked` from the repository root | Pass | Local and remote history match through `202608160002`. |
 
@@ -72,6 +84,8 @@ Automated tests exercise deterministic behavior for:
 - Offline/error classification, versioned dashboard cache parsing, and
   calendar-date behavior across leap days, month ends, and daylight-saving
   boundaries.
+- Registered navigation targets, dynamic expense destinations, keyboard-safe
+  editable screens, and Android keyboard/security release configuration.
 
 These tests validate pure calculations and contracts. They do not prove hosted
 Supabase availability, notification delivery, navigation behavior, or a full

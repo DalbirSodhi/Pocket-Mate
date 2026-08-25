@@ -3,7 +3,7 @@
     "name": "Pocket-Mate",
     "slug": "pocket-mate",
     "scheme": "pocketmate",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -15,6 +15,11 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "androidStatusBar": {
+      "backgroundColor": "#FFFFFF",
+      "barStyle": "dark-content",
+      "translucent": false
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dalbirsodhi.pocketmate",
@@ -22,6 +27,8 @@
     },
     "android": {
       "package": "com.dalbirsodhi.pocketmate",
+      "allowBackup": false,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#101C2C",
         "foregroundImage": "./assets/android-icon-foreground.png",

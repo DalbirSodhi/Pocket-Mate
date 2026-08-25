@@ -1,12 +1,13 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { Check, Plus, Tags, Trash2, WandSparkles, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppButton } from '../../../components/AppButton';
 import { FormField } from '../../../components/FormField';
 import { InlineNotice } from '../../../components/InlineNotice';
+import { KeyboardAwareScrollView } from '../../../components/KeyboardAwareScrollView';
 import { ScreenHeader } from '../../../components/ScreenHeader';
 import { colors, radius, spacing, typography } from '../../../theme/tokens';
 import { useAuthSession } from '../../auth';
@@ -92,7 +93,7 @@ export function AutomationScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <ScreenHeader onBack={navigation.goBack} subtitle="Consistent categories with explicit review" title="Rules and tags" />
           <InlineNotice message={error} variant="error" />
@@ -125,7 +126,7 @@ export function AutomationScreen({ navigation, route }) {
             <View style={styles.list}>{reviews.map((item, index) => <View key={item.id}><View style={styles.reviewRow}><View style={styles.rowCopy}><Text style={styles.rowTitle}>{item.expenses?.merchant || 'Expense'}</Text><Text style={styles.rowBody}>{formatCurrency(item.expenses?.amount_cents || 0, currencyCode)} • {item.reason}</Text></View><Pressable accessibilityLabel="Approve" accessibilityRole="button" onPress={() => resolve(item, 'approved')} style={[styles.reviewButton, styles.approveButton]}><Check color={colors.success} size={19} /></Pressable><Pressable accessibilityLabel="Ignore" accessibilityRole="button" onPress={() => resolve(item, 'ignored')} style={[styles.reviewButton, styles.ignoreButton]}><X color={colors.inkMuted} size={19} /></Pressable></View>{index < reviews.length - 1 ? <View style={styles.divider} /> : null}</View>)}{!reviews.length ? <Empty icon={Check} text="Nothing needs review." /> : null}</View>
           ) : null}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
