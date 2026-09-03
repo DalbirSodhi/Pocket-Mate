@@ -1,0 +1,64 @@
+name: Supabase Activity
+
+on:
+  schedule:
+    - cron: "17 1,9,17 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: supabase-activity
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  database-read:
+    name: Check Pocket-Mate database
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+    steps:
+      - name: Validate configuration
+        shell: bash
+        run: |
+          test -n "$SUPABASE_URL" || {
+            echo "::error::Missing SUPABASE_URL repository secret."
+            exit 1
+          }
+          test -n "$SUPABASE_ANON_KEY" || {
+            echo "::error::Missing SUPABASE_ANON_KEY repository secret."
+            exit 1
+          }
+          [[ "$SUPABASE_URL" == https://*.supabase.co ]] || {
+            echo "::error::SUPABASE_URL must be a hosted Supabase project URL."
+            exit 1
+          }
+
+      - name: Run read-only database health query
+        shell: bash
+        run: |
+          response_code="$(curl \
+            --silent \
+            --show-error \
+            --output response.json \
+            --write-out "%{http_code}" \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --retry 2 \
+            --get \
+            --data-urlencode "select=id" \
+            --data-urlencode "limit=1" \
+            --header "apikey: $SUPABASE_ANON_KEY" \
+            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/profiles")"
+
+          if [[ "$response_code" != "200" ]]; then
+            echo "::error::Pocket-Mate Supabase query failed with HTTP $response_code."
+            exit 1
+          fi
+
+          echo "Pocket-Mate Supabase database responded successfully."
