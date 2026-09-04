@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  database-read:
-    name: Check Pocket-Mate database
+  service-health:
+    name: Check Pocket-Mate Supabase
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -38,7 +38,7 @@ jobs:
             exit 1
           }
 
-      - name: Run read-only database health query
+      - name: Check Supabase service health
         shell: bash
         run: |
           response_code="$(curl \
@@ -49,16 +49,12 @@ jobs:
             --connect-timeout 10 \
             --max-time 30 \
             --retry 2 \
-            --get \
-            --data-urlencode "select=id" \
-            --data-urlencode "limit=1" \
             --header "apikey: $SUPABASE_ANON_KEY" \
-            --header "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            "$SUPABASE_URL/rest/v1/profiles")"
+            "$SUPABASE_URL/auth/v1/health")"
 
           if [[ "$response_code" != "200" ]]; then
-            echo "::error::Pocket-Mate Supabase query failed with HTTP $response_code."
+            echo "::error::Pocket-Mate Supabase health check failed with HTTP $response_code."
             exit 1
           fi
 
-          echo "Pocket-Mate Supabase database responded successfully."
+          echo "Pocket-Mate Supabase services responded successfully."
