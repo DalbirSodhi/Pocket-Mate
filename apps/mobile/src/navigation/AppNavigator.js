@@ -1,7 +1,7 @@
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Clock3, Home, PieChart, Settings2 } from 'lucide-react-native';
+import { Clock3, Home, PieChart, Settings2, Utensils } from 'lucide-react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -39,6 +39,11 @@ import {
 import { CashFlowTrendsScreen, MonthlyInsightsScreen } from '../features/insights';
 import { ImportTransactionsScreen } from '../features/imports';
 import { HouseholdScreen } from '../features/household/screens/HouseholdScreen';
+import {
+  AddMealScreen,
+  NutritionDashboardScreen,
+  NutritionGoalsScreen,
+} from '../features/nutrition';
 import {
   DeleteAccountScreen,
   ProfileGate,
@@ -95,6 +100,7 @@ const tabIcons = {
   HomeTab: Home,
   ActivityTab: Clock3,
   PlanTab: PieChart,
+  WellnessTab: Utensils,
   SettingsTab: Settings2,
 };
 
@@ -147,6 +153,9 @@ function MainTabs({ profile, onProfileChange }) {
         {(screenProps) => (
           <PlanOverviewScreen {...screenProps} profile={profile} />
         )}
+      </Tab.Screen>
+      <Tab.Screen name="WellnessTab" options={{ title: 'Wellness' }}>
+        {(screenProps) => <NutritionDashboardScreen {...screenProps} />}
       </Tab.Screen>
       <Tab.Screen name="SettingsTab" options={{ title: 'Settings' }}>
         {(screenProps) => (
@@ -201,6 +210,8 @@ function MainNavigator({ profile, onProfileChange }) {
       <Stack.Screen component={BudgetCapsScreen} name="BudgetCaps" />
       <Stack.Screen component={PurchaseImpactScreen} name="PurchaseImpact" />
       <Stack.Screen component={TransactionsScreen} name="Transactions" />
+      <Stack.Screen component={NutritionGoalsScreen} name="NutritionGoals" />
+      <Stack.Screen component={AddMealScreen} name="AddMeal" />
     </Stack.Navigator>
   );
 }

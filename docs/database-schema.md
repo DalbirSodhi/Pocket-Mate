@@ -416,6 +416,18 @@ Stores APR basis points and minimum monthly payments for owned loan or
 credit-card financial accounts. Payoff schedules remain deterministic client
 projections and are not persisted.
 
+### nutrition_profiles and meal_entries
+
+`nutrition_profiles` stores one owner-scoped set of physique, eating-style,
+calorie, and macronutrient targets. Weights are stored as integer grams to avoid
+floating-point drift while the UI presents kilograms. `meal_entries` stores a
+date, meal type, label, calories, macros, and optional note. Database constraints
+bound numeric values and reject unsupported goal, diet, or meal types.
+
+Both tables reference `auth.users` with cascade deletion, deny anonymous table
+access, and enforce `user_id = auth.uid()` through RLS. Nutrition rows are not
+joined into finance reports or household aggregates.
+
 ## Later Tables
 
 These should wait until core finance is stable:
@@ -448,6 +460,8 @@ erDiagram
     auth_users ||--o{ transaction_import_batches : stages
     transaction_import_batches ||--o{ transaction_import_rows : contains
     auth_users ||--o{ debt_settings : configures
+    auth_users ||--o| nutrition_profiles : configures
+    auth_users ||--o{ meal_entries : owns
     expense_categories ||--o{ expenses : classifies
     expense_categories ||--o{ recurring_expenses : classifies
     credit_cards ||--o{ credit_card_bills : receives
@@ -615,6 +629,7 @@ supabase/migrations/202608050002_add_transaction_planning.sql
 supabase/migrations/202608060001_add_calendar_preferences.sql
 supabase/migrations/202608060002_add_imports_and_debt_settings.sql
 supabase/migrations/202608100001_add_household_collaboration.sql
+supabase/migrations/202609040001_add_nutrition_foundation.sql
 ```
 
 ## Household Collaboration

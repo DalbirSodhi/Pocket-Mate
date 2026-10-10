@@ -11,14 +11,17 @@ flowchart TD
     B --> D["Finance Service"]
     B --> E["Dashboard Service"]
     B --> F["Savings Service"]
+    B --> L["Nutrition Service"]
 
     C --> G["Supabase Auth Adapter"]
     D --> H["Supabase Finance Repository"]
     E --> H
     F --> H
+    L --> M["Supabase Nutrition Repository"]
 
     G --> I["Supabase Auth"]
     H --> J["Supabase Postgres"]
+    M --> J
     J --> K["Row Level Security"]
 ```
 
@@ -118,6 +121,8 @@ user_preferences
 transaction_import_batches
 transaction_import_rows
 debt_settings
+nutrition_profiles
+meal_entries
 ```
 
 Bill-plan writes use authenticated Postgres functions so statement updates,
@@ -185,6 +190,12 @@ from the authenticated JWT, deletes finance rows in dependency order and the
 Auth user in one transaction, then the auth service clears the local mobile
 session. No service-role credential or target user ID is exposed to the client.
 
+Nutrition is a separate feature boundary with its own service, validation, and
+calculation utilities. `nutrition_profiles` stores self-selected goals and
+targets, while `meal_entries` stores daily intake. Both use owner-only RLS and
+cascade from the Auth user. Nutrition data never enters finance totals or
+household aggregate functions.
+
 Detailed table planning is maintained in [database-schema.md](./database-schema.md).
 
 ## Security Rules
@@ -199,6 +210,7 @@ Detailed table planning is maintained in [database-schema.md](./database-schema.
 - Require explicit confirmation before irreversible account deletion.
 - Keep household access changes behind role-checked database functions.
 - Share household aggregates without weakening owner-only finance-table RLS.
+- Keep nutrition and finance calculations in separate feature domains.
 
 ## Replaceability Goals
 

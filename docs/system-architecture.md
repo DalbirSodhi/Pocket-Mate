@@ -1,10 +1,10 @@
 # Pocket-Mate System Architecture
 
-Updated: 2026-09-02
+Updated: 2026-09-08
 
 Pocket-Mate is a feature-oriented Expo application backed by Supabase. The
 mobile client is a modular monolith: presentation, feature services, pure
-financial calculations, and infrastructure adapters are separated without
+domain calculations, and infrastructure adapters are separated without
 adding network boundaries that the current product does not need.
 
 ## Runtime Architecture
@@ -113,6 +113,8 @@ flowchart LR
   encryption keys remain in SecureStore.
 - Provider secrets, SMTP credentials, service-role keys, and future AI keys must
   remain in hosted server configuration and never enter an Expo bundle.
+- Finance and nutrition tables are separate owner-scoped domains. Household
+  finance functions never expose nutrition records.
 
 ## Scaling Direction
 
@@ -124,7 +126,8 @@ PostgreSQL indexes, pagination, or materialized summaries cannot address.
 
 ## Development Availability
 
-The Free Plan can pause the hosted project after sustained low database
-activity. `.github/workflows/supabase-activity.yml` performs a read-only,
-RLS-protected database request three times daily. It requires repository secrets
-named `SUPABASE_URL` and `SUPABASE_ANON_KEY`; neither value is stored in Git.
+The Free Plan can pause the hosted project after sustained low activity.
+`.github/workflows/supabase-activity.yml` checks the authenticated Supabase Auth
+health endpoint three times daily. It reports availability but does not bypass
+provider pause policy. It requires repository secrets named `SUPABASE_URL` and
+`SUPABASE_ANON_KEY`; neither value is stored in Git.

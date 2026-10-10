@@ -6,7 +6,17 @@ Pocket-Mate helps users know what they can safely spend today while protecting s
 
 ## First Product Focus
 
-The first version is a personal finance app. Meal planning, gym reminders, and AI meal scanning are intentionally out of scope until the finance loop is useful and stable.
+The first version is a personal finance app. The finance loop is now functionally
+complete, so Pocket-Mate can add wellness as a separate product domain without
+changing financial totals or weakening finance data boundaries.
+
+## Second Product Focus
+
+The wellness foundation lets users define a physique goal, choose an eating
+style, set their own calorie and macro targets, log meals, and review daily
+progress. It does not prescribe clinical targets. Workout scheduling and
+server-side meal photo analysis follow only after the nutrition data model and
+manual workflow are stable.
 
 ## Target Users
 
@@ -61,7 +71,6 @@ The first complete version should include:
 - Bank account syncing.
 - Investment tracking.
 - Credit score.
-- Meal planning.
 - Gym scheduling.
 - AI image analysis.
 - Shared editing of another member's itemized transactions.
@@ -100,3 +109,7 @@ and net totals. Transaction descriptions, notes, category details, cards, and
 account balances remain owner-only. Owners manage invitations and roles;
 editors and viewers can review the aggregate snapshot but cannot administer
 the household or change another person's finance records.
+
+Nutrition records are private to their owner and are not included in household
+finance summaries. The Wellness tab keeps nutrition progress separate from the
+cash-movement ledger.

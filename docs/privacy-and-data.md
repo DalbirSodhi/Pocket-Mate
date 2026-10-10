@@ -13,6 +13,7 @@ planning experience:
 - Reminder and dashboard display preferences.
 - CSV import batches, normalized staging rows, and optional debt payoff settings.
 - Household membership, invitation state, roles, and access-change audit events.
+- Self-selected nutrition goals, body measurements, daily macro targets, and meal logs.
 
 Pocket-Mate does not currently connect to bank accounts, collect card numbers,
 or store card security codes. Saved cards contain only a user-provided nickname
@@ -73,6 +74,11 @@ Pocket-Mate intentionally does not request bank credentials or provider access
 tokens. Bank synchronization is deferred until the product has mature consent,
 support, monitoring, and incident-response processes.
 
+Nutrition profiles and meals use the same owner-only RLS rule as private finance
+records. They are not included in household summaries, reports, exports, or
+financial calculations. Pocket-Mate does not currently upload meal photos or
+send nutrition history to an AI provider.
+
 ## Data Export
 
 Users can export monthly transaction reports as CSV from Settings or Monthly
@@ -87,8 +93,8 @@ exact confirmation phrase and a final destructive confirmation before calling
 
 The database function accepts no user identifier. It derives the target from
 the authenticated JWT with `auth.uid()`, removes owned finance data in
-dependency order, and deletes that Auth user in the same database transaction.
-Anonymous clients cannot execute the function.
+dependency order, cascades owned nutrition data, and deletes that Auth user in
+the same database transaction. Anonymous clients cannot execute the function.
 
 If the deleting user owns a household with other members, ownership transfers
 to an existing member before deletion. Otherwise the empty household is
