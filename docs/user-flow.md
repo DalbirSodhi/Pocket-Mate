@@ -295,12 +295,37 @@ Plan screen.
    Dashboard commitments and calendar totals include every occurrence due in
    the selected month.
 
+## Nutrition Goal And Meal Flow
+
+```mermaid
+flowchart TD
+    A["Open Wellness"] --> B{"Targets configured?"}
+    B -->|No| C["Choose physique goal and eating style"]
+    C --> D["Enter calorie and macro targets"]
+    D --> E["Save private nutrition profile"]
+    B -->|Yes| F["Review today's progress"]
+    E --> F
+    F --> G["Add breakfast, lunch, dinner, or snack"]
+    G --> H["Enter calories and macros"]
+    H --> I["Save meal"]
+    I --> J["Recalculate daily progress"]
+    J --> F
+    F --> K["Open a meal to edit or delete"]
+    K --> J
+```
+
+Nutrition targets are selected by the user and remain separate from finance.
+High-protein meal ideas show approximate values and do not replace medical or
+dietitian guidance. Meal-photo analysis is deferred until a server-side AI
+boundary and explicit review flow are available.
+
 ## Main Navigation
 
 ```text
 Home
 Activity
 Plan
+Wellness
 Settings
 ```
 

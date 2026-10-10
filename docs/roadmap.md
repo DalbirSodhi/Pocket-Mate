@@ -119,6 +119,22 @@
 - [x] Review CSV category and account assignments row by row before posting.
 - [x] Surface pending categorization work on the dashboard.
 
+## Phase 12: Nutrition Foundation
+
+- [x] Owner-scoped physique goals and dietary-style preferences.
+- [x] User-selected daily calorie and macronutrient targets.
+- [x] Daily meal logging with edit and delete controls.
+- [x] Daily calorie, protein, carbohydrate, and fat progress.
+- [x] High-protein meal guidance with clearly labeled estimates.
+- [x] Mobile, web, calculation, and database-policy test coverage.
+
+## Phase 13: Training And Nutrition Intelligence
+
+- [ ] Workout schedules and pre-workout or recovery reminders.
+- [ ] Exercise logging and weekly training progress.
+- [ ] Server-side meal photo analysis with user confirmation.
+- [ ] Personalized meal suggestions using owned nutrition history.
+
 Provider-backed bank sync remains deliberately deferred. Manual entry and
 reviewed CSV imports keep the current product useful without asking early users
 to grant financial-institution access. A provider integration should begin only
@@ -129,6 +145,5 @@ and production support model are stable.
 
 - Optional cloud backup.
 - Optional bank sync.
-- Meal planning.
 - Gym reminders.
 - AI meal photo analysis.
